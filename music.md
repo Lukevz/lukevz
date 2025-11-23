@@ -11,3 +11,9 @@
 - https://www.youtube.com/watch?v=JgDNFQ2RaLQ&list=RDJgDNFQ2RaLQ&start_radio=1&pp=ygUTc2FwcGhpcmUgZWQgc2hlZXJhbqAHAQ%3D%3D
 - https://www.youtube.com/watch?v=BGcD17uK3mE&list=RDBGcD17uK3mE&start_radio=1&pp=ygURYWxsIHNldmVuIHNlYXNvbnOgBwE%3D
 - https://www.youtube.com/watch?v=QssGbZJrUq4&list=RDQssGbZJrUq4&start_radio=1&pp=ygUMZWNsaXBzZSBhZ3N0oAcB
+
+## Podcasts
+- https://www.youtube.com/@bncmap
+- [Good Hang with Amy Poehler](https://www.youtube.com/@Good-Hang-with-Amy-Poehler)
+- https://www.youtube.com/@SmartLess
+- [Cal Newport](https://www.youtube.com/@CalNewportMedia)

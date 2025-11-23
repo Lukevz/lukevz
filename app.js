@@ -602,111 +602,14 @@ function renderLatestPost() {
 }
 
 /**
- * Pixel dissolve transition effect on a specific container
- */
-function pixelDissolveTransition(container, callback) {
-  const tileSize = 28; // Larger tiles with spacing
-  const gap = 3;
-  const rect = container.getBoundingClientRect();
-  const cols = Math.ceil(rect.width / (tileSize + gap));
-  const rows = Math.ceil(rect.height / (tileSize + gap));
-  const totalTiles = cols * rows;
-
-  // Create fixed overlay matching container position
-  const overlay = document.createElement('div');
-  overlay.className = 'pixel-transition-overlay';
-  overlay.style.setProperty('--tile-size', `${tileSize}px`);
-  overlay.style.position = 'fixed';
-  overlay.style.top = `${rect.top}px`;
-  overlay.style.left = `${rect.left}px`;
-  overlay.style.width = `${rect.width}px`;
-  overlay.style.height = `${rect.height}px`;
-  overlay.style.borderRadius = getComputedStyle(container).borderRadius;
-
-  // Use DocumentFragment for better performance with many tiles
-  const fragment = document.createDocumentFragment();
-  const tiles = [];
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const tile = document.createElement('div');
-      tile.className = 'pixel-tile';
-      tile.dataset.row = row;
-      tile.dataset.col = col;
-      fragment.appendChild(tile);
-      tiles.push(tile);
-    }
-  }
-  overlay.appendChild(fragment);
-  document.body.appendChild(overlay);
-
-  // Sort tiles by distance from a random corner for cascade effect
-  const corner = Math.floor(Math.random() * 4);
-  const startRow = corner < 2 ? 0 : rows - 1;
-  const startCol = corner % 2 === 0 ? 0 : cols - 1;
-
-  const sorted = [...tiles].sort((a, b) => {
-    const distA = Math.abs(a.dataset.row - startRow) + Math.abs(a.dataset.col - startCol);
-    const distB = Math.abs(b.dataset.row - startRow) + Math.abs(b.dataset.col - startCol);
-    // Add slight randomness within same distance
-    return (distA - distB) + (Math.random() - 0.5) * 0.5;
-  });
-
-  // Calculate timing
-  const phaseDuration = 180;
-  const staggerDelay = Math.max(0.8, phaseDuration / totalTiles);
-  const transitionDuration = 100; // matches CSS transition time
-
-  // Phase 1: Tiles cascade in - covers old view
-  sorted.forEach((tile, index) => {
-    setTimeout(() => {
-      tile.classList.add('active');
-    }, index * staggerDelay);
-  });
-
-  // Wait for all tiles to finish appearing before switching
-  const allTilesActiveTime = (totalTiles * staggerDelay) + transitionDuration;
-  setTimeout(() => {
-    callback();
-
-    // Phase 2: Tiles cascade out from opposite corner - reveals new view
-    const reversed = [...sorted].reverse();
-    reversed.forEach((tile, index) => {
-      setTimeout(() => {
-        tile.classList.remove('active');
-        tile.classList.add('fade-out');
-      }, index * staggerDelay);
-    });
-
-    // Remove overlay after all tiles have fully faded out
-    const fadeOutTime = (totalTiles * staggerDelay) + transitionDuration;
-    setTimeout(() => {
-      overlay.remove();
-    }, fadeOutTime);
-  }, allTilesActiveTime);
-}
-
-/**
- * Switch between views (home, tasks, notes)
+ * Switch between views (home, tasks, notes, music)
+ * Uses CSS fade transition for smooth, mobile-friendly effect
  */
 function switchView(viewName) {
   // Don't transition if already on this view
   if (state.currentView === viewName) return;
 
-  // Check reduced motion preference
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // Get the current active view container
-  const currentView = document.getElementById(`${state.currentView}View`);
-
-  if (prefersReducedMotion || !currentView) {
-    // Instant switch for reduced motion or if no current view
-    performViewSwitch(viewName);
-  } else {
-    // Pixel dissolve transition on the current view
-    pixelDissolveTransition(currentView, () => {
-      performViewSwitch(viewName);
-    });
-  }
+  performViewSwitch(viewName);
 }
 
 /**
@@ -1035,6 +938,8 @@ async function parseMusicMd(content) {
     if (linkMatch) {
       const [, text, url] = linkMatch;
       const videoId = extractYouTubeId(url);
+      const channelHandle = extractYouTubeChannel(url);
+
       if (videoId) {
         const hasArtist = text.includes(' - ');
         const [title, artist] = hasArtist
@@ -1047,7 +952,19 @@ async function parseMusicMd(content) {
           url,
           thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
           needsMetadata: !hasArtist,
-          folder: currentFolder
+          folder: currentFolder,
+          isChannel: false
+        });
+      } else if (channelHandle) {
+        tracks.push({
+          title: text.trim(),
+          artist: 'YouTube Channel',
+          channelHandle,
+          url,
+          thumbnail: null,
+          needsMetadata: true,
+          folder: currentFolder,
+          isChannel: true
         });
       }
       continue;
@@ -1058,6 +975,8 @@ async function parseMusicMd(content) {
     if (urlMatch) {
       const url = urlMatch[1];
       const videoId = extractYouTubeId(url);
+      const channelHandle = extractYouTubeChannel(url);
+
       if (videoId) {
         tracks.push({
           title: 'YouTube Video',
@@ -1066,7 +985,19 @@ async function parseMusicMd(content) {
           url,
           thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
           needsMetadata: true,
-          folder: currentFolder
+          folder: currentFolder,
+          isChannel: false
+        });
+      } else if (channelHandle) {
+        tracks.push({
+          title: channelHandle,
+          artist: 'YouTube Channel',
+          channelHandle,
+          url,
+          thumbnail: null,
+          needsMetadata: true,
+          folder: currentFolder,
+          isChannel: true
         });
       }
     }
@@ -1095,6 +1026,14 @@ function extractYouTubeId(url) {
 }
 
 /**
+ * Extract YouTube channel handle from URL
+ */
+function extractYouTubeChannel(url) {
+  const match = url.match(/youtube\.com\/@([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+/**
  * Fetch and hydrate metadata for tracks that only had URLs
  */
 async function enrichTrackMetadata(tracks) {
@@ -1105,6 +1044,18 @@ async function enrichTrackMetadata(tracks) {
   if (pending.length === 0) return;
 
   await Promise.all(pending.map(async ({ track }) => {
+    if (track.isChannel) {
+      // Fetch channel metadata
+      const channelMeta = await fetchChannelMetadata(track.channelHandle);
+      if (channelMeta) {
+        track.title = channelMeta.title || track.title;
+        track.thumbnail = channelMeta.thumbnail;
+        track.artist = 'Podcast';
+      }
+      track.needsMetadata = false;
+      return;
+    }
+
     const meta = await fetchYouTubeMetadata(track.url);
     if (!meta) return;
 
@@ -1116,6 +1067,45 @@ async function enrichTrackMetadata(tracks) {
     track.thumbnail = `https://img.youtube.com/vi/${track.videoId}/mqdefault.jpg`;
     track.needsMetadata = false;
   }));
+}
+
+/**
+ * Fetch channel metadata using noembed service (more permissive than YouTube oEmbed)
+ */
+async function fetchChannelMetadata(handle) {
+  try {
+    const channelUrl = `https://www.youtube.com/@${handle}`;
+
+    // Try noembed.com which often returns better data
+    const noembedUrl = `https://noembed.com/embed?url=${encodeURIComponent(channelUrl)}`;
+    const res = await fetch(noembedUrl);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.error) {
+        return {
+          title: data.author_name || data.title || handle,
+          thumbnail: data.thumbnail_url || null
+        };
+      }
+    }
+
+    // Fallback to YouTube oEmbed for channel name
+    const oembed = `https://www.youtube.com/oembed?url=${encodeURIComponent(channelUrl)}&format=json`;
+    const ytRes = await fetch(oembed);
+    if (ytRes.ok) {
+      const data = await ytRes.json();
+      return {
+        title: data.author_name || handle,
+        thumbnail: null
+      };
+    }
+
+    return { title: handle, thumbnail: null };
+  } catch (err) {
+    console.warn('Could not fetch channel metadata:', err);
+    return { title: handle, thumbnail: null };
+  }
 }
 
 /**
@@ -1187,12 +1177,24 @@ function resetPlayerForFolder() {
   const currentEl = document.getElementById('currentTime');
   const durationEl = document.getElementById('duration');
   const fill = document.getElementById('progressFill');
-  const hasTracks = musicState.tracks.length > 0;
+  const musicContainer = document.querySelector('.music-container');
 
-  if (titleEl) titleEl.textContent = hasTracks
-    ? 'Select a track below'
-    : `No ${musicState.activeFolder} tracks yet`;
-  if (artistEl) artistEl.textContent = 'Add tracks to music.md';
+  // Check if folder has any playable tracks (non-channel)
+  const playableTracks = musicState.tracks.filter(t => !t.isChannel);
+  const hasPlayableTracks = playableTracks.length > 0;
+  const hasChannelsOnly = musicState.tracks.length > 0 && !hasPlayableTracks;
+
+  // Hide player controls if folder only has channels
+  if (musicContainer) {
+    musicContainer.classList.toggle('channels-only', hasChannelsOnly);
+  }
+
+  if (titleEl) titleEl.textContent = hasPlayableTracks
+    ? 'Nothing playing'
+    : hasChannelsOnly
+      ? 'Browse podcasts below'
+      : `No ${musicState.activeFolder} tracks yet`;
+  if (artistEl) artistEl.textContent = hasChannelsOnly ? '' : 'Add tracks to music.md';
   if (currentEl) currentEl.textContent = '0:00';
   if (durationEl) durationEl.textContent = '0:00';
   if (fill) fill.style.width = '0%';
@@ -1256,20 +1258,43 @@ function renderPlaylist() {
     return;
   }
 
-  playlist.innerHTML = musicState.tracks.map((track, index) => `
-    <div class="playlist-item${index === musicState.currentIndex ? ' active playing' : ''}" data-index="${index}">
-      <div class="playlist-thumb">
-        <img src="${track.thumbnail}" alt="${track.title}" loading="lazy">
-      </div>
-      <div class="playlist-info">
-        <div class="playlist-title">${track.title}</div>
-        <div class="playlist-artist">${track.artist}</div>
-      </div>
-    </div>
-  `).join('');
+  playlist.innerHTML = musicState.tracks.map((track, index) => {
+    const isActive = !track.isChannel && index === musicState.currentIndex;
+    const thumbSrc = track.thumbnail || '';
+    const thumbHtml = thumbSrc
+      ? `<img src="${thumbSrc}" alt="${track.title}" loading="lazy">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
 
-  // Add click handlers
-  playlist.querySelectorAll('.playlist-item').forEach(item => {
+    if (track.isChannel) {
+      return `
+        <a class="playlist-item playlist-channel" href="${track.url}" target="_blank" rel="noopener noreferrer" data-index="${index}">
+          <div class="playlist-thumb">${thumbHtml}</div>
+          <div class="playlist-info">
+            <div class="playlist-title">${track.title}</div>
+            <div class="playlist-artist">${track.artist}</div>
+          </div>
+          <svg class="playlist-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+        </a>
+      `;
+    }
+
+    return `
+      <div class="playlist-item${isActive ? ' active playing' : ''}" data-index="${index}">
+        <div class="playlist-thumb">${thumbHtml}</div>
+        <div class="playlist-info">
+          <div class="playlist-title">${track.title}</div>
+          <div class="playlist-artist">${track.artist}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Add click handlers for playable tracks only
+  playlist.querySelectorAll('.playlist-item:not(.playlist-channel)').forEach(item => {
     item.addEventListener('click', () => {
       const index = parseInt(item.dataset.index, 10);
       playTrack(index);
@@ -1553,9 +1578,35 @@ function setupMusicPlayer() {
 }
 
 /**
+ * Detect and set background image (supports png, jpg, jpeg, webp)
+ */
+async function initBackgroundImage() {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const baseName = isDark ? 'dark' : 'light';
+  const extensions = ['jpg', 'png', 'jpeg', 'webp'];
+
+  for (const ext of extensions) {
+    const url = `images/${baseName}.${ext}`;
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) {
+        document.documentElement.style.setProperty('--bg-image', `url('${url}')`);
+        break;
+      }
+    } catch {
+      // Continue to next extension
+    }
+  }
+
+  // Listen for color scheme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', initBackgroundImage);
+}
+
+/**
  * Initialize app
  */
 async function init() {
+  initBackgroundImage();
   setupEventListeners();
   setupFloatingNav();
   setupMusicPlayer();

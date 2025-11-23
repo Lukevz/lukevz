@@ -90,6 +90,26 @@
 .social-icon svg {
   width: 18px;
   height: 18px;
+  fill: currentColor;
+}
+
+/* Light theme: darken navbar icons for better visibility */
+@media (prefers-color-scheme: light) {
+  .social-icon {
+    color: var(--text-primary);
+  }
+
+  .social-icon svg {
+    fill: var(--text-primary);
+  }
+
+  .social-icon:hover {
+    color: var(--accent);
+  }
+
+  .social-icon:hover svg {
+    fill: var(--accent);
+  }
 }
 
 /* Mobile adjustments for top menu bar */
@@ -149,12 +169,12 @@
   --cursor-pointer: url('images/cursor-select-dark.svg') 0 0, pointer;
 
   /* Effects */
-  --glass-blur: 20px;
+  --glass-blur: 32px;
   --shell-radius: 16px;
 
-  /* Background image */
+  /* Background image - JS will override with cache-busted version */
   --bg-fill: #0D0914;
-  --bg-image: url('images/dark.png');
+  --bg-image: url('images/dark.jpg');
   --stars-color: rgba(255, 255, 255, 0.7);
 }
 
@@ -165,11 +185,11 @@
     --cursor-pointer: url('images/cursor-select.svg') 0 0, pointer;
 
     --bg-fill: #0D0914;
-    --bg-image: url('images/dark.png');
+    --bg-image: url('images/dark.jpg');
     --stars-color: rgba(255, 255, 255, 0.7);
 
     /* Colors - WCAG AA compliant contrast ratios */
-    --bg-primary: rgba(26, 26, 26, 0.92);
+    --bg-primary: rgba(26, 26, 26, 0.82);
     --bg-secondary: rgba(36, 36, 36, 0.92);
     --bg-tertiary: rgba(45, 45, 45, 0.92);
     --bg-hover: rgba(54, 54, 54, 0.95);
@@ -198,11 +218,11 @@
 @media (prefers-color-scheme: light) {
   :root {
     --bg-fill: #E3DFEA;
-    --bg-image: url('images/light.png');
+    --bg-image: url('images/light.jpg');
     --stars-color: rgba(120, 110, 150, 0.5);
 
     /* Colors - WCAG AA compliant contrast ratios */
-    --bg-primary: rgba(255, 255, 255, 0.88);
+    --bg-primary: rgba(255, 255, 255, 0.78);
     --bg-secondary: rgba(245, 245, 247, 0.88);
     --bg-tertiary: rgba(238, 238, 240, 0.88);
     --bg-hover: rgba(230, 230, 232, 0.92);
@@ -238,6 +258,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* Prevent horizontal scroll globally */
 }
 
 body {
@@ -251,10 +272,10 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
+  height: 100vh;
+  overflow: hidden; /* Prevent body scroll - only windows scroll */
   cursor: var(--cursor-default);
   position: relative;
-  z-index: 0;
-  isolation: isolate; /* keep star layers behind content */
 }
 
 /* Subtle star field that twinkles above the background image but stays behind content */
@@ -270,7 +291,7 @@ body::after {
   background-repeat: repeat;
   background-position: center top;
   mix-blend-mode: screen;
-  z-index: 0;
+  z-index: -1;
   -webkit-mask-image: url('images/stars-mask.svg');
   mask-image: url('images/stars-mask.svg');
   -webkit-mask-size: cover;
@@ -627,6 +648,9 @@ ul {
 .note-body {
   font-size: 1rem;
   line-height: 1.75;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .note-body h1,
@@ -671,6 +695,9 @@ ul {
   border-radius: 8px;
   overflow-x: auto;
   margin: var(--space-md) 0;
+  max-width: 100%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .note-body pre code {
@@ -706,8 +733,10 @@ ul {
 
 .note-body img {
   max-width: 100%;
+  height: auto;
   border-radius: 8px;
   margin: var(--space-md) 0;
+  display: block;
 }
 
 .note-body hr {
@@ -756,19 +785,66 @@ ul {
 
   .note-view.active {
     display: block;
-    position: fixed;
-    inset: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 50;
+    background: var(--bg-primary-solid); /* Solid background to prevent transparency */
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .note-content {
     padding-top: var(--space-xl);
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
 }
 
 @media (max-width: 768px) {
   .app {
     grid-template-columns: 1fr;
+    overflow-x: hidden;
+  }
+
+  /* Notes view app layout - single column on mobile */
+  .notes-view .app {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .notes-view .sidebar {
+    display: none;
+  }
+
+  .notes-view .post-list {
+    flex: 1;
+    border-right: none;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .notes-view .note-view {
+    display: none;
+  }
+
+  .notes-view .note-view.active {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-primary-solid);
+    z-index: 50;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .sidebar {
@@ -824,6 +900,8 @@ ul {
   color: var(--accent);
   font-weight: 500;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-primary-solid);
 }
 
 .note-back svg {
@@ -880,54 +958,17 @@ ul {
 }
 
 /* ==================== */
-/* Pixel Dissolve Transition */
+/* View Fade Transition  */
 /* ==================== */
 
+/* Simple fade transition for views - works well on mobile */
 .view {
-  position: relative;
-}
-
-.pixel-transition-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 100;
-  pointer-events: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, var(--tile-size, 28px));
-  grid-template-rows: repeat(auto-fill, var(--tile-size, 28px));
-  gap: 3px;
-  padding: 3px;
-  border-radius: inherit;
-  overflow: hidden;
-  perspective: 800px;
-}
-
-.pixel-tile {
-  width: var(--tile-size, 28px);
-  height: var(--tile-size, 28px);
-  background: var(--bg-primary);
-  border-radius: 4px;
   opacity: 0;
-  transform: scale(0.3) rotateX(60deg) translateY(-10px);
-  transform-origin: center center;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    0 4px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  will-change: opacity, transform;
-  transition:
-    opacity 100ms ease-out,
-    transform 100ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity 200ms ease-out;
 }
 
-.pixel-tile.active {
+.view.active {
   opacity: 1;
-  transform: scale(1) rotateX(0deg) translateY(0);
-}
-
-.pixel-tile.fade-out {
-  opacity: 0;
-  transform: scale(0.3) rotateX(-60deg) translateY(10px);
 }
 
 /* Reduced motion preference */
@@ -965,8 +1006,8 @@ ul {
   height: calc(100vh - 80px - 120px); /* Full height minus menu bar area and dock area */
   max-height: none;
   background: var(--bg-primary);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border-radius: 24px;
   border: 1px solid var(--border);
   box-shadow: 0 24px 80px var(--shadow-color);
@@ -985,8 +1026,8 @@ ul {
   height: auto;
   transform: none;
   background: var(--bg-primary);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border-radius: 24px;
   border: 1px solid var(--border);
   box-shadow: 0 24px 80px var(--shadow-color);
@@ -1017,8 +1058,8 @@ ul {
   align-items: center;
   gap: var(--space-xs);
   background: var(--bg-secondary);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border);
   border-radius: 9999px;
   padding: var(--space-xs);
@@ -1032,7 +1073,7 @@ ul {
   justify-content: center;
   padding: var(--space-sm) var(--space-md);
   border-radius: 9999px;
-  color: var(--text-muted);
+  color: var(--text-primary);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
@@ -1055,8 +1096,8 @@ ul {
 }
 
 .nav-tab svg {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
 }
 
 /* Window Title Bar */
@@ -1339,8 +1380,8 @@ body:has(.notes-view.active) .top-menu-bar {
   height: calc(100vh - 80px - 120px);
   max-height: none;
   background: var(--bg-primary);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border-radius: 24px;
   border: 1px solid var(--border);
   box-shadow: 0 24px 80px var(--shadow-color);
@@ -1440,10 +1481,12 @@ body:has(.notes-view.active) .top-menu-bar {
   align-items: stretch;
   padding: var(--space-lg);
   flex: 0 0 auto;
+  overflow: hidden;
 }
 
 .music-player {
-  flex: 1;
+  flex: 1 1 50%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
@@ -1490,6 +1533,8 @@ body:has(.notes-view.active) .top-menu-bar {
 .player-play {
   width: 72px;
   height: 72px;
+  flex-shrink: 0;
+  aspect-ratio: 1;
   background: var(--accent);
   color: var(--bg-primary-solid);
 }
@@ -1513,9 +1558,8 @@ body:has(.notes-view.active) .top-menu-bar {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .player-artist {
@@ -1555,15 +1599,13 @@ body:has(.notes-view.active) .top-menu-bar {
 }
 
 .music-artwork {
-  flex: 0 0 clamp(170px, 24vw, 240px);
-  width: clamp(170px, 24vw, 240px);
-  height: clamp(170px, 24vw, 240px);
+  flex: 0 0 50%;
+  max-width: 50%;
   aspect-ratio: 1 / 1;
-  flex-shrink: 0;
-  margin-left: auto;
   align-self: center;
   display: flex;
   padding: var(--space-md);
+  box-sizing: border-box;
 }
 
 .artwork-placeholder {
@@ -1713,6 +1755,44 @@ body:has(.notes-view.active) .top-menu-bar {
   font-variant-numeric: tabular-nums;
 }
 
+.playlist-channel {
+  text-decoration: none;
+  color: inherit;
+}
+
+.playlist-external {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: color var(--transition-fast);
+}
+
+.playlist-channel:hover .playlist-external {
+  color: var(--accent);
+}
+
+.playlist-thumb svg {
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+}
+
+/* Hide player controls when folder only has channels */
+.music-container.channels-only .player-controls,
+.music-container.channels-only .player-progress,
+.music-container.channels-only .music-artwork {
+  display: none;
+}
+
+.music-container.channels-only .music-player {
+  flex: 0 0 auto;
+}
+
+.music-container.channels-only .player-info {
+  text-align: center;
+}
+
 .playlist-empty {
   display: flex;
   flex-direction: column;
@@ -1748,7 +1828,7 @@ body:has(.notes-view.active) .top-menu-bar {
   }
 
   .music-container {
-    flex-direction: column-reverse;
+    flex-direction: column;
     gap: var(--space-lg);
   }
 
@@ -1762,12 +1842,14 @@ body:has(.notes-view.active) .top-menu-bar {
   }
 
   .music-artwork {
-    order: 1;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1;
+    flex: 0 0 auto;
     max-width: 260px;
+    width: 100%;
     margin: 0 auto;
+  }
+
+  .music-player {
+    flex: 1 1 auto;
   }
 
   .player-controls {
