@@ -602,9 +602,117 @@ function renderLatestPost() {
 }
 
 /**
+ * Pixel dissolve transition effect on a specific container
+ */
+function pixelDissolveTransition(container, callback) {
+  const tileSize = 28; // Larger tiles with spacing
+  const gap = 3;
+  const rect = container.getBoundingClientRect();
+  const cols = Math.ceil(rect.width / (tileSize + gap));
+  const rows = Math.ceil(rect.height / (tileSize + gap));
+  const totalTiles = cols * rows;
+
+  // Create fixed overlay matching container position
+  const overlay = document.createElement('div');
+  overlay.className = 'pixel-transition-overlay';
+  overlay.style.setProperty('--tile-size', `${tileSize}px`);
+  overlay.style.position = 'fixed';
+  overlay.style.top = `${rect.top}px`;
+  overlay.style.left = `${rect.left}px`;
+  overlay.style.width = `${rect.width}px`;
+  overlay.style.height = `${rect.height}px`;
+  overlay.style.borderRadius = getComputedStyle(container).borderRadius;
+
+  // Use DocumentFragment for better performance with many tiles
+  const fragment = document.createDocumentFragment();
+  const tiles = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const tile = document.createElement('div');
+      tile.className = 'pixel-tile';
+      tile.dataset.row = row;
+      tile.dataset.col = col;
+      fragment.appendChild(tile);
+      tiles.push(tile);
+    }
+  }
+  overlay.appendChild(fragment);
+  document.body.appendChild(overlay);
+
+  // Sort tiles by distance from a random corner for cascade effect
+  const corner = Math.floor(Math.random() * 4);
+  const startRow = corner < 2 ? 0 : rows - 1;
+  const startCol = corner % 2 === 0 ? 0 : cols - 1;
+
+  const sorted = [...tiles].sort((a, b) => {
+    const distA = Math.abs(a.dataset.row - startRow) + Math.abs(a.dataset.col - startCol);
+    const distB = Math.abs(b.dataset.row - startRow) + Math.abs(b.dataset.col - startCol);
+    // Add slight randomness within same distance
+    return (distA - distB) + (Math.random() - 0.5) * 0.5;
+  });
+
+  // Calculate timing
+  const phaseDuration = 180;
+  const staggerDelay = Math.max(0.8, phaseDuration / totalTiles);
+  const transitionDuration = 100; // matches CSS transition time
+
+  // Phase 1: Tiles cascade in - covers old view
+  sorted.forEach((tile, index) => {
+    setTimeout(() => {
+      tile.classList.add('active');
+    }, index * staggerDelay);
+  });
+
+  // Wait for all tiles to finish appearing before switching
+  const allTilesActiveTime = (totalTiles * staggerDelay) + transitionDuration;
+  setTimeout(() => {
+    callback();
+
+    // Phase 2: Tiles cascade out from opposite corner - reveals new view
+    const reversed = [...sorted].reverse();
+    reversed.forEach((tile, index) => {
+      setTimeout(() => {
+        tile.classList.remove('active');
+        tile.classList.add('fade-out');
+      }, index * staggerDelay);
+    });
+
+    // Remove overlay after all tiles have fully faded out
+    const fadeOutTime = (totalTiles * staggerDelay) + transitionDuration;
+    setTimeout(() => {
+      overlay.remove();
+    }, fadeOutTime);
+  }, allTilesActiveTime);
+}
+
+/**
  * Switch between views (home, tasks, notes)
  */
 function switchView(viewName) {
+  // Don't transition if already on this view
+  if (state.currentView === viewName) return;
+
+  // Check reduced motion preference
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Get the current active view container
+  const currentView = document.getElementById(`${state.currentView}View`);
+
+  if (prefersReducedMotion || !currentView) {
+    // Instant switch for reduced motion or if no current view
+    performViewSwitch(viewName);
+  } else {
+    // Pixel dissolve transition on the current view
+    pixelDissolveTransition(currentView, () => {
+      performViewSwitch(viewName);
+    });
+  }
+}
+
+/**
+ * Perform the actual view switch
+ */
+function performViewSwitch(viewName) {
   // Update view visibility
   document.querySelectorAll('.view').forEach(view => {
     view.classList.remove('active');
