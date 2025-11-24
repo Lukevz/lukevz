@@ -173,9 +173,9 @@
   --shell-radius: 16px;
 
   /* Background image - JS will override with cache-busted version */
-  --bg-fill: #0D0914;
+  --bg-fill: #06080c;
   --bg-image: url('images/dark.jpg');
-  --stars-color: rgba(255, 255, 255, 0.7);
+  --stars-color: rgba(255, 255, 255, 0.85);
 }
 
 /* Dark theme (default) */
@@ -184,9 +184,9 @@
     --cursor-default: url('images/cursor.svg') 0 0, auto;
     --cursor-pointer: url('images/cursor-select.svg') 0 0, pointer;
 
-    --bg-fill: #0D0914;
+    --bg-fill: #06080c;
     --bg-image: url('images/dark.jpg');
-    --stars-color: rgba(255, 255, 255, 0.7);
+    --stars-color: rgba(255, 255, 255, 0.85);
 
     /* Colors - WCAG AA compliant contrast ratios */
     --bg-primary: rgba(26, 26, 26, 0.82);
@@ -264,11 +264,6 @@ html {
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-fill);
-  background-image: var(--bg-image);
-  background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: cover;
-  background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
@@ -278,78 +273,18 @@ body {
   position: relative;
 }
 
-/* Subtle star field that twinkles above the background image but stays behind content */
-body::before,
-body::after {
-  content: '';
+/* Animated background canvas */
+#bgCanvas {
   position: fixed;
   top: 0;
-  right: 0;
   left: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
   pointer-events: none;
-  background-repeat: repeat;
-  background-position: center top;
-  mix-blend-mode: screen;
-  z-index: -1;
-  -webkit-mask-image: url('images/stars-mask.svg');
-  mask-image: url('images/stars-mask.svg');
-  -webkit-mask-size: cover;
-  mask-size: cover;
-  -webkit-mask-position: center bottom;
-  mask-position: center bottom;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
 }
 
-body::before {
-  background-image:
-    radial-gradient(2px 2px at 20% 30%, var(--stars-color), transparent 50%),
-    radial-gradient(1.8px 1.8px at 70% 25%, var(--stars-color), transparent 50%),
-    radial-gradient(1.5px 1.5px at 40% 55%, var(--stars-color), transparent 50%),
-    radial-gradient(2.2px 2.2px at 85% 70%, var(--stars-color), transparent 50%);
-  background-size: 180px 180px, 220px 220px, 280px 280px, 320px 320px;
-  animation: twinkle 3s ease-in-out infinite alternate, twinkle-drift 8s ease-in-out infinite;
-  animation-delay: -1s, -3s;
-}
-
-body::after {
-  background-image:
-    radial-gradient(1.8px 1.8px at 15% 65%, var(--stars-color), transparent 50%),
-    radial-gradient(1.6px 1.6px at 80% 45%, var(--stars-color), transparent 50%),
-    radial-gradient(1.4px 1.4px at 60% 75%, var(--stars-color), transparent 50%),
-    radial-gradient(2px 2px at 35% 15%, var(--stars-color), transparent 50%);
-  background-size: 240px 240px, 260px 260px, 300px 300px, 350px 350px;
-  animation: twinkle-soft 2.5s ease-in-out infinite alternate, twinkle-pulse 5s ease-in-out infinite;
-  animation-delay: -2s, 0s;
-}
-
-@keyframes twinkle {
-  0% { opacity: 0.3; }
-  50% { opacity: 0.85; }
-  100% { opacity: 0.4; }
-}
-
-@keyframes twinkle-soft {
-  0% { opacity: 0.25; }
-  50% { opacity: 0.7; }
-  100% { opacity: 0.35; }
-}
-
-@keyframes twinkle-drift {
-  0%, 100% { opacity: 0.5; transform: translateY(0); }
-  25% { opacity: 0.9; }
-  50% { opacity: 0.4; transform: translateY(-2px); }
-  75% { opacity: 0.75; }
-}
-
-@keyframes twinkle-pulse {
-  0%, 100% { opacity: 0.4; }
-  20% { opacity: 0.8; }
-  40% { opacity: 0.3; }
-  60% { opacity: 0.9; }
-  80% { opacity: 0.5; }
-}
+/* Stars are now rendered in the canvas background (background.js) */
 
 /* Focus styles for accessibility */
 :focus-visible {
@@ -406,7 +341,7 @@ ul {
 .tag-list {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
 }
 
 .tag-item {
@@ -414,7 +349,7 @@ ul {
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-xs) var(--space-sm);
   border-radius: 6px;
   color: var(--text-secondary);
   text-align: left;
@@ -452,10 +387,10 @@ ul {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   padding: 0;
-  margin-left: var(--space-xs);
+  margin-left: 0;
   border-radius: 4px;
   color: var(--text-muted);
   flex-shrink: 0;
@@ -478,17 +413,17 @@ ul {
 }
 
 .tag-toggle-spacer {
-  width: 20px;
-  margin-left: var(--space-xs);
+  width: 18px;
+  margin-left: 0;
   flex-shrink: 0;
 }
 
 .tag-item.nested {
-  padding-left: var(--space-sm);
+  padding-left: var(--space-xs);
 }
 
 .tag-children {
-  margin-left: calc(var(--space-md) + 4px);
+  margin-left: var(--space-md);
   border-left: 1px solid var(--border);
   padding-left: var(--space-xs);
   overflow: hidden;

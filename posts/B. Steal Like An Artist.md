@@ -1,5 +1,5 @@
 # B. Steal Like An Artist
-#books 
+#commonplace/books 
 
 ## 10 things nobody told you about being creative
 

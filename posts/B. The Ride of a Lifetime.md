@@ -1,5 +1,5 @@
 # B. The Ride of a Lifetime
-#books 
+#commonplace/books 
 
 ### 10 Principles
 

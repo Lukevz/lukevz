@@ -1,0 +1,5 @@
+# “HONESTY IS AN EXPENSIVGIFT, DON'T EXPECT IT FROM CHEAP PEOPLE.”
+
+https://x.com/Wisdom_HQ/status/1836918194390303078
+
+#commonplace/quotes

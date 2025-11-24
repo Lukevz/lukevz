@@ -1,5 +1,5 @@
 # B. Creativity, Inc.
- #books 
+ #commonplace/books 
 
 ---
 

@@ -1,5 +1,5 @@
 # B. Building A Second Brain
-#books 
+#commonplace/books 
 
 By Tiago Forte
 

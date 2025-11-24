@@ -1,5 +1,5 @@
 # B. Show Your Work
-#books 
+#commonplace/books 
 
 *10 ways to share your creativity and get discovered*
 

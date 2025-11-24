@@ -1,5 +1,5 @@
 # B. The Speed of Trust
-#books 
+#commonplace/books 
 
 > ### **One line summary**
 > Trust is the most valuable currency which shapes the culture, efficiency, and integrity of an organization through intentionality in every interaction.
