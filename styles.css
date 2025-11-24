@@ -488,6 +488,9 @@ ul {
   font-weight: 500;
   margin-bottom: var(--space-xs);
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .post-item-excerpt {

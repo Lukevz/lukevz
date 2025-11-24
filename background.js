@@ -64,97 +64,97 @@
   // ==========================================================================
 
   // Dark theme sphere configurations - vibrant pink/blue space aesthetic
-  // Spheres positioned in lower 2/3 of screen to leave dark space for stars at top
+  // Spheres staggered with varying depths to create celestial body illusion
+  // More black space between bodies, varied sizes for depth perception
   const darkSphereConfigs = [
-    // Large pink/coral sphere (back, lower-right) - main warm glow
-    // Vibrant coral-pink highlight fading to deep magenta
+    // Distant dark planet (far back, upper-right)
+    // Deep purple/maroon tones suggest distance and shadow
     {
-      baseX: 0.7,
-      baseY: 0.85,
-      baseRadius: 0.55,
+      baseX: 0.78,
+      baseY: 0.32,
+      baseRadius: 0.25,
       colors: [
-        { offset: 0, color: 'rgba(255, 180, 160, 1)' },    // Bright peach-coral highlight
-        { offset: 0.1, color: 'rgba(255, 150, 140, 1)' },  // Warm coral
-        { offset: 0.2, color: 'rgba(245, 130, 135, 1)' },  // Vibrant pink-coral
-        { offset: 0.35, color: 'rgba(220, 110, 140, 1)' }, // Rich pink
-        { offset: 0.5, color: 'rgba(185, 90, 140, 1)' },   // Magenta-pink
-        { offset: 0.65, color: 'rgba(145, 70, 130, 1)' },  // Deep magenta
-        { offset: 0.8, color: 'rgba(100, 50, 110, 1)' },   // Purple-magenta
-        { offset: 0.92, color: 'rgba(60, 35, 80, 1)' },    // Deep violet
-        { offset: 1, color: 'rgba(35, 25, 55, 1)' }        // Dark plum
+        { offset: 0, color: 'rgba(140, 90, 110, 0.9)' },
+        { offset: 0.15, color: 'rgba(115, 70, 95, 0.92)' },
+        { offset: 0.3, color: 'rgba(90, 55, 80, 0.95)' },
+        { offset: 0.5, color: 'rgba(70, 42, 65, 0.97)' },
+        { offset: 0.7, color: 'rgba(50, 32, 52, 1)' },
+        { offset: 0.85, color: 'rgba(35, 24, 40, 1)' },
+        { offset: 1, color: 'rgba(22, 16, 28, 1)' }
       ],
-      rimColor: 'rgba(255, 200, 180, 0.85)',               // Warm peach-cream rim
+      rimColor: 'rgba(180, 130, 150, 0.45)',
+      rimIntensity: 0.35,
+      lightAngleOffset: 0,
+      drift: { x: 0.004, y: 0.003, scale: 0.008 },
+      driftSpeed: 0.3,
+      zIndex: 0
+    },
+    // Sky blue planet (mid-ground, lower-left)
+    // Cool contrast, medium distance
+    {
+      baseX: -0.08,
+      baseY: 0.82,
+      baseRadius: 0.36,
+      colors: [
+        { offset: 0, color: 'rgba(170, 210, 255, 1)' },
+        { offset: 0.15, color: 'rgba(140, 190, 245, 1)' },
+        { offset: 0.3, color: 'rgba(115, 170, 230, 1)' },
+        { offset: 0.5, color: 'rgba(90, 145, 210, 1)' },
+        { offset: 0.7, color: 'rgba(70, 115, 180, 1)' },
+        { offset: 0.85, color: 'rgba(50, 80, 140, 1)' },
+        { offset: 1, color: 'rgba(30, 50, 100, 1)' }
+      ],
+      rimColor: 'rgba(200, 230, 255, 0.8)',
+      rimIntensity: 0.55,
+      lightAngleOffset: Math.PI * 0.4,
+      drift: { x: 0.007, y: 0.006, scale: 0.01 },
+      driftSpeed: 0.5,
+      zIndex: 1
+    },
+    // Large pink/coral planet (mid-ground, lower-right)
+    // Main warm focal point
+    {
+      baseX: 0.8,
+      baseY: 1.0,
+      baseRadius: 0.45,
+      colors: [
+        { offset: 0, color: 'rgba(255, 180, 160, 1)' },
+        { offset: 0.1, color: 'rgba(255, 150, 140, 1)' },
+        { offset: 0.2, color: 'rgba(245, 130, 135, 1)' },
+        { offset: 0.35, color: 'rgba(220, 110, 140, 1)' },
+        { offset: 0.5, color: 'rgba(185, 90, 140, 1)' },
+        { offset: 0.65, color: 'rgba(145, 70, 130, 1)' },
+        { offset: 0.8, color: 'rgba(100, 50, 110, 1)' },
+        { offset: 0.92, color: 'rgba(60, 35, 80, 1)' },
+        { offset: 1, color: 'rgba(35, 25, 55, 1)' }
+      ],
+      rimColor: 'rgba(255, 200, 180, 0.85)',
       rimIntensity: 0.65,
       lightAngleOffset: 0,
       drift: { x: 0.006, y: 0.005, scale: 0.012 },
       driftSpeed: 0.45,
-      zIndex: 0
-    },
-    // Sky blue sphere (left side, lower) - cool contrast
-    // Soft sky blue → cyan gradient
-    {
-      baseX: 0.05,
-      baseY: 0.9,
-      baseRadius: 0.42,
-      colors: [
-        { offset: 0, color: 'rgba(170, 210, 255, 1)' },    // Bright sky blue highlight
-        { offset: 0.15, color: 'rgba(140, 190, 245, 1)' }, // Soft sky blue
-        { offset: 0.3, color: 'rgba(115, 170, 230, 1)' },  // Light azure
-        { offset: 0.5, color: 'rgba(90, 145, 210, 1)' },   // Medium blue
-        { offset: 0.7, color: 'rgba(70, 115, 180, 1)' },   // Deeper blue
-        { offset: 0.85, color: 'rgba(50, 80, 140, 1)' },   // Navy blue
-        { offset: 1, color: 'rgba(30, 50, 100, 1)' }       // Deep navy
-      ],
-      rimColor: 'rgba(200, 230, 255, 0.8)',                // Soft sky-white rim
-      rimIntensity: 0.55,
-      lightAngleOffset: Math.PI * 0.4,
-      drift: { x: 0.008, y: 0.007, scale: 0.01 },
-      driftSpeed: 0.55,
-      zIndex: 1
-    },
-    // Lavender/violet transitional sphere (bottom-center)
-    // Bridges the warm and cool tones
-    {
-      baseX: 0.4,
-      baseY: 1.15,
-      baseRadius: 0.48,
-      colors: [
-        { offset: 0, color: 'rgba(200, 170, 220, 1)' },    // Soft lavender highlight
-        { offset: 0.15, color: 'rgba(180, 150, 210, 1)' }, // Light purple
-        { offset: 0.3, color: 'rgba(160, 130, 195, 1)' },  // Lavender
-        { offset: 0.5, color: 'rgba(140, 110, 175, 1)' },  // Medium violet
-        { offset: 0.7, color: 'rgba(110, 85, 150, 1)' },   // Deep lavender
-        { offset: 0.85, color: 'rgba(80, 60, 120, 1)' },   // Rich purple
-        { offset: 1, color: 'rgba(50, 40, 85, 1)' }        // Dark violet
-      ],
-      rimColor: 'rgba(220, 190, 240, 0.75)',               // Soft violet-cream rim
-      rimIntensity: 0.5,
-      lightAngleOffset: Math.PI * 0.8,
-      drift: { x: 0.01, y: 0.009, scale: 0.011 },
-      driftSpeed: 0.5,
       zIndex: 2
     },
-    // Large cyan-aqua sphere (front, bottom-right corner)
-    // Cool accent sphere overlapping with main pink
+    // Lavender planet (foreground, bottom-center, partially off-screen)
+    // Closest body
     {
-      baseX: 0.9,
-      baseY: 1.3,
-      baseRadius: 0.5,
+      baseX: 0.32,
+      baseY: 1.28,
+      baseRadius: 0.4,
       colors: [
-        { offset: 0, color: 'rgba(160, 220, 240, 1)' },    // Bright cyan highlight
-        { offset: 0.12, color: 'rgba(130, 200, 230, 1)' }, // Light cyan
-        { offset: 0.25, color: 'rgba(100, 180, 215, 1)' }, // Soft aqua
-        { offset: 0.4, color: 'rgba(80, 155, 195, 1)' },   // Medium cyan-blue
-        { offset: 0.55, color: 'rgba(70, 130, 175, 1)' },  // Teal-blue
-        { offset: 0.7, color: 'rgba(60, 100, 150, 1)' },   // Deeper teal
-        { offset: 0.85, color: 'rgba(45, 70, 120, 1)' },   // Navy-teal
-        { offset: 1, color: 'rgba(30, 45, 85, 1)' }        // Deep navy
+        { offset: 0, color: 'rgba(200, 170, 220, 1)' },
+        { offset: 0.15, color: 'rgba(180, 150, 210, 1)' },
+        { offset: 0.3, color: 'rgba(160, 130, 195, 1)' },
+        { offset: 0.5, color: 'rgba(140, 110, 175, 1)' },
+        { offset: 0.7, color: 'rgba(110, 85, 150, 1)' },
+        { offset: 0.85, color: 'rgba(80, 60, 120, 1)' },
+        { offset: 1, color: 'rgba(50, 40, 85, 1)' }
       ],
-      rimColor: 'rgba(180, 235, 255, 0.75)',               // Bright cyan-white rim
-      rimIntensity: 0.6,
-      lightAngleOffset: Math.PI * 1.3,
-      drift: { x: 0.005, y: 0.007, scale: 0.009 },
-      driftSpeed: 0.4,
+      rimColor: 'rgba(220, 190, 240, 0.75)',
+      rimIntensity: 0.5,
+      lightAngleOffset: Math.PI * 0.8,
+      drift: { x: 0.008, y: 0.007, scale: 0.01 },
+      driftSpeed: 0.45,
       zIndex: 3
     }
   ];
@@ -331,40 +331,40 @@
       ctx.fillStyle = '#06080c';
       ctx.fillRect(0, 0, width, height);
 
-      // Bottom-right: vibrant pink/coral atmospheric glow (shifted down)
+      // Bottom-right: vibrant pink/coral atmospheric glow (more compact, less spread)
       const pinkGlow = ctx.createRadialGradient(
-        width * 1.0, height * 0.85, 0,
-        width * 0.7, height * 0.9, width * 0.7
+        width * 1.0, height * 1.0, 0,
+        width * 0.8, height * 0.95, width * 0.5
       );
-      pinkGlow.addColorStop(0, 'rgba(180, 80, 100, 0.28)');       // Vibrant pink core
-      pinkGlow.addColorStop(0.2, 'rgba(150, 60, 90, 0.2)');       // Rich magenta
-      pinkGlow.addColorStop(0.4, 'rgba(120, 50, 80, 0.12)');      // Deep pink
-      pinkGlow.addColorStop(0.6, 'rgba(80, 35, 60, 0.05)');       // Warm fade
+      pinkGlow.addColorStop(0, 'rgba(180, 80, 100, 0.22)');       // Vibrant pink core
+      pinkGlow.addColorStop(0.25, 'rgba(150, 60, 90, 0.14)');     // Rich magenta
+      pinkGlow.addColorStop(0.5, 'rgba(120, 50, 80, 0.07)');      // Deep pink
+      pinkGlow.addColorStop(0.75, 'rgba(80, 35, 60, 0.02)');      // Warm fade
       pinkGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = pinkGlow;
       ctx.fillRect(0, 0, width, height);
 
-      // Bottom-left: cool blue atmospheric glow (shifted down)
+      // Bottom-left: cool blue atmospheric glow (tighter radius)
       const blueGlow = ctx.createRadialGradient(
-        width * -0.1, height * 0.9, 0,
-        width * 0.2, height * 0.85, width * 0.6
+        width * -0.1, height * 1.0, 0,
+        width * 0.1, height * 0.9, width * 0.45
       );
-      blueGlow.addColorStop(0, 'rgba(80, 140, 200, 0.22)');       // Bright sky blue
-      blueGlow.addColorStop(0.2, 'rgba(60, 110, 170, 0.15)');     // Medium blue
-      blueGlow.addColorStop(0.4, 'rgba(45, 80, 140, 0.08)');      // Deeper blue
-      blueGlow.addColorStop(0.6, 'rgba(30, 55, 100, 0.03)');      // Navy fade
+      blueGlow.addColorStop(0, 'rgba(80, 140, 200, 0.18)');       // Bright sky blue
+      blueGlow.addColorStop(0.25, 'rgba(60, 110, 170, 0.1)');     // Medium blue
+      blueGlow.addColorStop(0.5, 'rgba(45, 80, 140, 0.04)');      // Deeper blue
+      blueGlow.addColorStop(0.75, 'rgba(30, 55, 100, 0.01)');     // Navy fade
       blueGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = blueGlow;
       ctx.fillRect(0, 0, width, height);
 
-      // Center-bottom: soft lavender transition glow
+      // Center-bottom: soft lavender transition glow (reduced)
       const lavenderGlow = ctx.createRadialGradient(
-        width * 0.45, height * 1.3, 0,
-        width * 0.45, height * 1.0, width * 0.55
+        width * 0.4, height * 1.4, 0,
+        width * 0.4, height * 1.1, width * 0.4
       );
-      lavenderGlow.addColorStop(0, 'rgba(130, 100, 160, 0.2)');   // Soft lavender
-      lavenderGlow.addColorStop(0.3, 'rgba(100, 75, 140, 0.12)'); // Medium violet
-      lavenderGlow.addColorStop(0.6, 'rgba(70, 50, 110, 0.05)');  // Deep purple
+      lavenderGlow.addColorStop(0, 'rgba(130, 100, 160, 0.15)');  // Soft lavender
+      lavenderGlow.addColorStop(0.35, 'rgba(100, 75, 140, 0.08)');// Medium violet
+      lavenderGlow.addColorStop(0.7, 'rgba(70, 50, 110, 0.02)');  // Deep purple
       lavenderGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = lavenderGlow;
       ctx.fillRect(0, 0, width, height);
