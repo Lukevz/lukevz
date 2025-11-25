@@ -423,10 +423,13 @@ function renderPosts(tag = 'all') {
 /**
  * Render note view
  */
-function renderNote(post) {
+function renderNote(post, updateUrl = true) {
   if (!post) {
     elements.noteEmpty.classList.remove('hidden');
     elements.noteContent.classList.add('hidden');
+    if (updateUrl) {
+      updateNoteUrl(null);
+    }
     return;
   }
 
@@ -467,6 +470,11 @@ function renderNote(post) {
 
   // Scroll to top of note
   elements.noteView.scrollTop = 0;
+
+  // Update URL to reflect current note
+  if (updateUrl) {
+    updateNoteUrl(post);
+  }
 }
 
 /**
@@ -490,6 +498,65 @@ function formatDate(dateStr) {
     month: 'short',
     day: 'numeric'
   });
+}
+
+/**
+ * Convert filename to URL-safe slug
+ */
+function filenameToSlug(filename) {
+  if (!filename) return '';
+  // Remove .md extension
+  let slug = filename.replace(/\.md$/i, '');
+  // Replace spaces and special chars with hyphens
+  slug = slug.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  return slug;
+}
+
+/**
+ * Find post by slug
+ */
+function findPostBySlug(slug) {
+  return state.posts.find(post => filenameToSlug(post.filename) === slug);
+}
+
+/**
+ * Get current note from URL hash
+ * Expected format: #note/slug or #note/slug?tag=tagname
+ */
+function getNoteFromUrl() {
+  const hash = window.location.hash;
+  if (!hash || !hash.startsWith('#note/')) return null;
+
+  // Extract slug (everything after #note/ until ? or end)
+  const match = hash.match(/#note\/([^?]+)/);
+  if (!match) return null;
+
+  const slug = match[1];
+  return findPostBySlug(slug);
+}
+
+/**
+ * Update URL to reflect current note
+ */
+function updateNoteUrl(post) {
+  if (!post) {
+    // Clear the note hash but keep the view
+    const hash = window.location.hash;
+    if (hash.startsWith('#note/')) {
+      window.history.pushState(null, '', '#notes');
+    }
+    return;
+  }
+
+  const slug = filenameToSlug(post.filename);
+  const newHash = `#note/${slug}`;
+
+  // Only update if different from current hash
+  if (window.location.hash !== newHash) {
+    window.history.pushState(null, '', newHash);
+  }
 }
 
 /**
@@ -588,6 +655,25 @@ function setupEventListeners() {
       }
     }
   });
+
+  // Handle browser back/forward navigation
+  window.addEventListener('popstate', () => {
+    const noteFromUrl = getNoteFromUrl();
+    if (noteFromUrl) {
+      state.currentPost = noteFromUrl;
+      renderNote(noteFromUrl, false); // Don't update URL since we're responding to URL change
+      // Switch to notes view if not already there
+      if (state.currentView !== 'notes') {
+        performViewSwitch('notes');
+      }
+    } else {
+      // No note in URL, clear current note
+      if (state.currentPost) {
+        state.currentPost = null;
+        renderNote(null, false);
+      }
+    }
+  });
 }
 
 /**
@@ -621,8 +707,17 @@ async function loadPosts() {
     buildTagNav();
     renderPosts();
 
-    // Open Garden Readme as default, or first post on desktop
-    if (window.innerWidth > 1024 && state.posts.length > 0) {
+    // Check if there's a note in the URL to open (deep linking)
+    const noteFromUrl = getNoteFromUrl();
+    if (noteFromUrl) {
+      state.currentPost = noteFromUrl;
+      renderNote(noteFromUrl, false); // Don't update URL since we're loading from it
+      // Switch to notes view if not already there
+      if (state.currentView !== 'notes') {
+        performViewSwitch('notes');
+      }
+    } else if (window.innerWidth > 1024 && state.posts.length > 0) {
+      // Open Garden Readme as default, or first post on desktop (only if no URL note)
       const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
       const sorted = [...state.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
       const postToOpen = defaultPost || sorted[0];
@@ -697,12 +792,20 @@ function performViewSwitch(viewName) {
     tab.classList.toggle('active', tab.dataset.view === viewName);
   });
 
-  // When switching to notes view, always select Garden Readme as the default
+  // When switching to notes view, check URL first, then default to Garden Readme
   if (viewName === 'notes' && state.posts.length > 0) {
-    const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
-    if (defaultPost) {
-      state.currentPost = defaultPost;
-      renderNote(defaultPost);
+    const noteFromUrl = getNoteFromUrl();
+    if (noteFromUrl) {
+      // If there's a note in the URL, open that
+      state.currentPost = noteFromUrl;
+      renderNote(noteFromUrl, false);
+    } else if (!state.currentPost) {
+      // If no note in URL and no current post, default to Garden Readme
+      const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
+      if (defaultPost) {
+        state.currentPost = defaultPost;
+        renderNote(defaultPost);
+      }
     }
   }
 
