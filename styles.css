@@ -1157,7 +1157,7 @@ ul {
 .view {
   display: none;
   position: fixed;
-  z-index: 10;
+  z-index: 1010; /* Above status bar (1001) so windows can be dragged */
 }
 
 .view.active {
@@ -1268,11 +1268,12 @@ ul {
 
 /* Narrow window views (Tasks) - 500px wide, fills between menu bar and dock */
 .tasks-view {
-  top: 80px; /* Below top menu bar + 32px padding */
+  top: 100px; /* Below top menu bar (20px margin + ~60px height + 20px spacing) */
   left: 50%;
   transform: translateX(-50%);
   width: min(500px, calc(100vw - 64px));
-  height: min(calc(100vh - 200px), calc(100vh - 80px - 120px));
+  height: calc(100vh - 120px); /* Full height minus top spacing and bottom margin */
+  max-height: calc(100vh - 120px);
   background: var(--bg-primary);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -1281,15 +1282,16 @@ ul {
   box-shadow: 0 24px 80px var(--shadow-color);
   overflow: hidden;
   flex-direction: column;
+  z-index: 1010; /* Explicitly set to be above status bar */
 }
 
 /* Fullscreen window view (Notes) - fills between top and dock */
 .notes-view.active {
   display: flex;
-  top: max(24px, 2vh);
+  top: max(80px, calc(20px + 60px)); /* Start below status bar (20px margin + ~60px height) */
   left: max(48px, 3vw);
   right: max(48px, 3vw);
-  bottom: max(120px, 15vh);
+  bottom: 20px; /* Remove old bottom constraint for footer */
   width: auto;
   height: auto;
   transform: none;
@@ -1300,6 +1302,7 @@ ul {
   border: 1px solid var(--border);
   box-shadow: 0 24px 80px var(--shadow-color);
   overflow: hidden;
+  z-index: 1010; /* Explicitly set to be above status bar */
 }
 
 .notes-view {
@@ -1525,11 +1528,12 @@ ul {
 /* ==================== */
 
 .music-view {
-  top: 80px;
+  top: 100px; /* Below top menu bar (20px margin + ~60px height + 20px spacing) */
   left: 50%;
   transform: translateX(-50%);
   width: min(500px, calc(100vw - 64px));
-  height: min(calc(100vh - 200px), calc(100vh - 80px - 120px));
+  height: calc(100vh - 120px); /* Full height minus top spacing and bottom margin */
+  max-height: calc(100vh - 120px);
   background: var(--bg-primary);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -1538,6 +1542,7 @@ ul {
   box-shadow: 0 24px 80px var(--shadow-color);
   overflow: hidden;
   flex-direction: column;
+  z-index: 1010; /* Explicitly set to be above status bar */
 }
 
 .music-folders {
