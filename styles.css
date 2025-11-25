@@ -4,18 +4,17 @@
 
 .system-alert {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: 20px;
+  right: 20px;
   background: var(--bg-secondary);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border);
   border-radius: 0px;
   box-shadow: 0 8px 32px var(--shadow-color);
-  padding: var(--space-2xl);
-  max-width: 600px;
-  width: 90%;
+  padding: 1.5rem 1.5rem;
+  max-width: 420px;
+  width: calc(100% - 40px);
   z-index: 9999;
   opacity: 0;
   visibility: hidden;
@@ -27,8 +26,14 @@
   visibility: visible;
 }
 
+.system-alert-content {
+  padding: 0;
+  padding-right: 2.5rem;
+  font-family: 'Doto', var(--font-sans);
+}
+
 .system-alert-content h1 {
-  font-size: 1.5rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 var(--space-md) 0;
@@ -36,7 +41,7 @@
 }
 
 .system-alert-content p {
-  font-size: 1rem;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.6;
@@ -72,16 +77,22 @@
 
 @media (max-width: 768px) {
   .system-alert {
-    padding: var(--space-xl);
-    max-width: 90%;
+    padding: 1.25rem 1.25rem;
+    max-width: calc(100% - 40px);
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .system-alert-content {
+    padding-right: 2rem;
   }
 
   .system-alert-content h1 {
-    font-size: 1.25rem;
+    font-size: 1rem;
   }
 
   .system-alert-content p {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
   }
 }
 
@@ -91,9 +102,10 @@
 
 .top-menu-bar {
   position: fixed;
-  top: var(--space-md);
-  left: 50%;
-  transform: translateX(-50%);
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  width: calc(100% - 40px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -102,11 +114,10 @@
   background: var(--bg-secondary);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   border-radius: 0px;
   box-shadow: 0 4px 24px var(--shadow-color);
   z-index: 1001;
-  min-width: 400px;
 }
 
 .menu-left,
@@ -243,14 +254,51 @@
   transform: rotate(180deg);
 }
 
+/* Hide follow button on wider screens - show social icons directly */
+@media (min-width: 769px) {
+  .follow-btn {
+    display: none;
+  }
+  
+  .social-icons {
+    display: flex;
+  }
+}
+
 .social-icons {
-  display: none;
+  display: flex;
   align-items: center;
   gap: var(--space-xs);
 }
 
-.social-icons.show {
-  display: flex;
+/* On mobile, hide social icons by default and show them in dropdown */
+@media (max-width: 768px) {
+  .social-icons {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: var(--space-xs);
+    padding: var(--space-sm);
+    background: var(--bg-secondary);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--border);
+    border-radius: 0px;
+    box-shadow: 0 8px 24px var(--shadow-color);
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 200px;
+    z-index: 1002;
+  }
+
+  .social-icons.show {
+    display: flex;
+  }
+
+  .menu-right {
+    position: relative;
+  }
 }
 
 .social-icon {
@@ -295,11 +343,8 @@
 }
 
 /* Mobile adjustments for top menu bar */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .top-menu-bar {
-    min-width: auto;
-    width: calc(100% - var(--space-lg));
-    max-width: 400px;
     padding: var(--space-xs) var(--space-md);
     gap: var(--space-sm);
   }
@@ -317,13 +362,17 @@
   }
 
   .social-icon {
-    width: 28px;
-    height: 28px;
+    width: 100%;
+    height: auto;
+    padding: var(--space-sm);
+    justify-content: flex-start;
+    border-radius: 0px;
   }
 
   .social-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    margin-right: var(--space-sm);
   }
 }
 
@@ -1124,6 +1173,8 @@ ul {
 .window-titlebar {
   cursor: grab;
   user-select: none;
+  position: relative;
+  z-index: 20; /* Higher than resize handles to prevent resize when clicking titlebar */
 }
 
 /* Window resize handles */

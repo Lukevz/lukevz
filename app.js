@@ -199,6 +199,11 @@ function makeWindowResizable(window) {
   let originalWidth, originalHeight, originalX, originalY, originalMouseX, originalMouseY;
 
   function initResize(e) {
+    // Don't allow resize if clicking on titlebar or its children
+    if (e.target.closest('.window-titlebar')) {
+      return;
+    }
+    
     e.preventDefault();
     e.stopPropagation();
 
@@ -2085,9 +2090,17 @@ function setupMusicPlayer() {
  * Detect and set background image (supports png, jpg, jpeg, webp)
  */
 async function initBackgroundImage() {
+  // Use the existing bg.jpg file as the background
+  // If you want dark/light mode specific images, add them to the images folder
+  // and uncomment the code below
+  document.documentElement.style.setProperty('--bg-image', `url('images/bg.jpg')`);
+
+  // Uncomment below to support dark/light mode specific images:
+  /*
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const baseName = isDark ? 'dark' : 'light';
   const extensions = ['jpg', 'png', 'jpeg', 'webp'];
+  let imageFound = false;
 
   for (const ext of extensions) {
     const url = `images/${baseName}.${ext}`;
@@ -2095,6 +2108,7 @@ async function initBackgroundImage() {
       const response = await fetch(url, { method: 'HEAD' });
       if (response.ok) {
         document.documentElement.style.setProperty('--bg-image', `url('${url}')`);
+        imageFound = true;
         break;
       }
     } catch {
@@ -2102,8 +2116,14 @@ async function initBackgroundImage() {
     }
   }
 
-  // Listen for color scheme changes
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', initBackgroundImage);
+  // Fallback to bg.jpg if no dark/light image found
+  if (!imageFound) {
+    document.documentElement.style.setProperty('--bg-image', `url('images/bg.jpg')`);
+  }
+  */
+
+  // Listen for color scheme changes (only needed if using dark/light images)
+  // window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', initBackgroundImage);
 }
 
 /**
