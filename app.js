@@ -9,8 +9,12 @@ const state = {
   tags: new Map(),
   currentTag: 'all',
   currentPost: null,
-  currentView: 'home',
-  expandedTags: new Set() // Track expanded parent tags
+  currentView: null,
+  expandedTags: new Set(), // Track expanded parent tags
+  windows: {
+    openWindows: new Set(), // Track which windows are open
+    highestZIndex: 10 // Track highest z-index for window stacking
+  }
 };
 
 // DOM Elements
@@ -28,6 +32,329 @@ const elements = {
   noteBody: document.getElementById('noteBody'),
   mobileMenuToggle: document.getElementById('mobileMenuToggle')
 };
+
+// ==========================================
+// Window Management System
+// ==========================================
+
+/**
+ * Check if we're on mobile
+ */
+function isMobile() {
+  return window.innerWidth <= 768;
+}
+
+/**
+ * Add resize handles to a window (corners only)
+ */
+function addResizeHandles(window) {
+  const handles = [
+    'top-left', 'top-right', 'bottom-left', 'bottom-right'
+  ];
+
+  handles.forEach(position => {
+    const handle = document.createElement('div');
+    handle.className = `resize-handle resize-${position}`;
+    handle.dataset.position = position;
+    window.appendChild(handle);
+  });
+}
+
+/**
+ * Make windows draggable and manage window operations
+ */
+function setupWindowManagement() {
+  const windows = document.querySelectorAll('.view');
+
+  windows.forEach(window => {
+    const titlebar = window.querySelector('.window-titlebar');
+    const closeBtn = window.querySelector('.window-close');
+
+    // Only enable dragging and resizing on desktop
+    if (!isMobile()) {
+      if (titlebar) {
+        makeWindowDraggable(window, titlebar);
+      }
+
+      // Add resize handles
+      addResizeHandles(window);
+      makeWindowResizable(window);
+
+      // Bring window to front when clicked
+      window.addEventListener('mousedown', () => {
+        bringWindowToFront(window);
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeWindow(window);
+      });
+    }
+  });
+
+  // Handle window resize - re-initialize if switching between mobile/desktop
+  let wasMobile = isMobile();
+  window.addEventListener('resize', () => {
+    const isNowMobile = isMobile();
+    if (wasMobile !== isNowMobile) {
+      wasMobile = isNowMobile;
+      // If switching to mobile, close all windows except one
+      if (isNowMobile && state.windows.openWindows.size > 1) {
+        const openWindows = Array.from(state.windows.openWindows);
+        const firstWindow = openWindows[0];
+        openWindows.slice(1).forEach(windowId => {
+          const win = document.getElementById(`${windowId}View`);
+          if (win) closeWindow(win);
+        });
+      }
+    }
+  });
+}
+
+/**
+ * Make a window draggable by its titlebar
+ */
+function makeWindowDraggable(window, titlebar) {
+  let isDragging = false;
+  let currentX;
+  let currentY;
+  let initialX;
+  let initialY;
+  let xOffset = 0;
+  let yOffset = 0;
+
+  // Get current position from inline styles or compute it
+  const computedStyle = window.computedStyleMap ? window.computedStyleMap() : getComputedStyle(window);
+  const currentTop = parseInt(window.style.top) || parseInt(computedStyle.get ? computedStyle.get('top').value : computedStyle.top);
+  const currentLeft = parseInt(window.style.left) || parseInt(computedStyle.get ? computedStyle.get('left').value : computedStyle.left);
+
+  if (!isNaN(currentTop) && !isNaN(currentLeft)) {
+    xOffset = currentLeft;
+    yOffset = currentTop;
+    setTranslate(currentLeft, currentTop, window);
+  }
+
+  titlebar.addEventListener('mousedown', dragStart);
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('mouseup', dragEnd);
+
+  function dragStart(e) {
+    // Don't drag if clicking on close button or other interactive elements
+    if (e.target.closest('.window-close') || e.target.closest('.social-icon') || e.target.closest('button:not(.window-close)')) {
+      return;
+    }
+
+    initialX = e.clientX - xOffset;
+    initialY = e.clientY - yOffset;
+
+    if (e.target === titlebar || titlebar.contains(e.target)) {
+      isDragging = true;
+      window.classList.add('dragging');
+      bringWindowToFront(window);
+    }
+  }
+
+  function drag(e) {
+    if (isDragging) {
+      e.preventDefault();
+
+      currentX = e.clientX - initialX;
+      currentY = e.clientY - initialY;
+
+      xOffset = currentX;
+      yOffset = currentY;
+
+      setTranslate(currentX, currentY, window);
+    }
+  }
+
+  function dragEnd(e) {
+    initialX = currentX;
+    initialY = currentY;
+    isDragging = false;
+    window.classList.remove('dragging');
+  }
+
+  function setTranslate(xPos, yPos, el) {
+    el.style.left = `${xPos}px`;
+    el.style.top = `${yPos}px`;
+    el.style.transform = 'none'; // Override any existing transforms
+  }
+}
+
+/**
+ * Make a window resizable by its edges
+ */
+function makeWindowResizable(window) {
+  const handles = window.querySelectorAll('.resize-handle');
+
+  handles.forEach(handle => {
+    handle.addEventListener('mousedown', initResize);
+  });
+
+  let isResizing = false;
+  let currentHandle = null;
+  let originalWidth, originalHeight, originalX, originalY, originalMouseX, originalMouseY;
+
+  function initResize(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    isResizing = true;
+    currentHandle = e.target.dataset.position;
+
+    originalWidth = window.offsetWidth;
+    originalHeight = window.offsetHeight;
+    originalX = window.offsetLeft;
+    originalY = window.offsetTop;
+    originalMouseX = e.clientX;
+    originalMouseY = e.clientY;
+
+    window.classList.add('resizing');
+    bringWindowToFront(window);
+
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('mouseup', stopResize);
+  }
+
+  function resize(e) {
+    if (!isResizing) return;
+
+    const deltaX = e.clientX - originalMouseX;
+    const deltaY = e.clientY - originalMouseY;
+
+    let newWidth = originalWidth;
+    let newHeight = originalHeight;
+    let newX = originalX;
+    let newY = originalY;
+
+    // Minimum dimensions
+    const minWidth = 300;
+    const minHeight = 200;
+
+    // Handle different resize directions
+    if (currentHandle.includes('right')) {
+      newWidth = Math.max(minWidth, originalWidth + deltaX);
+    }
+    if (currentHandle.includes('left')) {
+      const widthChange = originalWidth - deltaX;
+      if (widthChange >= minWidth) {
+        newWidth = widthChange;
+        newX = originalX + deltaX;
+      }
+    }
+    if (currentHandle.includes('bottom')) {
+      newHeight = Math.max(minHeight, originalHeight + deltaY);
+    }
+    if (currentHandle.includes('top')) {
+      const heightChange = originalHeight - deltaY;
+      if (heightChange >= minHeight) {
+        newHeight = heightChange;
+        newY = originalY + deltaY;
+      }
+    }
+
+    // Apply new dimensions and position
+    window.style.width = `${newWidth}px`;
+    window.style.height = `${newHeight}px`;
+    window.style.left = `${newX}px`;
+    window.style.top = `${newY}px`;
+    window.style.right = 'auto';
+    window.style.bottom = 'auto';
+    window.style.transform = 'none';
+  }
+
+  function stopResize() {
+    isResizing = false;
+    currentHandle = null;
+    window.classList.remove('resizing');
+
+    document.removeEventListener('mousemove', resize);
+    document.removeEventListener('mouseup', stopResize);
+  }
+}
+
+/**
+ * Bring window to front by managing z-index
+ */
+function bringWindowToFront(window) {
+  state.windows.highestZIndex++;
+  window.style.zIndex = state.windows.highestZIndex;
+}
+
+/**
+ * Close a window
+ */
+function closeWindow(window) {
+  const windowId = window.id.replace('View', '');
+  window.classList.remove('active');
+  state.windows.openWindows.delete(windowId);
+
+  // Update nav icon button state
+  const navBtn = document.querySelector(`.nav-icon-btn[data-view="${windowId}"]`);
+  if (navBtn) {
+    navBtn.classList.remove('active');
+  }
+}
+
+/**
+ * Open a window
+ */
+function openWindow(windowId) {
+  const window = document.getElementById(`${windowId}View`);
+  if (!window) return;
+
+  window.classList.add('active');
+  state.windows.openWindows.add(windowId);
+  bringWindowToFront(window);
+
+  // Update nav icon button state
+  const navBtn = document.querySelector(`.nav-icon-btn[data-view="${windowId}"]`);
+  if (navBtn) {
+    navBtn.classList.add('active');
+  }
+
+  // Handle special cases for specific windows
+  if (windowId === 'notes' && state.posts.length > 0) {
+    const noteFromUrl = getNoteFromUrl();
+    if (noteFromUrl) {
+      state.currentPost = noteFromUrl;
+      renderNote(noteFromUrl, false);
+    } else if (!state.currentPost) {
+      const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
+      if (defaultPost) {
+        state.currentPost = defaultPost;
+        renderNote(defaultPost);
+      }
+    }
+  }
+
+  state.currentView = windowId;
+}
+
+/**
+ * Toggle window open/closed
+ */
+function toggleWindow(windowId) {
+  if (state.windows.openWindows.has(windowId)) {
+    const window = document.getElementById(`${windowId}View`);
+    closeWindow(window);
+  } else {
+    // On mobile, close all other windows first (single window mode)
+    if (isMobile()) {
+      const openWindows = Array.from(state.windows.openWindows);
+      openWindows.forEach(openWindowId => {
+        if (openWindowId !== windowId) {
+          const win = document.getElementById(`${openWindowId}View`);
+          if (win) closeWindow(win);
+        }
+      });
+    }
+    openWindow(windowId);
+  }
+}
 
 // Tag icons (Lucide icon SVG paths - https://lucide.dev/icons/)
 const tagIcons = {
@@ -716,13 +1043,20 @@ async function loadPosts() {
       if (state.currentView !== 'notes') {
         performViewSwitch('notes');
       }
-    } else if (window.innerWidth > 1024 && state.posts.length > 0) {
-      // Open Garden Readme as default, or first post on desktop (only if no URL note)
-      const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
-      const sorted = [...state.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
-      const postToOpen = defaultPost || sorted[0];
-      state.currentPost = postToOpen;
-      renderNote(postToOpen);
+    } else {
+      // Default to home view - clear any stray hashes
+      if (window.location.hash && window.location.hash !== '#home') {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+
+      // On desktop, preload Garden Readme for notes view but stay on home
+      if (window.innerWidth > 1024 && state.posts.length > 0) {
+        const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
+        const sorted = [...state.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const postToOpen = defaultPost || sorted[0];
+        state.currentPost = postToOpen;
+        // Don't render the note here - let it be opened when user clicks notes
+      }
     }
   } catch (err) {
     console.error('Failed to load posts manifest:', err);
@@ -740,31 +1074,7 @@ async function loadPosts() {
 }
 
 /**
- * Render latest post on home view
- */
-function renderLatestPost() {
-  const latestPostEl = document.getElementById('latestPost');
-  if (!latestPostEl || state.posts.length === 0) return;
-
-  const sorted = [...state.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const latest = sorted[0];
-
-  latestPostEl.innerHTML = `
-    <h3 class="latest-post-title">${latest.title}</h3>
-    <p class="latest-post-excerpt">${latest.excerpt}</p>
-    <time class="latest-post-date">${formatDate(latest.date)}</time>
-  `;
-
-  // Click to navigate to notes and open the post
-  latestPostEl.addEventListener('click', () => {
-    switchView('notes');
-    state.currentPost = latest;
-    renderNote(latest);
-  });
-}
-
-/**
- * Switch between views (home, tasks, notes, music)
+ * Switch between views (tasks, notes, music)
  * Uses CSS fade transition for smooth, mobile-friendly effect
  */
 function switchView(viewName) {
@@ -787,9 +1097,9 @@ function performViewSwitch(viewName) {
     targetView.classList.add('active');
   }
 
-  // Update nav tabs
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.view === viewName);
+  // Update nav icon buttons
+  document.querySelectorAll('.nav-icon-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === viewName);
   });
 
   // When switching to notes view, check URL first, then default to Garden Readme
@@ -813,18 +1123,33 @@ function performViewSwitch(viewName) {
 }
 
 /**
- * Setup floating navigation
+ * Setup top menu bar navigation
  */
-function setupFloatingNav() {
-  const floatingNav = document.getElementById('floatingNav');
-  if (!floatingNav) return;
+function setupTopMenuNav() {
+  const menuNav = document.getElementById('menuNav');
+  if (!menuNav) return;
 
-  floatingNav.addEventListener('click', (e) => {
-    const tab = e.target.closest('.nav-tab');
-    if (tab) {
-      const viewName = tab.dataset.view;
-      switchView(viewName);
+  menuNav.addEventListener('click', (e) => {
+    const btn = e.target.closest('.nav-icon-btn');
+    if (btn) {
+      const viewName = btn.dataset.view;
+      toggleWindow(viewName);
     }
+  });
+}
+
+/**
+ * Setup Follow button to toggle social icons
+ */
+function setupFollowButton() {
+  const followBtn = document.getElementById('followBtn');
+  const socialIcons = document.getElementById('socialIcons');
+  
+  if (!followBtn || !socialIcons) return;
+  
+  followBtn.addEventListener('click', () => {
+    const isShowing = socialIcons.classList.toggle('show');
+    followBtn.classList.toggle('active', isShowing);
   });
 }
 
@@ -912,7 +1237,7 @@ function updateMenuTime() {
   const timeString = `${displayHours}:${minutes} ${ampm}`;
 
   // Update all time elements
-  const timeElements = ['menuTime', 'notesMenuTime'];
+  const timeElements = ['menuTime'];
   timeElements.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = timeString;
@@ -977,8 +1302,8 @@ async function fetchWeather() {
     const tempString = `${temp}°F`;
 
     // Update all weather elements
-    const iconElements = ['weatherIcon', 'notesWeatherIcon'];
-    const tempElements = ['weatherTemp', 'notesWeatherTemp'];
+    const iconElements = ['weatherIcon'];
+    const tempElements = ['weatherTemp'];
 
     iconElements.forEach(id => {
       const el = document.getElementById(id);
@@ -991,11 +1316,11 @@ async function fetchWeather() {
     });
   } catch (err) {
     console.warn('Could not fetch weather:', err);
-    ['weatherIcon', 'notesWeatherIcon'].forEach(id => {
+    ['weatherIcon'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = '🌡️';
     });
-    ['weatherTemp', 'notesWeatherTemp'].forEach(id => {
+    ['weatherTemp'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = 'Atlanta';
     });
@@ -1782,18 +2107,53 @@ async function initBackgroundImage() {
 }
 
 /**
+ * Show system alert after a delay
+ */
+function showSystemAlert() {
+  const alert = document.getElementById('systemAlert');
+  if (!alert) return;
+
+  // Show alert after 2 seconds
+  setTimeout(() => {
+    alert.classList.add('show');
+  }, 2000);
+
+  // Setup close button
+  const closeBtn = alert.querySelector('.system-alert-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      alert.classList.remove('show');
+    });
+  }
+
+  // Close on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && alert.classList.contains('show')) {
+      alert.classList.remove('show');
+    }
+  });
+
+  // Auto-hide after 10 seconds
+  setTimeout(() => {
+    alert.classList.remove('show');
+  }, 12000);
+}
+
+/**
  * Initialize app
  */
 async function init() {
   initBackgroundImage();
   setupEventListeners();
-  setupFloatingNav();
+  setupTopMenuNav();
+  setupFollowButton();
+  setupWindowManagement(); // Initialize window dragging and management
   setupMusicPlayer();
   initMenuBar();
   await loadPosts();
-  renderLatestPost();
   await loadGoals();
   await loadMusic();
+  showSystemAlert(); // Show welcome alert
 }
 
 // Start the app
