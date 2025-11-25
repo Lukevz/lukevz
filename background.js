@@ -35,8 +35,10 @@
     x: 0,
     y: 0,
     mass: 3000,
-    radius: 80,  // Increased from 40
-    eventHorizonRadius: 140  // Increased from 70
+    radius: 80,
+    eventHorizonRadius: 140,
+    accretionDiskRadius: 280,
+    glowRadius: 180
   };
 
   // Particle array
@@ -45,7 +47,7 @@
 
   // Animation state
   let lastFrameTime = 0;
-  const frameDelay = 1000 / 24; // 24 FPS for slower, more cinematic feel
+  const frameDelay = 1000 / 30; // 30 FPS for slower, more contemplative motion
 
   // ============================================================================
   // INITIALIZATION
@@ -62,17 +64,18 @@
 
   function createParticle() {
     const angle = Math.random() * Math.PI * 2;
-    const distance = Math.random() < 0.6 
-      ? 100 + Math.random() * 250 
+    const distance = Math.random() < 0.6
+      ? 100 + Math.random() * 250
       : 400 + Math.random() * 600;
-    
+
     const x = blackHole.x + Math.cos(angle) * distance;
     const y = blackHole.y + Math.sin(angle) * distance;
 
-    // Calculate orbital velocity (reduced for slower animation)
-    const speed = Math.sqrt(blackHole.mass / distance) * 0.5;  // Reduced from 0.8
-    const vx = -Math.sin(angle) * speed + (Math.random() - 0.5) * 0.3;  // Reduced randomness
-    const vy = Math.cos(angle) * speed + (Math.random() - 0.5) * 0.3;
+    // Calculate precise orbital velocity for stable circular motion
+    // Using vis-viva equation for orbital mechanics
+    const speed = Math.sqrt(blackHole.mass / distance) * 0.55;
+    const vx = -Math.sin(angle) * speed + (Math.random() - 0.5) * 0.1;  // Reduced randomness
+    const vy = Math.cos(angle) * speed + (Math.random() - 0.5) * 0.1;
 
     return {
       x: x,
@@ -83,7 +86,8 @@
       maxLife: 1,
       size: 0.5 + Math.random() * 1,
       angle: angle,
-      distance: distance
+      distance: distance,
+      orbitalDirection: Math.random() > 0.5 ? 1 : -1  // Some orbit clockwise, some counter
     };
   }
 
@@ -120,16 +124,53 @@
     }
     lastFrameTime = currentTime;
 
-    // Clear canvas with fade effect
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    // Clear canvas with fade effect for motion trails
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Update black hole position (in case of resize)
     blackHole.x = canvas.width / 2;
     blackHole.y = canvas.height / 2;
 
-    // Draw black hole event horizon glow
-    const gradient = ctx.createRadialGradient(
+    // Draw accretion disk outer glow
+    const accretionGlow = ctx.createRadialGradient(
+      blackHole.x,
+      blackHole.y,
+      blackHole.eventHorizonRadius,
+      blackHole.x,
+      blackHole.y,
+      blackHole.accretionDiskRadius
+    );
+    accretionGlow.addColorStop(0, 'rgba(100, 150, 255, 0.03)');
+    accretionGlow.addColorStop(0.5, 'rgba(80, 120, 200, 0.015)');
+    accretionGlow.addColorStop(1, 'rgba(60, 100, 180, 0)');
+
+    ctx.fillStyle = accretionGlow;
+    ctx.beginPath();
+    ctx.arc(blackHole.x, blackHole.y, blackHole.accretionDiskRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw event horizon bright glow
+    const eventHorizonGlow = ctx.createRadialGradient(
+      blackHole.x,
+      blackHole.y,
+      blackHole.radius,
+      blackHole.x,
+      blackHole.y,
+      blackHole.glowRadius
+    );
+    eventHorizonGlow.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+    eventHorizonGlow.addColorStop(0.3, 'rgba(200, 220, 255, 0.04)');
+    eventHorizonGlow.addColorStop(0.6, 'rgba(150, 180, 255, 0.02)');
+    eventHorizonGlow.addColorStop(1, 'rgba(100, 150, 255, 0)');
+
+    ctx.fillStyle = eventHorizonGlow;
+    ctx.beginPath();
+    ctx.arc(blackHole.x, blackHole.y, blackHole.glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw event horizon inner glow
+    const innerGlow = ctx.createRadialGradient(
       blackHole.x,
       blackHole.y,
       0,
@@ -137,17 +178,37 @@
       blackHole.y,
       blackHole.eventHorizonRadius
     );
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
-    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.02)');
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    
-    ctx.fillStyle = gradient;
+    innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+    innerGlow.addColorStop(0.4, 'rgba(220, 230, 255, 0.05)');
+    innerGlow.addColorStop(0.7, 'rgba(180, 200, 255, 0.02)');
+    innerGlow.addColorStop(1, 'rgba(150, 180, 255, 0)');
+
+    ctx.fillStyle = innerGlow;
     ctx.beginPath();
     ctx.arc(blackHole.x, blackHole.y, blackHole.eventHorizonRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw black hole core
-    ctx.fillStyle = '#000000';
+    // Draw photon sphere ring
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(blackHole.x, blackHole.y, blackHole.eventHorizonRadius * 0.7, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw black hole core with subtle gradient
+    const coreGradient = ctx.createRadialGradient(
+      blackHole.x,
+      blackHole.y,
+      0,
+      blackHole.x,
+      blackHole.y,
+      blackHole.radius
+    );
+    coreGradient.addColorStop(0, '#000000');
+    coreGradient.addColorStop(0.7, '#000000');
+    coreGradient.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+
+    ctx.fillStyle = coreGradient;
     ctx.beginPath();
     ctx.arc(blackHole.x, blackHole.y, blackHole.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -183,19 +244,39 @@
         }
       }
 
-      // Apply gravitational force from black hole (reduced for slower animation)
+      // Apply gravitational force from black hole
       if (dist > 0.1) {
         const force = blackHole.mass / (dist * dist);
         const fx = (dx / dist) * force;
         const fy = (dy / dist) * force;
 
-        p.vx += fx * 0.005;  // Reduced from 0.008
+        p.vx += fx * 0.005;
         p.vy += fy * 0.005;
+
+        // Add orbital stabilization to maintain circular motion
+        // Calculate current velocity magnitude and ideal orbital velocity
+        const currentSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        const idealSpeed = Math.sqrt(blackHole.mass / dist) * 0.55;
+
+        // Calculate tangential direction (perpendicular to radial)
+        const tangentX = -dy / dist;
+        const tangentY = dx / dist;
+
+        // Calculate how much velocity is in the tangential direction
+        const tangentialVelocity = p.vx * tangentX + p.vy * tangentY;
+
+        // Apply gentle correction to maintain orbital velocity
+        if (currentSpeed > 0.1 && dist > blackHole.eventHorizonRadius) {
+          const correction = (idealSpeed - Math.abs(tangentialVelocity)) * 0.02;
+          const direction = tangentialVelocity >= 0 ? 1 : -1;
+          p.vx += tangentX * correction * direction;
+          p.vy += tangentY * correction * direction;
+        }
       }
 
-      // Apply drag (increased for slower movement)
-      p.vx *= 0.992;  // Reduced from 0.995
-      p.vy *= 0.992;
+      // Apply minimal drag to simulate space friction
+      p.vx *= 0.998;
+      p.vy *= 0.998;
 
       // Update position
       p.x += p.vx;
@@ -203,14 +284,16 @@
 
       // Check if particle is in event horizon
       if (dist < blackHole.eventHorizonRadius) {
-        p.life -= 0.03;  // Reduced from 0.05 for slower fade
+        p.life -= 0.03;
 
-        // Create accretion disk effect (reduced force for slower swirl)
-        if (dist > blackHole.radius && Math.random() > 0.7) {
+        // Create accretion disk swirl effect - enhances orbital motion
+        if (dist > blackHole.radius) {
           const angle = Math.atan2(dy, dx);
           const perpAngle = angle + Math.PI / 2;
-          p.vx += Math.cos(perpAngle) * 0.3;  // Reduced from 0.5
-          p.vy += Math.sin(perpAngle) * 0.3;
+          // Stronger swirl closer to the event horizon
+          const swirl_strength = (1 - dist / blackHole.eventHorizonRadius) * 0.2;
+          p.vx += Math.cos(perpAngle) * swirl_strength;
+          p.vy += Math.sin(perpAngle) * swirl_strength;
         }
       }
 

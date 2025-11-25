@@ -4,7 +4,7 @@
  * Watches /posts folder and regenerates posts.js on changes
  */
 
-import { readdirSync, writeFileSync, watch } from 'fs';
+import { readdirSync, writeFileSync, watch, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
@@ -33,10 +33,20 @@ function build() {
     .filter(file => file.endsWith('.md'))
     .sort();
 
+  // Get creation dates for each file
+  const posts = files.map(file => {
+    const filePath = join(postsDir, file);
+    const stats = statSync(filePath);
+    // Use birthtime (creation date) and format as YYYY-MM-DD
+    const created = stats.birthtime.toISOString().split('T')[0];
+    return { file, created };
+  });
+
   const content = `/**
  * Posts Manifest (auto-generated)
+ * Using object format with created dates from filesystem
  */
-export default ${JSON.stringify(files, null, 2)};
+export default ${JSON.stringify(posts, null, 2)};
 `;
 
   writeFileSync(join(__dirname, 'posts.js'), content);

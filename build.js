@@ -4,7 +4,7 @@
  * Run: node build.js
  */
 
-import { readdirSync, writeFileSync } from 'fs';
+import { readdirSync, writeFileSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -16,16 +16,26 @@ const files = readdirSync(postsDir)
   .filter(file => file.endsWith('.md'))
   .sort();
 
+// Get creation dates for each file
+const posts = files.map(file => {
+  const filePath = join(postsDir, file);
+  const stats = statSync(filePath);
+  // Use birthtime (creation date) and format as YYYY-MM-DD
+  const created = stats.birthtime.toISOString().split('T')[0];
+  return { file, created };
+});
+
 // Generate posts.js content
 const content = `/**
  * Posts Manifest (auto-generated)
+ * Using object format with created dates from filesystem
  * Run 'node build.js' to regenerate after adding new posts
  */
 
-export default ${JSON.stringify(files, null, 2)};
+export default ${JSON.stringify(posts, null, 2)};
 `;
 
 writeFileSync(join(__dirname, 'posts.js'), content);
 
 console.log(`✓ Generated posts.js with ${files.length} posts:`);
-files.forEach(f => console.log(`  - ${f}`));
+posts.forEach(p => console.log(`  - ${p.file} (${p.created})`));
