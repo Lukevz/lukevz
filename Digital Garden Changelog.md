@@ -1,4 +1,8 @@
 # Digital Garden Changelog
+V1.0.4 - Fixed responsive issues
+- Collapsible header
+- General navigation in the app
+
 V1.0.3 - added credits & version history
 - Various bug fixes
 - Default dark mode 24/7
