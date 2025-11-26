@@ -323,6 +323,16 @@ function closeWindow(window) {
       toggleSidebar();
     }
   }
+
+  // Special handling for Music view
+  if (windowId === 'music') {
+    // If there's a current track (playing or paused), show mini player
+    if (musicState.currentIndex >= 0 && musicState.tracks.length > 0) {
+      showMiniPlayer();
+    } else {
+      hideMiniPlayer();
+    }
+  }
 }
 
 /**
@@ -359,6 +369,11 @@ function openWindow(windowId) {
         renderNote(state.currentPost);
       }
     }
+  }
+
+  // Hide mini player when music window is opened
+  if (windowId === 'music') {
+    hideMiniPlayer();
   }
 
   state.currentView = windowId;
@@ -2268,6 +2283,7 @@ function playTrack(index) {
   musicState.isPlaying = true;
   ensureYouTubePlayer(track.videoId);
   updatePlayButton();
+  updateMiniPlayer();
 }
 
 /**
@@ -2359,20 +2375,24 @@ function createYouTubePlayer(videoId) {
         updatePlayButton();
         startProgressTimer();
         updateDuration();
+        updateMiniPlayer();
       },
       onStateChange: (event) => {
         if (event.data === YT.PlayerState.PLAYING) {
           musicState.isPlaying = true;
           updatePlayButton();
           startProgressTimer();
+          updateMiniPlayer();
         } else if (event.data === YT.PlayerState.PAUSED) {
           musicState.isPlaying = false;
           updatePlayButton();
           stopProgressTimer();
+          updateMiniPlayer();
         } else if (event.data === YT.PlayerState.ENDED) {
           musicState.isPlaying = false;
           updatePlayButton();
           stopProgressTimer();
+          updateMiniPlayer();
           playNext();
         }
       }
@@ -2430,6 +2450,8 @@ function updatePlayButton() {
   document.querySelectorAll('.playlist-item').forEach((item, index) => {
     item.classList.toggle('playing', musicState.isPlaying && index === musicState.currentIndex);
   });
+
+  updateMiniPlayer();
 }
 
 /**
@@ -2489,10 +2511,16 @@ function setupMusicPlayer() {
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
   const progressBar = document.getElementById('progressBar');
+  const miniPlayerPlayBtn = document.getElementById('miniPlayerPlayBtn');
 
   if (playBtn) playBtn.addEventListener('click', togglePlay);
   if (prevBtn) prevBtn.addEventListener('click', playPrev);
   if (nextBtn) nextBtn.addEventListener('click', playNext);
+  
+  // Connect mini player play/pause button
+  if (miniPlayerPlayBtn) {
+    miniPlayerPlayBtn.addEventListener('click', togglePlay);
+  }
 
   // Progress bar seeking (placeholder)
   if (progressBar) {
@@ -2504,6 +2532,91 @@ function setupMusicPlayer() {
       if (!duration || Number.isNaN(duration)) return;
       musicState.player.seekTo(duration * percent, true);
     });
+  }
+}
+
+/**
+ * Mini Player Functions
+ */
+
+/**
+ * Show mini player and populate with current track data
+ */
+function showMiniPlayer() {
+  const miniPlayer = document.getElementById('miniPlayer');
+  if (!miniPlayer) return;
+
+  // Only show if music window is closed
+  if (state.windows.openWindows.has('music')) {
+    return;
+  }
+
+  updateMiniPlayer();
+  miniPlayer.setAttribute('aria-hidden', 'false');
+}
+
+/**
+ * Hide the mini player
+ */
+function hideMiniPlayer() {
+  const miniPlayer = document.getElementById('miniPlayer');
+  if (!miniPlayer) return;
+  miniPlayer.setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Update mini player with current track info
+ */
+function updateMiniPlayer() {
+  const miniPlayer = document.getElementById('miniPlayer');
+  if (!miniPlayer) return;
+
+  // Only update if mini player should be visible (music window closed)
+  if (state.windows.openWindows.has('music')) {
+    return;
+  }
+
+  const titleEl = document.getElementById('miniPlayerTitle');
+  const artistEl = document.getElementById('miniPlayerArtist');
+  const thumbEl = document.getElementById('miniPlayerThumb');
+  const playBtn = document.getElementById('miniPlayerPlayBtn');
+  const iconPlay = playBtn?.querySelector('.mini-player-icon-play');
+  const iconPause = playBtn?.querySelector('.mini-player-icon-pause');
+
+  if (musicState.currentIndex >= 0 && musicState.currentIndex < musicState.tracks.length) {
+    const track = musicState.tracks[musicState.currentIndex];
+    
+    if (titleEl) titleEl.textContent = track.title || 'Unknown Track';
+    if (artistEl) artistEl.textContent = track.artist || 'Unknown Artist';
+    
+    if (thumbEl && track.thumbnail) {
+      thumbEl.src = track.thumbnail;
+      thumbEl.alt = track.title || 'Track thumbnail';
+      thumbEl.style.display = 'block';
+      const placeholder = miniPlayer.querySelector('.mini-player-placeholder');
+      if (placeholder) placeholder.style.display = 'none';
+    } else {
+      if (thumbEl) thumbEl.style.display = 'none';
+      const placeholder = miniPlayer.querySelector('.mini-player-placeholder');
+      if (placeholder) placeholder.style.display = 'block';
+    }
+  } else {
+    if (titleEl) titleEl.textContent = 'No track';
+    if (artistEl) artistEl.textContent = 'Select a track';
+    if (thumbEl) thumbEl.style.display = 'none';
+    const placeholder = miniPlayer.querySelector('.mini-player-placeholder');
+    if (placeholder) placeholder.style.display = 'block';
+  }
+
+  // Update play/pause button state
+  if (playBtn && iconPlay && iconPause) {
+    if (musicState.isPlaying) {
+      iconPlay.classList.add('hidden');
+      iconPause.classList.remove('hidden');
+    } else {
+      iconPlay.classList.remove('hidden');
+      iconPause.classList.add('hidden');
+    }
   }
 }
 
@@ -2632,6 +2745,17 @@ async function init() {
   await loadPosts();
   await loadGoals();
   await loadMusic();
+  
+  // Initialize mini player state
+  const miniPlayer = document.getElementById('miniPlayer');
+  if (miniPlayer) {
+    miniPlayer.setAttribute('aria-hidden', 'true');
+    // Check if there's a current track and window is closed, show mini player if needed
+    if (musicState.currentIndex >= 0 && musicState.tracks.length > 0 && !state.windows.openWindows.has('music')) {
+      showMiniPlayer();
+    }
+  }
+  
   showSystemAlert(); // Show welcome alert
 }
 

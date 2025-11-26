@@ -497,6 +497,32 @@
     </div>
   </div>
 
+  <!-- Mini Music Player -->
+  <div class="mini-player" id="miniPlayer" role="region" aria-label="Mini music player" aria-hidden="true">
+    <div class="mini-player-content">
+      <div class="mini-player-thumb">
+        <img id="miniPlayerThumb" src="" alt="" style="display: none;">
+        <svg class="mini-player-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/>
+          <circle cx="18" cy="16" r="3"/>
+        </svg>
+      </div>
+      <div class="mini-player-info">
+        <div class="mini-player-title" id="miniPlayerTitle">No track</div>
+        <div class="mini-player-artist" id="miniPlayerArtist">Select a track</div>
+      </div>
+      <button class="mini-player-play-btn" id="miniPlayerPlayBtn" aria-label="Play/Pause">
+        <svg class="mini-player-icon-play" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+        <svg class="mini-player-icon-pause hidden" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 <script src="background.js"></script>
 <script src="timeline-background.js"></script>

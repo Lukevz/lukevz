@@ -1,5 +1,7 @@
 # Digital Garden Changelog
-V1.1.4 - Added timeline view
+V1.1.1 - Added mini media player
+
+V1.1.0 - Added timeline view
 - New app! Timeline view to browse through career milestones
 - Dynamically update version number on screen based on .md file
 
