@@ -1,4 +1,8 @@
 # Digital Garden Changelog
+V1.1.4 - Added timeline view
+- New app! Timeline view to browse through career milestones
+- Dynamically update version number on screen based on .md file
+
 V1.0.4 - Fixed responsive issues
 - Collapsible header
 - General navigation in the app

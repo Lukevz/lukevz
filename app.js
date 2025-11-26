@@ -1092,21 +1092,18 @@ async function loadPosts() {
     buildTagNav();
     renderPosts();
 
-    // Check if there's a note in the URL to open (deep linking)
+    // Always start on homepage - clear any stray hashes
+    if (window.location.hash && window.location.hash !== '#home') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+
+    // If there's a note in the URL, prepare it for when user opens notes view
+    // but don't automatically open the notes window
     const noteFromUrl = getNoteFromUrl();
     if (noteFromUrl) {
       state.currentPost = noteFromUrl;
-      renderNote(noteFromUrl, false); // Don't update URL since we're loading from it
-      // Switch to notes view if not already there
-      if (state.currentView !== 'notes') {
-        performViewSwitch('notes');
-      }
+      // Don't render or open anything - just prepare the state
     } else {
-      // Default to home view - clear any stray hashes
-      if (window.location.hash && window.location.hash !== '#home') {
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-
       // On desktop, preload Garden Readme for notes view but stay on home
       if (window.innerWidth > 1024 && state.posts.length > 0) {
         const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
@@ -1389,6 +1386,17 @@ async function loadChangelog() {
     const content = await response.text();
     const versions = parseChangelog(content);
     renderChangelog(versions);
+    
+    // Update version number in the UI with the latest version
+    if (versions.length > 0) {
+      const latestVersion = versions[0].version;
+      const versionEl = document.getElementById('appVersion');
+      if (versionEl) {
+        versionEl.textContent = `v${latestVersion}`;
+        versionEl.setAttribute('aria-label', `Version ${latestVersion}`);
+      }
+    }
+    
     return versions;
   } catch (err) {
     console.warn('Could not load changelog:', err);
@@ -1436,8 +1444,11 @@ function setupVersionChangelog() {
   const modal = document.getElementById('changelogModal');
   if (!versionEl || !modal) return;
 
-  // Load changelog on first click
+  // Load changelog on page load to get latest version
   let changelogLoaded = false;
+  loadChangelog().then(() => {
+    changelogLoaded = true;
+  });
 
   versionEl.addEventListener('click', async () => {
     if (!changelogLoaded) {
@@ -2490,6 +2501,41 @@ function showSystemAlert() {
 }
 
 /**
+ * Setup timeline scroll animations
+ */
+function setupTimelineAnimations() {
+  const timelineScroll = document.querySelector('.timeline-scroll');
+  const timelineItems = document.querySelectorAll('.timeline-item');
+  
+  if (!timelineScroll || timelineItems.length === 0) return;
+
+  // Use Intersection Observer for fade-in effect
+  const observerOptions = {
+    root: timelineScroll,
+    rootMargin: '0px',
+    threshold: 0.2
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('fade-in');
+      }
+    });
+  }, observerOptions);
+
+  // Observe each timeline item
+  timelineItems.forEach(item => {
+    observer.observe(item);
+  });
+
+  // Add sequential delay for staggered animation
+  timelineItems.forEach((item, index) => {
+    item.style.transitionDelay = `${index * 0.1}s`;
+  });
+}
+
+/**
  * Initialize app
  */
 async function init() {
@@ -2501,6 +2547,7 @@ async function init() {
   setupVersionChangelog();
   setupWindowManagement(); // Initialize window dragging and management
   setupMusicPlayer();
+  setupTimelineAnimations(); // Setup timeline scroll animations
   initMenuBar();
   await loadPosts();
   await loadGoals();
