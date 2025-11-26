@@ -45,9 +45,22 @@
   const particles = [];
   const maxParticles = 400;
 
+  // Celestial bodies - Solar System planets
+  // Sizes scaled relative to Earth (size 5 = Earth), colors based on actual appearance
+  const celestialBodies = [
+    { distance: 320, speed: 0.0015, angle: 0, size: 2, color: 'rgba(169, 169, 169, 0.4)' },      // Mercury - small, gray
+    { distance: 380, speed: 0.0012, angle: 1.2, size: 4.8, color: 'rgba(230, 200, 150, 0.38)' }, // Venus - yellowish white
+    { distance: 440, speed: 0.001, angle: 2.5, size: 5, color: 'rgba(100, 149, 237, 0.4)' },     // Earth - blue
+    { distance: 500, speed: 0.0008, angle: 4, size: 2.7, color: 'rgba(220, 100, 80, 0.38)' },    // Mars - red
+    { distance: 580, speed: 0.0006, angle: 5.5, size: 11, color: 'rgba(210, 180, 140, 0.36)' },  // Jupiter - tan/brown with bands
+    { distance: 660, speed: 0.0005, angle: 0.8, size: 9.2, color: 'rgba(230, 210, 170, 0.35)' }, // Saturn - pale gold
+    { distance: 730, speed: 0.0004, angle: 3.2, size: 6.3, color: 'rgba(175, 238, 238, 0.33)' }, // Uranus - pale cyan
+    { distance: 800, speed: 0.0003, angle: 1.5, size: 6.1, color: 'rgba(100, 120, 200, 0.36)' }  // Neptune - deep blue
+  ];
+
   // Animation state
   let lastFrameTime = 0;
-  const frameDelay = 1000 / 30; // 30 FPS for slower, more contemplative motion
+  const frameDelay = 1000 / 24; // 24 FPS for slower, more contemplative motion
 
   // ============================================================================
   // INITIALIZATION
@@ -125,7 +138,7 @@
     lastFrameTime = currentTime;
 
     // Clear canvas with fade effect for motion trails
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Update black hole position (in case of resize)
@@ -213,6 +226,81 @@
     ctx.arc(blackHole.x, blackHole.y, blackHole.radius, 0, Math.PI * 2);
     ctx.fill();
 
+    // Add subtle digital pixel texture over the glow
+    const pixelSize = 4;
+    const textureRadius = blackHole.glowRadius;
+    const centerX = blackHole.x;
+    const centerY = blackHole.y;
+
+    // Only draw pixels within the glow radius
+    for (let x = centerX - textureRadius; x < centerX + textureRadius; x += pixelSize) {
+      for (let y = centerY - textureRadius; y < centerY + textureRadius; y += pixelSize) {
+        const dx = x - centerX;
+        const dy = y - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Only draw within the glow radius
+        if (dist < textureRadius && dist > blackHole.radius) {
+          // Random pixel opacity based on distance and randomness
+          const distanceFactor = 1 - (dist / textureRadius);
+          const randomFactor = Math.random();
+
+          // Make pixels more subtle and sparse
+          if (randomFactor > 0.7) {
+            const opacity = distanceFactor * 0.08 * randomFactor;
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            ctx.fillRect(x, y, pixelSize * 0.8, pixelSize * 0.8);
+          }
+        }
+      }
+    }
+
+    // Update and draw celestial bodies (moons/planets)
+    for (const body of celestialBodies) {
+      // Update orbital angle
+      body.angle += body.speed;
+
+      // Calculate position
+      const x = blackHole.x + Math.cos(body.angle) * body.distance;
+      const y = blackHole.y + Math.sin(body.angle) * body.distance;
+
+      // Calculate fade based on distance from viewport edges
+      const maxViewportDist = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height) / 2;
+      const viewportCenterDist = Math.sqrt(
+        Math.pow(x - canvas.width / 2, 2) +
+        Math.pow(y - canvas.height / 2, 2)
+      );
+      const edgeFade = Math.max(0.2, 1 - (viewportCenterDist / maxViewportDist) * 1.2);
+
+      // Draw orbital path (very subtle)
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.03 * edgeFade})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.arc(blackHole.x, blackHole.y, body.distance, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Draw the celestial body with a subtle glow
+      const bodyColor = body.color.replace(/[\d.]+\)$/, (match) => {
+        const alpha = parseFloat(match);
+        return `${alpha * edgeFade})`;
+      });
+
+      // Outer glow
+      ctx.fillStyle = bodyColor.replace(/[\d.]+\)$/, (match) => {
+        const alpha = parseFloat(match);
+        return `${alpha * 0.3})`;
+      });
+      ctx.beginPath();
+      ctx.arc(x, y, body.size * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main body
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.arc(x, y, body.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // Update and draw particles
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -284,7 +372,9 @@
 
       // Check if particle is in event horizon
       if (dist < blackHole.eventHorizonRadius) {
-        p.life -= 0.03;
+        // Fade faster the closer to the black hole
+        const proximityFactor = 1 - (dist / blackHole.eventHorizonRadius);
+        p.life -= 0.06 + (proximityFactor * 0.12); // Faster fade near the core
 
         // Create accretion disk swirl effect - enhances orbital motion
         if (dist > blackHole.radius) {

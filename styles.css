@@ -169,7 +169,7 @@
   width: 40px;
   height: 40px;
   border-radius: 0px;
-  color: var(--text-secondary);
+  color: #ffffff;
   transition: color var(--transition-fast), background var(--transition-fast);
   padding: 0;
   border: none;
@@ -178,7 +178,7 @@
 }
 
 .nav-icon-btn:hover {
-  color: var(--text-primary);
+  color: #ffffff;
   background: var(--bg-hover);
 }
 
@@ -187,9 +187,11 @@
   background: var(--bg-active);
 }
 
-.nav-icon-btn svg {
+.nav-icon-btn svg,
+.nav-icon-btn img {
   width: 26px;
   height: 26px;
+  filter: brightness(0) invert(1);
 }
 
 .menu-weather {
@@ -1511,8 +1513,9 @@ ul {
     width: 36px;
     height: 36px;
   }
-  
-  .nav-icon-btn svg {
+
+  .nav-icon-btn svg,
+  .nav-icon-btn img {
     width: 22px;
     height: 22px;
   }

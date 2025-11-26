@@ -69,10 +69,12 @@ function setupWindowManagement() {
   windows.forEach(window => {
     const titlebar = window.querySelector('.window-titlebar');
     const closeBtn = window.querySelector('.window-close');
+    const windowId = window.id.replace('View', '');
 
     // Only enable dragging and resizing on desktop
     if (!isMobile()) {
-      if (titlebar) {
+      // Only make non-notes windows draggable
+      if (titlebar && windowId !== 'notes') {
         makeWindowDraggable(window, titlebar);
       }
 
@@ -327,11 +329,15 @@ function openWindow(windowId) {
     if (noteFromUrl) {
       state.currentPost = noteFromUrl;
       renderNote(noteFromUrl, false);
-    } else if (!state.currentPost) {
+    } else {
+      // If no note in URL, always default to Garden Readme first
       const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
       if (defaultPost) {
         state.currentPost = defaultPost;
         renderNote(defaultPost);
+      } else if (state.currentPost) {
+        // Fall back to current post if Garden Readme doesn't exist
+        renderNote(state.currentPost);
       }
     }
   }
@@ -1114,12 +1120,15 @@ function performViewSwitch(viewName) {
       // If there's a note in the URL, open that
       state.currentPost = noteFromUrl;
       renderNote(noteFromUrl, false);
-    } else if (!state.currentPost) {
-      // If no note in URL and no current post, default to Garden Readme
+    } else {
+      // If no note in URL, always default to Garden Readme first
       const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
       if (defaultPost) {
         state.currentPost = defaultPost;
         renderNote(defaultPost);
+      } else if (state.currentPost) {
+        // Fall back to current post if Garden Readme doesn't exist
+        renderNote(state.currentPost);
       }
     }
   }
