@@ -906,12 +906,17 @@ function toggleSidebar() {
   elements.mobileMenuToggle.setAttribute('aria-expanded', isOpen);
 
   // Handle overlay
+  const notesView = document.querySelector('.notes-view');
+  const overlayParent = notesView || document.body;
   let overlay = document.querySelector('.sidebar-overlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.className = 'sidebar-overlay';
     overlay.addEventListener('click', toggleSidebar);
-    document.body.appendChild(overlay);
+    overlayParent.appendChild(overlay);
+  } else if (overlay.parentElement !== overlayParent) {
+    // Ensure overlay lives in the notes view stacking context
+    overlayParent.appendChild(overlay);
   }
   overlay.classList.toggle('active', isOpen);
 }

@@ -129,8 +129,6 @@
 
 .menu-left {
   min-width: 180px;
-  display: flex;
-  align-items: center;
   gap: var(--space-sm);
 }
 
@@ -150,10 +148,11 @@
 }
 
 .menu-center {
-  flex: 1;
   justify-content: center;
-  display: flex;
-  align-items: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .menu-nav {
@@ -214,8 +213,6 @@
 }
 
 .menu-right {
-  display: flex;
-  align-items: center;
   gap: var(--space-sm);
   min-width: 180px;
   justify-content: flex-end;
@@ -312,6 +309,7 @@
   border-radius: 0px;
   color: var(--text-secondary);
   transition: color var(--transition-fast), background var(--transition-fast);
+  gap: var(--space-xs);
 }
 
 .social-icon:hover {
@@ -323,6 +321,14 @@
   width: 18px;
   height: 18px;
   fill: currentColor;
+}
+
+.social-label {
+  display: none;
+  margin-left: var(--space-xs);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* Light theme: darken navbar icons for better visibility */
@@ -368,13 +374,19 @@
     height: auto;
     padding: var(--space-sm);
     justify-content: flex-start;
+    gap: var(--space-sm);
     border-radius: 0px;
   }
 
   .social-icon svg {
     width: 18px;
     height: 18px;
-    margin-right: var(--space-sm);
+  }
+
+  .social-label {
+    display: inline-block;
+    font-size: 0.875rem;
+    color: var(--text-primary);
   }
 }
 
@@ -929,7 +941,7 @@ ul {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px var(--shadow-color);
-  z-index: 100;
+  z-index: 1100; /* Above everything else for easy mobile access */
   transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
@@ -956,8 +968,8 @@ ul {
 
   .note-view.active {
     display: block;
-    position: absolute;
-    top: 0;
+    position: fixed;
+    top: 60px; /* Account for top menu bar */
     left: 0;
     right: 0;
     bottom: 0;
@@ -989,10 +1001,6 @@ ul {
     flex-direction: column;
   }
 
-  .notes-view .sidebar {
-    display: none;
-  }
-
   .notes-view .post-list {
     flex: 1;
     border-right: none;
@@ -1007,8 +1015,8 @@ ul {
   .notes-view .note-view.active {
     display: flex;
     flex-direction: column;
-    position: absolute;
-    top: 0;
+    position: fixed;
+    top: 60px; /* Account for top menu bar */
     left: 0;
     right: 0;
     bottom: 0;
@@ -1021,10 +1029,10 @@ ul {
   .sidebar {
     position: fixed;
     left: 0;
-    top: 0;
+    top: 60px; /* Account for top menu bar */
     bottom: 0;
     width: var(--sidebar-width);
-    z-index: 60;
+    z-index: 999; /* Below top menu bar (1001) */
     transform: translateX(-100%);
     transition: transform var(--transition-normal);
   }
@@ -1034,6 +1042,11 @@ ul {
   }
 
   .mobile-menu-toggle {
+    display: flex;
+  }
+
+  /* Ensure mobile menu toggle is visible when notes view is active */
+  .notes-view.active .mobile-menu-toggle {
     display: flex;
   }
 
@@ -1050,7 +1063,7 @@ ul {
     position: fixed;
     inset: 0;
     background: var(--overlay-bg);
-    z-index: 55;
+    z-index: 998; /* Below sidebar but above content */
     opacity: 0;
     visibility: hidden;
     transition: opacity var(--transition-normal), visibility var(--transition-normal);
