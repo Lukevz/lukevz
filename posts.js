@@ -104,6 +104,10 @@ export default [
     "created": "2025-04-06"
   },
   {
+    "file": "The Rise of Digital Gardens & Personal Operating Systems.md",
+    "created": "2025-11-26"
+  },
+  {
     "file": "The UX request checklist.md",
     "created": "2024-10-19"
   },
