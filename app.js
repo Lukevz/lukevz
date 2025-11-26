@@ -711,7 +711,23 @@ function buildTagNav() {
 
   const tagButtons = renderTagTree(tagTree);
 
-  // Keep "All Notes" and add tags
+  // Find Garden Readme post
+  const gardenReadme = state.posts.find(p => p.filename === 'Garden Readme.md');
+  const gardenReadmeButton = gardenReadme ? `
+    <li>
+      <button class="tag-item garden-readme-item" data-filename="${gardenReadme.filename}" aria-label="Open ${gardenReadme.title}">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <span>Readme</span>
+      </button>
+    </li>
+  ` : '';
+
+  // Keep "All Notes", add Garden Readme, then add tags
   elements.tagList.innerHTML = `
     <li>
       <button class="tag-item active" data-tag="all" aria-current="true">
@@ -722,6 +738,7 @@ function buildTagNav() {
         <span>All Notes</span>
       </button>
     </li>
+    ${gardenReadmeButton}
     ${tagButtons}
   `;
 }
@@ -730,9 +747,12 @@ function buildTagNav() {
  * Render post list
  */
 function renderPosts(tag = 'all') {
+  // Filter out Garden Readme from the post list
+  const postsWithoutReadme = state.posts.filter(post => post.filename !== 'Garden Readme.md');
+  
   const filtered = tag === 'all'
-    ? state.posts
-    : state.posts.filter(post =>
+    ? postsWithoutReadme
+    : postsWithoutReadme.filter(post =>
         post.tags.some(t => t === tag || t.startsWith(tag + '/'))
       );
 
@@ -747,6 +767,13 @@ function renderPosts(tag = 'all') {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-current', isActive ? 'true' : 'false');
   });
+
+  // Clear Garden Readme active state when a tag is selected
+  const gardenReadmeBtn = document.querySelector('.garden-readme-item');
+  if (gardenReadmeBtn) {
+    gardenReadmeBtn.classList.remove('active');
+    gardenReadmeBtn.removeAttribute('aria-current');
+  }
 
   if (filtered.length === 0) {
     elements.postsList.innerHTML = `
@@ -824,6 +851,22 @@ function renderNote(post, updateUrl = true) {
   document.querySelectorAll('.post-item').forEach(item => {
     item.classList.toggle('active', item.dataset.filename === post.filename);
   });
+
+  // Update Garden Readme button active state
+  const gardenReadmeBtn = document.querySelector('.garden-readme-item');
+  if (gardenReadmeBtn) {
+    const isGardenReadme = post.filename === 'Garden Readme.md';
+    gardenReadmeBtn.classList.toggle('active', isGardenReadme);
+    gardenReadmeBtn.setAttribute('aria-current', isGardenReadme ? 'true' : 'false');
+    
+    // Also update tag buttons to remove active state when Garden Readme is open
+    if (isGardenReadme) {
+      document.querySelectorAll('.tag-item:not(.garden-readme-item)').forEach(btn => {
+        btn.classList.remove('active');
+        btn.removeAttribute('aria-current');
+      });
+    }
+  }
 
   // Scroll to top of note
   elements.noteView.scrollTop = 0;
@@ -973,11 +1016,48 @@ function setupEventListeners() {
       return;
     }
 
+    // Handle Garden Readme button click
+    const gardenReadmeBtn = e.target.closest('.garden-readme-item');
+    if (gardenReadmeBtn) {
+      e.preventDefault();
+      const filename = gardenReadmeBtn.dataset.filename;
+      const post = state.posts.find(p => p.filename === filename);
+      if (post) {
+        state.currentPost = post;
+        renderNote(post);
+        
+        // Update active states
+        document.querySelectorAll('.tag-item').forEach(btn => {
+          btn.classList.remove('active');
+          btn.removeAttribute('aria-current');
+        });
+        gardenReadmeBtn.classList.add('active');
+        gardenReadmeBtn.setAttribute('aria-current', 'true');
+        
+        // Close sidebar on mobile
+        if (window.innerWidth <= 768) {
+          const sidebar = document.querySelector('.sidebar');
+          if (sidebar && sidebar.classList.contains('open')) {
+            toggleSidebar();
+          }
+        }
+      }
+      return;
+    }
+
     const tagBtn = e.target.closest('.tag-item');
     if (tagBtn) {
       e.preventDefault();
       state.currentTag = tagBtn.dataset.tag;
       renderPosts(state.currentTag);
+
+      // Update active states
+      document.querySelectorAll('.tag-item').forEach(btn => {
+        btn.classList.remove('active');
+        btn.removeAttribute('aria-current');
+      });
+      tagBtn.classList.add('active');
+      tagBtn.setAttribute('aria-current', 'true');
 
       // Close note view if open on mobile
       if (window.innerWidth <= 1024 && elements.noteView && elements.noteView.classList.contains('active')) {
