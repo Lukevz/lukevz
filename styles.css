@@ -111,12 +111,6 @@
   justify-content: space-between;
   gap: var(--space-xl);
   padding: var(--space-sm) var(--space-lg);
-  background: var(--bg-secondary);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-bottom: 1px solid var(--border);
-  border-radius: 0px;
-  box-shadow: 0 4px 24px var(--shadow-color);
   z-index: 1001;
 }
 
@@ -159,6 +153,13 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-secondary);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border);
+  border-radius: 0px;
+  box-shadow: 0 4px 24px var(--shadow-color);
 }
 
 .nav-icon-btn {

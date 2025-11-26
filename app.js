@@ -1251,9 +1251,10 @@ function updateMenuTime() {
   const now = new Date();
   const hours = now.getHours();
   const minutes = now.getMinutes().toString().padStart(2, '0');
+  const seconds = now.getSeconds().toString().padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours % 12 || 12;
-  const timeString = `${displayHours}:${minutes} ${ampm}`;
+  const timeString = `${displayHours}:${minutes}:${seconds} ${ampm}`;
 
   // Update all time elements
   const timeElements = ['menuTime'];
@@ -1315,10 +1316,10 @@ async function fetchWeather() {
     if (!response.ok) throw new Error('Weather fetch failed');
 
     const data = await response.json();
-    const temp = Math.round(data.current.temperature_2m);
+    const temp = data.current.temperature_2m;
     const weatherCode = data.current.weather_code;
     const emoji = getWeatherEmoji(weatherCode);
-    const tempString = `${temp}°F`;
+    const tempString = `${temp.toFixed(1)}°F`;
 
     // Update all weather elements
     const iconElements = ['weatherIcon'];
@@ -1350,9 +1351,9 @@ async function fetchWeather() {
  * Initialize menu bar
  */
 function initMenuBar() {
-  // Update time immediately and every minute
+  // Update time immediately and every second
   updateMenuTime();
-  setInterval(updateMenuTime, 60000);
+  setInterval(updateMenuTime, 1000);
 
   // Fetch weather immediately and refresh every 30 minutes
   fetchWeather();
