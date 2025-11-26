@@ -146,9 +146,5 @@ export default [
   {
     "file": "“Whatever we aren’t changing, we are choosing”.md",
     "created": "2025-04-11"
-  },
-  {
-    "file": "“anywhere belle face.”.md",
-    "created": "2025-05-01"
   }
 ];
