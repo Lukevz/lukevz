@@ -2021,7 +2021,7 @@ ul {
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-bottom: none;
-  border-radius: 10px 10px 0 0;
+  border-radius: 0;
   color: var(--text-secondary);
   cursor: var(--cursor-pointer);
   font-weight: 600;

@@ -326,8 +326,8 @@ function closeWindow(window) {
 
   // Special handling for Music view
   if (windowId === 'music') {
-    // If there's a current track (playing or paused), show mini player
-    if (musicState.currentIndex >= 0 && musicState.tracks.length > 0) {
+    // If media is playing (or was playing), show mini player
+    if (musicState.isPlaying || musicState.playingTrack) {
       showMiniPlayer();
     } else {
       hideMiniPlayer();
@@ -1791,6 +1791,7 @@ const musicState = {
   activeFolder: 'Music',
   currentIndex: -1,
   isPlaying: false,
+  playingTrack: null, // Track the actual playing track (from allTracks) even when switching folders
   player: null,
   apiReady: false,
   pendingVideoId: null,
@@ -1814,7 +1815,15 @@ async function loadMusic() {
 
     const content = await response.text();
     const { tracks, folders } = await parseMusicMd(content);
-    await enrichTrackMetadata(tracks);
+    
+    // Split tracks into regular (fast) and channels (slow)
+    const regularTracks = tracks.filter(t => !t.isChannel);
+    const channelTracks = tracks.filter(t => t.isChannel);
+    
+    // Load regular track metadata quickly (just oEmbed, very fast)
+    await enrichRegularTrackMetadata(regularTracks);
+    
+    // Set all tracks and render immediately
     musicState.allTracks = tracks;
     musicState.folders = mergeFolders(folders);
     if (!musicState.folders.includes(musicState.activeFolder)) {
@@ -1837,6 +1846,11 @@ async function loadMusic() {
     renderMusicFolders();
     renderPlaylist();
     loadYouTubeIframeAPI();
+    
+    // Load channel metadata in background (non-blocking)
+    if (channelTracks.length > 0) {
+      enrichChannelMetadataInBackground(channelTracks);
+    }
 
   } catch (err) {
     console.warn('Could not load music.md:', err);
@@ -1979,28 +1993,13 @@ function extractYouTubeChannel(url) {
 }
 
 /**
- * Fetch and hydrate metadata for tracks that only had URLs
+ * Fetch and hydrate metadata for regular (non-channel) tracks - fast
  */
-async function enrichTrackMetadata(tracks) {
-  const pending = tracks
-    .map((track, index) => ({ track, index }))
-    .filter(({ track }) => track.needsMetadata);
-
+async function enrichRegularTrackMetadata(tracks) {
+  const pending = tracks.filter(track => track.needsMetadata);
   if (pending.length === 0) return;
 
-  await Promise.all(pending.map(async ({ track }) => {
-    if (track.isChannel) {
-      // Fetch channel metadata
-      const channelMeta = await fetchChannelMetadata(track.channelHandle);
-      if (channelMeta) {
-        track.title = channelMeta.title || track.title;
-        track.thumbnail = channelMeta.thumbnail;
-        track.artist = 'Podcast';
-      }
-      track.needsMetadata = false;
-      return;
-    }
-
+  await Promise.all(pending.map(async (track) => {
     const meta = await fetchYouTubeMetadata(track.url);
     if (!meta) return;
 
@@ -2015,27 +2014,162 @@ async function enrichTrackMetadata(tracks) {
 }
 
 /**
+ * Fetch and hydrate metadata for channel tracks in background - slow, non-blocking
+ */
+async function enrichChannelMetadataInBackground(channelTracks) {
+  const pending = channelTracks.filter(track => track.needsMetadata);
+  if (pending.length === 0) return;
+
+  // Process channels in parallel but update UI as each completes
+  pending.forEach(async (track) => {
+    // First try quick noembed (fast)
+    const quickMeta = await fetchChannelMetadataQuick(track.channelHandle);
+    if (quickMeta && quickMeta.thumbnail) {
+      track.title = quickMeta.title || track.title;
+      track.thumbnail = quickMeta.thumbnail;
+      track.artist = 'Podcast';
+      track.needsMetadata = false;
+      // Update UI immediately if this track is visible
+      const isVisible = musicState.tracks.some(t => 
+        t.isChannel && t.channelHandle === track.channelHandle
+      );
+      if (isVisible) {
+        renderPlaylist();
+      }
+      return;
+    }
+
+    // If no quick thumbnail, try slow method in background
+    const channelMeta = await fetchChannelMetadata(track.channelHandle);
+    if (channelMeta) {
+      track.title = channelMeta.title || track.title;
+      track.thumbnail = channelMeta.thumbnail;
+      track.artist = 'Podcast';
+    }
+    track.needsMetadata = false;
+    // Update UI when thumbnail arrives
+    const isVisible = musicState.tracks.some(t => 
+      t.isChannel && t.channelHandle === track.channelHandle
+    );
+    if (isVisible) {
+      renderPlaylist();
+    }
+  });
+}
+
+/**
+ * Quick channel metadata fetch - only tries noembed (fast)
+ */
+async function fetchChannelMetadataQuick(handle) {
+  try {
+    const channelUrl = `https://www.youtube.com/@${handle}`;
+    const noembedUrl = `https://noembed.com/embed?url=${encodeURIComponent(channelUrl)}`;
+    const res = await fetch(noembedUrl);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.error && data.thumbnail_url) {
+        return {
+          title: data.author_name || data.title || handle,
+          thumbnail: data.thumbnail_url
+        };
+      }
+    }
+  } catch (err) {
+    // Silent fail for quick method
+  }
+  return null;
+}
+
+/**
  * Fetch channel metadata using noembed service (more permissive than YouTube oEmbed)
  */
 async function fetchChannelMetadata(handle) {
   try {
     const channelUrl = `https://www.youtube.com/@${handle}`;
 
-    // Try noembed.com which often returns better data
+    // Try noembed.com which often returns better data (fast)
     const noembedUrl = `https://noembed.com/embed?url=${encodeURIComponent(channelUrl)}`;
     const res = await fetch(noembedUrl);
 
     if (res.ok) {
       const data = await res.json();
       if (!data.error) {
-        return {
-          title: data.author_name || data.title || handle,
-          thumbnail: data.thumbnail_url || null
-        };
+        const title = data.author_name || data.title || handle;
+        // If noembed provided a thumbnail, use it
+        if (data.thumbnail_url) {
+          return {
+            title: title,
+            thumbnail: data.thumbnail_url
+          };
+        }
+        // Otherwise, continue to fetch latest video thumbnail
       }
     }
 
-    // Fallback to YouTube oEmbed for channel name
+    // Try to get latest video thumbnail as channel artwork (with timeout)
+    // Use CORS proxy to fetch the channel's videos page
+    const videosUrl = `${channelUrl}/videos`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(videosUrl)}`;
+    
+    try {
+      // Fetch with 5 second timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const videosRes = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      if (videosRes.ok) {
+        const proxyData = await videosRes.json();
+        const videosHtml = proxyData.contents || '';
+        
+        if (videosHtml) {
+          // Try fast regex patterns only (skip slow JSON parsing)
+          // Pattern 1: "videoId":"..." (most common, fastest)
+          let videoIdMatch = videosHtml.match(/"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/);
+          // Pattern 2: watch?v=... (in URLs)
+          if (!videoIdMatch) {
+            videoIdMatch = videosHtml.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
+          }
+          
+          if (videoIdMatch && videoIdMatch[1]) {
+            const videoId = videoIdMatch[1];
+            // Get title from oEmbed in parallel (don't wait)
+            let title = handle;
+            fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(channelUrl)}&format=json`)
+              .then(ytRes => ytRes.ok ? ytRes.json() : null)
+              .then(data => {
+                if (data && data.author_name) {
+                  // Update title if track is still in the list
+                  const track = musicState.allTracks.find(t => 
+                    t.isChannel && t.channelHandle === handle
+                  );
+                  if (track) {
+                    track.title = data.author_name;
+                    if (musicState.tracks.includes(track)) {
+                      renderPlaylist();
+                    }
+                  }
+                }
+              })
+              .catch(() => {}); // Ignore errors
+            
+            return {
+              title: title,
+              thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+            };
+          }
+        }
+      }
+    } catch (videosErr) {
+      // Timeout or fetch failed, continue to fallback
+      if (videosErr.name !== 'AbortError') {
+        console.warn('Could not fetch channel videos:', videosErr);
+      }
+    }
+
+    // Fallback to YouTube oEmbed for channel name (no thumbnail available)
     const oembed = `https://www.youtube.com/oembed?url=${encodeURIComponent(channelUrl)}&format=json`;
     const ytRes = await fetch(oembed);
     if (ytRes.ok) {
@@ -2106,15 +2240,44 @@ function applyFolderFilter(resetPlayer = false) {
 
 function switchFolder(folder) {
   if (!folder || musicState.activeFolder === folder) return;
+  
+  // Save the current track before filtering (if any)
+  let currentTrack = null;
+  if (musicState.currentIndex >= 0 && musicState.tracks.length > 0) {
+    currentTrack = musicState.tracks[musicState.currentIndex];
+  }
+  
   musicState.activeFolder = folder;
-  applyFolderFilter(true);
+  applyFolderFilter(false);
+  
+  // If we had a current track, check if it's in the new folder
+  // If yes, find its new index. If no, reset currentIndex but keep player playing
+  if (currentTrack && currentTrack.folder === folder) {
+    // Find the track's new index in the filtered list
+    const newIndex = musicState.tracks.findIndex(t => 
+      t.url === currentTrack.url || 
+      (t.videoId === currentTrack.videoId && t.title === currentTrack.title && t.artist === currentTrack.artist)
+    );
+    musicState.currentIndex = newIndex >= 0 ? newIndex : -1;
+  } else {
+    // Current track is not in the new folder, reset index but keep playing
+    musicState.currentIndex = -1;
+  }
+  
   renderMusicFolders();
   renderPlaylist();
+  
+  // Update mini player if music window is closed and there's a playing track
+  if (!state.windows.openWindows.has('music') && (musicState.isPlaying || musicState.playingTrack)) {
+    updateMiniPlayer();
+    showMiniPlayer();
+  }
 }
 
 function resetPlayerForFolder() {
   musicState.currentIndex = -1;
   musicState.isPlaying = false;
+  musicState.playingTrack = null;
   stopProgressTimer();
 
   const titleEl = document.getElementById('playerTitle');
@@ -2279,6 +2442,12 @@ function playTrack(index) {
     item.classList.toggle('active', i === index);
     item.classList.toggle('playing', i === index && musicState.isPlaying);
   });
+
+  // Store the actual playing track from allTracks
+  musicState.playingTrack = musicState.allTracks.find(t => 
+    t.url === track.url || 
+    (t.videoId === track.videoId && t.title === track.title && t.artist === track.artist)
+  ) || track;
 
   musicState.isPlaying = true;
   ensureYouTubePlayer(track.videoId);
@@ -2583,9 +2752,15 @@ function updateMiniPlayer() {
   const iconPlay = playBtn?.querySelector('.mini-player-icon-play');
   const iconPause = playBtn?.querySelector('.mini-player-icon-pause');
 
-  if (musicState.currentIndex >= 0 && musicState.currentIndex < musicState.tracks.length) {
-    const track = musicState.tracks[musicState.currentIndex];
-    
+  // Use playingTrack if available (even if currentIndex is -1), otherwise use currentIndex track
+  let track = null;
+  if (musicState.playingTrack) {
+    track = musicState.playingTrack;
+  } else if (musicState.currentIndex >= 0 && musicState.currentIndex < musicState.tracks.length) {
+    track = musicState.tracks[musicState.currentIndex];
+  }
+
+  if (track) {
     if (titleEl) titleEl.textContent = track.title || 'Unknown Track';
     if (artistEl) artistEl.textContent = track.artist || 'Unknown Artist';
     
