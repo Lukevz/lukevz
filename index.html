@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Lumos Notes</title>
 
   <!-- Open Graph / Facebook -->
@@ -52,6 +52,11 @@
             <path d="M3 2h18v14h-2v2h-2v-2h-2v2h2v2h-2v2H3V2zm2 2v16h8v-6h6V4H5z" fill="currentColor"/>
           </svg>
         </button>
+        <button class="nav-icon-btn" data-view="timeline" aria-label="Timeline">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M17 2h-2v2H9V2H7v2H3v18h18V4h-4V2zM7 6h12v2H5V6h2zM5 20V10h14v10H5zm12-8H7v2h10v-2z" fill="currentColor"/>
+          </svg>
+        </button>
         <button class="nav-icon-btn" data-view="music" aria-label="Music">
           <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path d="M19 4H5v2H3v14h7v-8H5V6h14v6h-5v8h7V6h-2V4zm-3 10h3v4h-3v-4zm-8 0v4H5v-4h3z" fill="currentColor"/>
@@ -60,10 +65,10 @@
       </nav>
     </div>
     <div class="menu-right">
-      <button class="follow-btn" id="followBtn">
-        Follow
+      <!-- Hamburger Menu Button (Mobile Only) -->
+      <button class="hamburger-menu-btn" id="hamburgerMenuBtn" aria-label="Menu" aria-expanded="false">
         <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M8 5v2h2V5H8zm4 4V7h-2v2h2zm2 2V9h-2v2h2zm0 2h2v-2h-2v2zm-2 2v-2h2v2h-2zm0 0h-2v2h2v-2zm-4 4v-2h2v2H8z" fill="currentColor"/>
+          <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm16 5H4v2h16v-2z" fill="currentColor"/>
         </svg>
       </button>
       <div class="social-icons" id="socialIcons">
@@ -90,6 +95,55 @@
       </div>
     </div>
   </header>
+
+  <!-- Mobile Header Menu Dropdown -->
+  <div class="mobile-header-menu" id="mobileHeaderMenu">
+    <div class="mobile-header-menu-content">
+      <nav class="mobile-menu-apps">
+        <button class="mobile-menu-app-btn" data-view="tasks">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 4h2v2h-2V4zm-2 4V6h2v2h-2zm-2 0h2v2h-2V8zm0 0h-2V6h2v2zM3 6h8v2H3V6zm8 10H3v2h8v-2zm7 2v-2h2v-2h-2v2h-2v-2h-2v2h2v2h-2v2h2v-2h2zm0 0v2h2v-2h-2z" fill="currentColor"/>
+          </svg>
+          <span>Tasks</span>
+        </button>
+        <button class="mobile-menu-app-btn" data-view="notes">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M3 2h18v14h-2v2h-2v-2h-2v2h2v2h-2v2H3V2zm2 2v16h8v-6h6V4H5z" fill="currentColor"/>
+          </svg>
+          <span>Notes</span>
+        </button>
+        <button class="mobile-menu-app-btn" data-view="timeline">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M17 2h-2v2H9V2H7v2H3v18h18V4h-4V2zM7 6h12v2H5V6h2zM5 20V10h14v10H5zm12-8H7v2h10v-2z" fill="currentColor"/>
+          </svg>
+          <span>Timeline</span>
+        </button>
+        <button class="mobile-menu-app-btn" data-view="music">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 4H5v2H3v14h7v-8H5V6h14v6h-5v8h7V6h-2V4zm-3 10h3v4h-3v-4zm-8 0v4H5v-4h3z" fill="currentColor"/>
+          </svg>
+          <span>Music</span>
+        </button>
+      </nav>
+      <div class="mobile-menu-socials">
+        <a href="https://x.com/lukevz" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="X (Twitter)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M18.42,14.009L27.891,3h-2.244l-8.224,9.559L10.855,3H3.28l9.932,14.455L3.28,29h2.244l8.684-10.095,6.936,10.095h7.576l-10.301-14.991h0Zm-3.074,3.573l-1.006-1.439L6.333,4.69h3.447l6.462,9.243,1.006,1.439,8.4,12.015h-3.447l-6.854-9.804h0Z"/></svg>
+        </a>
+        <a href="https://www.youtube.com/@uxwithluke" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="YouTube">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M31.331,8.248c-.368-1.386-1.452-2.477-2.829-2.848-2.496-.673-12.502-.673-12.502-.673,0,0-10.007,0-12.502,.673-1.377,.37-2.461,1.462-2.829,2.848-.669,2.512-.669,7.752-.669,7.752,0,0,0,5.241,.669,7.752,.368,1.386,1.452,2.477,2.829,2.847,2.496,.673,12.502,.673,12.502,.673,0,0,10.007,0,12.502-.673,1.377-.37,2.461-1.462,2.829-2.847,.669-2.512,.669-7.752,.669-7.752,0,0,0-5.24-.669-7.752ZM12.727,20.758V11.242l8.364,4.758-8.364,4.758Z"/></svg>
+        </a>
+        <a href="https://www.instagram.com/lukevanzyl/" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="Instagram">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M10.202,2.098c-1.49,.07-2.507,.308-3.396,.657-.92,.359-1.7,.84-2.477,1.619-.776,.779-1.254,1.56-1.61,2.481-.345,.891-.578,1.909-.644,3.4-.066,1.49-.08,1.97-.073,5.771s.024,4.278,.096,5.772c.071,1.489,.308,2.506,.657,3.396,.359,.92,.84,1.7,1.619,2.477,.779,.776,1.559,1.253,2.483,1.61,.89,.344,1.909,.579,3.399,.644,1.49,.065,1.97,.08,5.771,.073,3.801-.007,4.279-.024,5.773-.095s2.505-.309,3.395-.657c.92-.36,1.701-.84,2.477-1.62s1.254-1.561,1.609-2.483c.345-.89,.579-1.909,.644-3.398,.065-1.494,.081-1.971,.073-5.773s-.024-4.278-.095-5.771-.308-2.507-.657-3.397c-.36-.92-.84-1.7-1.619-2.477s-1.561-1.254-2.483-1.609c-.891-.345-1.909-.58-3.399-.644s-1.97-.081-5.772-.074-4.278,.024-5.771,.096m.164,25.309c-1.365-.059-2.106-.286-2.6-.476-.654-.252-1.12-.557-1.612-1.044s-.795-.955-1.05-1.608c-.192-.494-.423-1.234-.487-2.599-.069-1.475-.084-1.918-.092-5.656s.006-4.18,.071-5.656c.058-1.364,.286-2.106,.476-2.6,.252-.655,.556-1.12,1.044-1.612s.955-.795,1.608-1.05c.493-.193,1.234-.422,2.598-.487,1.476-.07,1.919-.084,5.656-.092,3.737-.008,4.181,.006,5.658,.071,1.364,.059,2.106,.285,2.599,.476,.654,.252,1.12,.555,1.612,1.044s.795,.954,1.051,1.609c.193,.492,.422,1.232,.486,2.597,.07,1.476,.086,1.919,.093,5.656,.007,3.737-.006,4.181-.071,5.656-.06,1.365-.286,2.106-.476,2.601-.252,.654-.556,1.12-1.045,1.612s-.955,.795-1.608,1.05c-.493,.192-1.234,.422-2.597,.487-1.476,.069-1.919,.084-5.657,.092s-4.18-.007-5.656-.071M21.779,8.517c.002,.928,.755,1.679,1.683,1.677s1.679-.755,1.677-1.683c-.002-.928-.755-1.679-1.683-1.677,0,0,0,0,0,0-.928,.002-1.678,.755-1.677,1.683m-12.967,7.496c.008,3.97,3.232,7.182,7.202,7.174s7.183-3.232,7.176-7.202c-.008-3.97-3.233-7.183-7.203-7.175s-7.182,3.233-7.174,7.203m2.522-.005c-.005-2.577,2.08-4.671,4.658-4.676,2.577-.005,4.671,2.08,4.676,4.658,.005,2.577-2.08,4.671-4.658,4.676-2.577,.005-4.671-2.079-4.676-4.656h0Z"/></svg>
+        </a>
+        <a href="https://www.threads.com/@lukevanzyl" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="Threads">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M22.7,14.977c-.121-.058-.243-.113-.367-.167-.216-3.982-2.392-6.262-6.046-6.285-.017,0-.033,0-.05,0-2.185,0-4.003,.933-5.122,2.63l2.009,1.378c.836-1.268,2.147-1.538,3.113-1.538,.011,0,.022,0,.033,0,1.203,.008,2.111,.357,2.698,1.04,.428,.497,.714,1.183,.855,2.049-1.067-.181-2.22-.237-3.453-.166-3.474,.2-5.707,2.226-5.557,5.041,.076,1.428,.788,2.656,2.003,3.459,1.028,.678,2.351,1.01,3.727,.935,1.817-.1,3.242-.793,4.236-2.06,.755-.963,1.233-2.21,1.444-3.781,.866,.523,1.507,1.21,1.862,2.037,.603,1.405,.638,3.714-1.246,5.596-1.651,1.649-3.635,2.363-6.634,2.385-3.326-.025-5.842-1.091-7.478-3.171-1.532-1.947-2.323-4.759-2.353-8.359,.03-3.599,.821-6.412,2.353-8.359,1.636-2.079,4.151-3.146,7.478-3.171,3.35,.025,5.91,1.097,7.608,3.186,.833,1.025,1.461,2.313,1.874,3.815l2.355-.628c-.502-1.849-1.291-3.443-2.365-4.764-2.177-2.679-5.361-4.051-9.464-4.08h-.016c-4.094,.028-7.243,1.406-9.358,4.095-1.882,2.393-2.853,5.722-2.886,9.895v.01s0,.01,0,.01c.033,4.173,1.004,7.503,2.886,9.895,2.115,2.689,5.264,4.067,9.358,4.095h.016c3.64-.025,6.206-.978,8.32-3.09,2.765-2.763,2.682-6.226,1.771-8.352-.654-1.525-1.901-2.763-3.605-3.581Zm-6.285,5.909c-1.522,.086-3.104-.598-3.182-2.061-.058-1.085,.772-2.296,3.276-2.441,.287-.017,.568-.025,.844-.025,.909,0,1.76,.088,2.533,.257-.288,3.602-1.98,4.187-3.471,4.269Z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/in/lukevz/" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="LinkedIn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" fill-rule="evenodd" d="M26.111,3H5.889c-1.595,0-2.889,1.293-2.889,2.889V26.111c0,1.595,1.293,2.889,2.889,2.889H26.111c1.595,0,2.889-1.293,2.889-2.889V5.889c0-1.595-1.293-2.889-2.889-2.889ZM10.861,25.389h-3.877V12.87h3.877v12.519Zm-1.957-14.158c-1.267,0-2.293-1.034-2.293-2.31s1.026-2.31,2.293-2.31,2.292,1.034,2.292,2.31-1.026,2.31-2.292,2.31Zm16.485,14.158h-3.858v-6.571c0-1.802-.685-2.809-2.111-2.809-1.551,0-2.362,1.048-2.362,2.809v6.571h-3.718V12.87h3.718v1.686s1.118-2.069,3.775-2.069,4.556,1.621,4.556,4.975v7.926Z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- System Alert -->
   <div class="system-alert" id="systemAlert">
@@ -195,6 +249,96 @@
   </div>
   </div><!-- End Notes View -->
 
+  <!-- Timeline View -->
+  <div class="view timeline-view" id="timelineView">
+    <div class="window-titlebar">
+      <h2>Timeline</h2>
+      <button class="window-close" aria-label="Close window">
+        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+    <div class="timeline-window">
+      <div class="timeline-inner">
+        <header class="timeline-header">
+          <p class="timeline-eyebrow">Career journey</p>
+          <h3 class="timeline-title">Moments that shaped my work</h3>
+          <p class="timeline-subtitle">Scroll horizontally from 2013 to 2025 to explore the milestones.</p>
+        </header>
+        <div class="timeline-scroll" aria-label="Career timeline">
+          <div class="timeline-track">
+            <article class="timeline-item">
+              <header class="timeline-meta">
+                <span class="timeline-dot"></span>
+                <span class="timeline-year">2013</span>
+              </header>
+              <div class="timeline-card">
+                <h4 class="timeline-item-title">First creative project</h4>
+                <p class="timeline-item-description">Launched Mac Square, my first YouTube channel.</p>
+              </div>
+            </article>
+
+            <article class="timeline-item">
+              <header class="timeline-meta">
+                <span class="timeline-dot"></span>
+                <span class="timeline-year">2015</span>
+              </header>
+              <div class="timeline-card">
+                <h4 class="timeline-item-title">Freelance Designer &amp; Video Editor</h4>
+                <p class="timeline-item-description">Partnered with clients as a solo designer and editor, honing craft and process.</p>
+              </div>
+            </article>
+
+            <article class="timeline-item">
+              <header class="timeline-meta">
+                <span class="timeline-dot"></span>
+                <span class="timeline-year">2021</span>
+              </header>
+              <div class="timeline-card">
+                <h4 class="timeline-item-title">Senior Digital Designer</h4>
+                <p class="timeline-item-description">Blue Corona, Inc — helping brands grow with conversion‑focused digital experiences.</p>
+              </div>
+            </article>
+
+            <article class="timeline-item">
+              <header class="timeline-meta">
+                <span class="timeline-dot"></span>
+                <span class="timeline-year">2022</span>
+              </header>
+              <div class="timeline-card">
+                <h4 class="timeline-item-title">Senior UX Designer</h4>
+                <p class="timeline-item-description">PwC Products &amp; Technology — designing product ecosystems at enterprise scale.</p>
+              </div>
+            </article>
+
+            <article class="timeline-item">
+              <header class="timeline-meta">
+                <span class="timeline-dot"></span>
+                <span class="timeline-year">2023</span>
+              </header>
+              <div class="timeline-card">
+                <h4 class="timeline-item-title">UX Design Manager</h4>
+                <p class="timeline-item-description">PwC Products &amp; Technology — leading a team shaping strategy, systems, and design quality.</p>
+              </div>
+            </article>
+
+            <article class="timeline-item">
+              <header class="timeline-meta">
+                <span class="timeline-dot"></span>
+                <span class="timeline-year">2025</span>
+              </header>
+              <div class="timeline-card">
+                <h4 class="timeline-item-title">Senior Product Designer</h4>
+                <p class="timeline-item-description">Instinct Science, LLC — building tools that help veterinarians deliver better care.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Music View -->
   <div class="view music-view" id="musicView">
     <div class="window-titlebar">
@@ -259,8 +403,46 @@
     </div>
   </div>
 
+  <!-- Info Button & Credits Popup -->
+  <button class="info-button" id="infoButton" aria-label="View credits" aria-expanded="false">
+    <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M3 3h2v18H3V3zm16 0H5v2h14v14H5v2h16V3h-2zm-8 6h2V7h-2v2zm2 8h-2v-6h2v6z" fill="currentColor"/>
+    </svg>
+  </button>
+
+  <div class="info-popup" id="infoPopup" role="dialog" aria-labelledby="infoPopupTitle">
+    <div class="info-popup-content">
+      <h2 id="infoPopupTitle" class="info-popup-title">Credits</h2>
+      <p><span class="info-label">Icons</span> – <a href="https://pixelarticons.com" target="_blank" rel="noopener noreferrer">pixelarticons.com</a> &amp; <a href="https://nucleoapp.com" target="_blank" rel="noopener noreferrer">Nucleo</a></p>
+      <p><span class="info-label">Fonts</span> – Bytesized, <a href="https://fonts.google.com/specimen/Bytesized" target="_blank" rel="noopener noreferrer">Google Fonts</a></p>
+      <p><span class="info-label">Built with</span> – Cursor &amp; Claude Code</p>
+      <p><span class="info-label">Designed by</span> – Luke van Zyl</p>
+    </div>
+  </div>
+
+  <!-- App Version -->
+  <div class="app-version" id="appVersion" aria-label="Version 1.0.3" role="button" tabindex="0">v1.0.3</div>
+
+  <!-- Changelog Modal -->
+  <div class="changelog-modal" id="changelogModal" role="dialog" aria-labelledby="changelogModalTitle" aria-hidden="true">
+    <div class="changelog-modal-overlay"></div>
+    <div class="changelog-modal-content">
+      <div class="changelog-modal-header">
+        <h2 id="changelogModalTitle" class="changelog-modal-title">Version History</h2>
+        <button class="changelog-modal-close" aria-label="Close changelog">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <div class="changelog-modal-body" id="changelogModalBody">
+        <!-- Changelog content will be loaded here -->
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 <script src="background.js"></script>
+<script src="timeline-background.js"></script>
 </body>
 </html>

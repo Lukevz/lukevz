@@ -304,6 +304,25 @@ function closeWindow(window) {
   if (navBtn) {
     navBtn.classList.remove('active');
   }
+
+  // Special handling for Notes view
+  if (windowId === 'notes') {
+    // Close the note view if it's open
+    if (elements.noteView) {
+      elements.noteView.classList.remove('active');
+    }
+    // Clear current post
+    state.currentPost = null;
+    // Clear active state from post items
+    document.querySelectorAll('.post-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    // Close sidebar if it's open on mobile
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar && sidebar.classList.contains('open')) {
+      toggleSidebar();
+    }
+  }
 }
 
 /**
@@ -819,11 +838,15 @@ function renderNote(post, updateUrl = true) {
  * Close note view (mobile)
  */
 function closeNote() {
-  elements.noteView.classList.remove('active');
+  if (elements.noteView) {
+    elements.noteView.classList.remove('active');
+  }
   state.currentPost = null;
   document.querySelectorAll('.post-item').forEach(item => {
     item.classList.remove('active');
   });
+  // Update URL to clear note hash
+  updateNoteUrl(null);
 }
 
 /**
@@ -931,6 +954,7 @@ function setupEventListeners() {
     const toggleBtn = e.target.closest('.tag-toggle');
     if (toggleBtn) {
       e.stopPropagation();
+      e.preventDefault();
       const tagPath = toggleBtn.dataset.tagPath;
       const isExpanded = state.expandedTags.has(tagPath);
 
@@ -951,12 +975,21 @@ function setupEventListeners() {
 
     const tagBtn = e.target.closest('.tag-item');
     if (tagBtn) {
+      e.preventDefault();
       state.currentTag = tagBtn.dataset.tag;
       renderPosts(state.currentTag);
 
+      // Close note view if open on mobile
+      if (window.innerWidth <= 1024 && elements.noteView && elements.noteView.classList.contains('active')) {
+        closeNote();
+      }
+
       // Close sidebar on mobile
       if (window.innerWidth <= 768) {
-        toggleSidebar();
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+          toggleSidebar();
+        }
       }
     }
   });
@@ -965,10 +998,19 @@ function setupEventListeners() {
   elements.postsList.addEventListener('click', (e) => {
     const postItem = e.target.closest('.post-item');
     if (postItem) {
+      e.preventDefault();
       const post = state.posts.find(p => p.filename === postItem.dataset.filename);
       if (post) {
         state.currentPost = post;
         renderNote(post);
+        
+        // On mobile, close sidebar after selecting a post
+        if (window.innerWidth <= 768) {
+          const sidebar = document.querySelector('.sidebar');
+          if (sidebar && sidebar.classList.contains('open')) {
+            toggleSidebar();
+          }
+        }
       }
     }
   });
@@ -1170,6 +1212,279 @@ function setupFollowButton() {
     const isShowing = socialIcons.classList.toggle('show');
     followBtn.classList.toggle('active', isShowing);
   });
+}
+
+/**
+ * Setup Hamburger menu for mobile
+ */
+function setupHamburgerMenu() {
+  const hamburgerBtn = document.getElementById('hamburgerMenuBtn');
+  const mobileMenu = document.getElementById('mobileHeaderMenu');
+  
+  if (!hamburgerBtn || !mobileMenu) return;
+  
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = mobileMenu.classList.toggle('show');
+    hamburgerBtn.classList.toggle('active', isOpen);
+    hamburgerBtn.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!mobileMenu.classList.contains('show')) return;
+    if (e.target === mobileMenu || mobileMenu.contains(e.target)) return;
+    if (e.target === hamburgerBtn || hamburgerBtn.contains(e.target)) return;
+    
+    mobileMenu.classList.remove('show');
+    hamburgerBtn.classList.remove('active');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+  });
+
+  // Handle app button clicks in mobile menu
+  mobileMenu.querySelectorAll('.mobile-menu-app-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const viewName = btn.dataset.view;
+      toggleWindow(viewName);
+      
+      // Close the menu after selection
+      mobileMenu.classList.remove('show');
+      hamburgerBtn.classList.remove('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      
+      // Update active state on buttons
+      mobileMenu.querySelectorAll('.mobile-menu-app-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === viewName && state.windows.openWindows.has(viewName));
+      });
+    });
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileMenu.classList.contains('show')) {
+      mobileMenu.classList.remove('show');
+      hamburgerBtn.classList.remove('active');
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+/**
+ * Setup Info button and credits popup
+ */
+function setupInfoPopup() {
+  const infoButton = document.getElementById('infoButton');
+  const infoPopup = document.getElementById('infoPopup');
+  if (!infoButton || !infoPopup) return;
+
+  const setOpen = (isOpen) => {
+    infoPopup.classList.toggle('show', isOpen);
+    infoButton.setAttribute('aria-expanded', String(isOpen));
+  };
+
+  infoButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const isOpen = !infoPopup.classList.contains('show');
+    setOpen(isOpen);
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', (event) => {
+    if (!infoPopup.classList.contains('show')) return;
+    if (event.target === infoPopup || infoPopup.contains(event.target)) return;
+    if (event.target === infoButton || infoButton.contains(event.target)) return;
+    setOpen(false);
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && infoPopup.classList.contains('show')) {
+      setOpen(false);
+    }
+  });
+}
+
+/**
+ * Parse changelog markdown content
+ */
+function parseChangelog(content) {
+  const lines = content.split('\n');
+  const versions = [];
+  let currentVersion = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Skip empty lines and markdown headers
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+    
+    // Match version headers like "V1.0.3 - description" or "V1.0.3"
+    const versionMatch = trimmed.match(/^V?(\d+\.\d+\.\d+)(?:\s*-\s*(.+))?$/i);
+    if (versionMatch) {
+      // Save previous version if exists
+      if (currentVersion) {
+        versions.push(currentVersion);
+      }
+      currentVersion = {
+        version: versionMatch[1],
+        description: versionMatch[2] || '',
+        items: []
+      };
+    }
+    // Match list items starting with "-"
+    else if (trimmed.startsWith('- ') && currentVersion) {
+      const item = trimmed.slice(2).trim();
+      if (item) {
+        currentVersion.items.push(item);
+      }
+    }
+  }
+
+  // Don't forget the last version
+  if (currentVersion) {
+    versions.push(currentVersion);
+  }
+
+  return versions;
+}
+
+/**
+ * Render changelog content in modal
+ */
+function renderChangelog(versions) {
+  const body = document.getElementById('changelogModalBody');
+  if (!body) return;
+
+  if (versions.length === 0) {
+    body.innerHTML = '<p style="color: var(--text-secondary);">No version history available.</p>';
+    return;
+  }
+
+  body.innerHTML = versions.map(version => {
+    const itemsHtml = version.items.length > 0
+      ? `<ul class="changelog-version-list">
+          ${version.items.map(item => `<li class="changelog-version-item">${item}</li>`).join('')}
+        </ul>`
+      : '';
+
+    return `
+      <div class="changelog-version">
+        <div class="changelog-version-header">v${version.version}${version.description ? ` — ${version.description}` : ''}</div>
+        ${itemsHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Load changelog from markdown file
+ */
+async function loadChangelog() {
+  try {
+    const response = await fetch('Digital Garden Changelog.md');
+    if (!response.ok) throw new Error('Failed to load changelog');
+    
+    const content = await response.text();
+    const versions = parseChangelog(content);
+    renderChangelog(versions);
+    return versions;
+  } catch (err) {
+    console.warn('Could not load changelog:', err);
+    const body = document.getElementById('changelogModalBody');
+    if (body) {
+      body.innerHTML = '<p style="color: var(--text-secondary);">Failed to load version history.</p>';
+    }
+    return [];
+  }
+}
+
+/**
+ * Show changelog modal
+ */
+function showChangelogModal() {
+  const modal = document.getElementById('changelogModal');
+  if (!modal) return;
+
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+
+  // Focus the close button for accessibility
+  const closeBtn = modal.querySelector('.changelog-modal-close');
+  if (closeBtn) {
+    setTimeout(() => closeBtn.focus(), 100);
+  }
+}
+
+/**
+ * Hide changelog modal
+ */
+function hideChangelogModal() {
+  const modal = document.getElementById('changelogModal');
+  if (!modal) return;
+
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+/**
+ * Setup version badge to show changelog modal
+ */
+function setupVersionChangelog() {
+  const versionEl = document.getElementById('appVersion');
+  const modal = document.getElementById('changelogModal');
+  if (!versionEl || !modal) return;
+
+  // Load changelog on first click
+  let changelogLoaded = false;
+
+  versionEl.addEventListener('click', async () => {
+    if (!changelogLoaded) {
+      await loadChangelog();
+      changelogLoaded = true;
+    }
+    showChangelogModal();
+  });
+
+  // Also support keyboard navigation
+  versionEl.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!changelogLoaded) {
+        await loadChangelog();
+        changelogLoaded = true;
+      }
+      showChangelogModal();
+    }
+  });
+
+  // Close button
+  const closeBtn = modal.querySelector('.changelog-modal-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', hideChangelogModal);
+  }
+
+  // Close on overlay click
+  const overlay = modal.querySelector('.changelog-modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', hideChangelogModal);
+  }
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') {
+      hideChangelogModal();
+    }
+  });
+
+  // Prevent modal content clicks from closing
+  const content = modal.querySelector('.changelog-modal-content');
+  if (content) {
+    content.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
 }
 
 /**
@@ -2181,7 +2496,9 @@ async function init() {
   initBackgroundImage();
   setupEventListeners();
   setupTopMenuNav();
-  setupFollowButton();
+  setupHamburgerMenu(); // Setup mobile hamburger menu
+  setupInfoPopup();
+  setupVersionChangelog();
   setupWindowManagement(); // Initialize window dragging and management
   setupMusicPlayer();
   initMenuBar();
