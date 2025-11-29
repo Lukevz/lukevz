@@ -2148,51 +2148,19 @@ async function fetchChannelMetadata(handle) {
           
           if (videoIdMatch && videoIdMatch[1]) {
             const videoId = videoIdMatch[1];
-            // Get title from oEmbed in parallel (don't wait)
-            let title = handle;
-            fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(channelUrl)}&format=json`)
-              .then(ytRes => ytRes.ok ? ytRes.json() : null)
-              .then(data => {
-                if (data && data.author_name) {
-                  // Update title if track is still in the list
-                  const track = musicState.allTracks.find(t => 
-                    t.isChannel && t.channelHandle === handle
-                  );
-                  if (track) {
-                    track.title = data.author_name;
-                    if (musicState.tracks.includes(track)) {
-                      renderPlaylist();
-                    }
-                  }
-                }
-              })
-              .catch(() => {}); // Ignore errors
-            
             return {
-              title: title,
+              title: handle,
               thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
             };
           }
         }
       }
     } catch (videosErr) {
-      // Timeout or fetch failed, continue to fallback
-      if (videosErr.name !== 'AbortError') {
-        console.warn('Could not fetch channel videos:', videosErr);
-      }
+      // Timeout or fetch failed (CORS proxy may be unavailable)
+      // Silently continue to fallback - these errors are expected
     }
 
-    // Fallback to YouTube oEmbed for channel name (no thumbnail available)
-    const oembed = `https://www.youtube.com/oembed?url=${encodeURIComponent(channelUrl)}&format=json`;
-    const ytRes = await fetch(oembed);
-    if (ytRes.ok) {
-      const data = await ytRes.json();
-      return {
-        title: data.author_name || handle,
-        thumbnail: null
-      };
-    }
-
+    // All methods failed, return fallback
     return { title: handle, thumbnail: null };
   } catch (err) {
     console.warn('Could not fetch channel metadata:', err);
