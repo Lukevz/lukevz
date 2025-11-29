@@ -24,6 +24,10 @@ Concise guide for maintaining consistency and preventing accidental overwrites w
 ### Assets
 - `images/` - Static images (bg.jpg, icons, cursors, og-header.png)
 
+### Archive
+- `.archive/` - Archived/legacy code that is preserved but not actively maintained
+- **Do not edit files in the `.archive` folder** - These are historical versions kept for reference only
+
 ## Goals & Principles
 
 **Primary Purpose:** Personal digital garden/portfolio combining notes, goals, music, and career timeline.

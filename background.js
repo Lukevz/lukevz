@@ -20,8 +20,12 @@
   const canvas = document.getElementById('bgCanvas');
   if (!canvas) return;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
   if (!ctx) return;
+
+  // Safari-specific rendering optimizations
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   // Mouse state
   const mouse = {
@@ -35,10 +39,12 @@
     x: 0,
     y: 0,
     mass: 3000,
-    radius: 80,
-    eventHorizonRadius: 140,
-    accretionDiskRadius: 280,
-    glowRadius: 180
+    radius: 90,                    // Schwarzschild radius (visual)
+    eventHorizonRadius: 115,        // Event horizon
+    accretionDiskRadius: 230,
+    glowRadius: 150,
+    iscoRadius: 200,               // ISCO at 3× Schwarzschild radius
+    photonSphereRadius: 100,        // Photon sphere at 1.5× Schwarzschild radius
   };
 
   // Particle array
@@ -97,8 +103,8 @@
     // Calculate precise orbital velocity for stable circular motion
     // Using vis-viva equation for orbital mechanics
     const speed = Math.sqrt(blackHole.mass / distance) * 0.55;
-    const vx = -Math.sin(angle) * speed + (Math.random() - 0.5) * 0.1;  // Reduced randomness
-    const vy = Math.cos(angle) * speed + (Math.random() - 0.5) * 0.1;
+    const vx = -Math.sin(angle) * speed + (Math.random() - 0.5) * 0.02;  // Minimal randomness for immediate stable orbits
+    const vy = Math.cos(angle) * speed + (Math.random() - 0.5) * 0.02;
 
     return {
       x: x,
@@ -155,7 +161,7 @@
     blackHole.x = canvas.width / 2;
     blackHole.y = canvas.height / 2;
 
-    // Draw accretion disk outer glow
+    // Draw accretion disk outer glow - simplified gradient for Safari
     const accretionGlow = ctx.createRadialGradient(
       blackHole.x,
       blackHole.y,
@@ -165,7 +171,7 @@
       blackHole.accretionDiskRadius
     );
     accretionGlow.addColorStop(0, 'rgba(100, 150, 255, 0.03)');
-    accretionGlow.addColorStop(0.5, 'rgba(80, 120, 200, 0.015)');
+    accretionGlow.addColorStop(0.5, 'rgba(75, 115, 210, 0.015)');
     accretionGlow.addColorStop(1, 'rgba(60, 100, 180, 0)');
 
     ctx.fillStyle = accretionGlow;
@@ -173,7 +179,7 @@
     ctx.arc(blackHole.x, blackHole.y, blackHole.accretionDiskRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw event horizon bright glow
+    // Draw event horizon bright glow - simplified for Safari
     const eventHorizonGlow = ctx.createRadialGradient(
       blackHole.x,
       blackHole.y,
@@ -183,8 +189,7 @@
       blackHole.glowRadius
     );
     eventHorizonGlow.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
-    eventHorizonGlow.addColorStop(0.3, 'rgba(200, 220, 255, 0.04)');
-    eventHorizonGlow.addColorStop(0.6, 'rgba(150, 180, 255, 0.02)');
+    eventHorizonGlow.addColorStop(0.5, 'rgba(180, 200, 255, 0.03)');
     eventHorizonGlow.addColorStop(1, 'rgba(100, 150, 255, 0)');
 
     ctx.fillStyle = eventHorizonGlow;
@@ -192,7 +197,7 @@
     ctx.arc(blackHole.x, blackHole.y, blackHole.glowRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw event horizon inner glow
+    // Draw event horizon inner glow - simplified for Safari
     const innerGlow = ctx.createRadialGradient(
       blackHole.x,
       blackHole.y,
@@ -202,8 +207,7 @@
       blackHole.eventHorizonRadius
     );
     innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
-    innerGlow.addColorStop(0.4, 'rgba(220, 230, 255, 0.05)');
-    innerGlow.addColorStop(0.7, 'rgba(180, 200, 255, 0.02)');
+    innerGlow.addColorStop(0.5, 'rgba(210, 225, 255, 0.04)');
     innerGlow.addColorStop(1, 'rgba(150, 180, 255, 0)');
 
     ctx.fillStyle = innerGlow;
@@ -211,12 +215,30 @@
     ctx.arc(blackHole.x, blackHole.y, blackHole.eventHorizonRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw photon sphere ring
+    // Draw photon sphere ring (subtle visualization at 1.5× Schwarzschild radius)
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(blackHole.x, blackHole.y, blackHole.eventHorizonRadius * 0.7, 0, Math.PI * 2);
+    ctx.arc(blackHole.x, blackHole.y, blackHole.photonSphereRadius, 0, Math.PI * 2);
     ctx.stroke();
+
+    // Draw accretion disk structure (gradient from ISCO outward) - simplified for Safari
+    const diskGradient = ctx.createRadialGradient(
+      blackHole.x,
+      blackHole.y,
+      blackHole.eventHorizonRadius,
+      blackHole.x,
+      blackHole.y,
+      blackHole.iscoRadius * 1.5
+    );
+    diskGradient.addColorStop(0, 'rgba(255, 255, 255, 0.06)');
+    diskGradient.addColorStop(0.5, 'rgba(210, 225, 255, 0.025)');
+    diskGradient.addColorStop(1, 'rgba(150, 180, 255, 0)');
+
+    ctx.fillStyle = diskGradient;
+    ctx.beginPath();
+    ctx.arc(blackHole.x, blackHole.y, blackHole.iscoRadius * 1.5, 0, Math.PI * 2);
+    ctx.fill();
 
     // Draw black hole core with subtle gradient
     const coreGradient = ctx.createRadialGradient(
@@ -285,35 +307,6 @@
       ctx.restore();
     }
 
-    // Add subtle digital pixel texture over the glow
-    const pixelSize = 4;
-    const textureRadius = blackHole.glowRadius;
-    const centerX = blackHole.x;
-    const centerY = blackHole.y;
-
-    // Only draw pixels within the glow radius
-    for (let x = centerX - textureRadius; x < centerX + textureRadius; x += pixelSize) {
-      for (let y = centerY - textureRadius; y < centerY + textureRadius; y += pixelSize) {
-        const dx = x - centerX;
-        const dy = y - centerY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        // Only draw within the glow radius
-        if (dist < textureRadius && dist > blackHole.radius) {
-          // Random pixel opacity based on distance and randomness
-          const distanceFactor = 1 - (dist / textureRadius);
-          const randomFactor = Math.random();
-
-          // Make pixels more subtle and sparse
-          if (randomFactor > 0.7) {
-            const opacity = distanceFactor * 0.08 * randomFactor;
-            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-            ctx.fillRect(x, y, pixelSize * 0.8, pixelSize * 0.8);
-          }
-        }
-      }
-    }
-
     // Update and draw celestial bodies (moons/planets)
     for (const body of celestialBodies) {
       // Update orbital angle
@@ -377,7 +370,7 @@
       );
       const edgeFade = Math.max(0.15, 1 - (viewportCenterDist / maxViewportDist) * 1.5);
 
-      // Mouse interaction - repulsion force
+      // Mouse interaction - repulsion force (reduced to prevent escape velocity)
       if (mouse.isHovering) {
         const mdx = p.x - mouse.x;
         const mdy = p.y - mouse.y;
@@ -385,10 +378,19 @@
 
         if (mouseDist < 120) {
           const repulsionStrength = (120 - mouseDist) / 120;
-          const repulsionForce = repulsionStrength * 0.8;
+          const repulsionForce = repulsionStrength * 0.4; // Reduced from 0.8 to prevent escape
           p.vx += (mdx / mouseDist) * repulsionForce;
           p.vy += (mdy / mouseDist) * repulsionForce;
         }
+      }
+
+      // Cap velocity to prevent escape velocity
+      const currentSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      const maxSpeed = Math.sqrt(blackHole.mass / Math.max(dist, blackHole.radius)) * 0.65; // Slightly above orbital speed
+      if (currentSpeed > maxSpeed) {
+        const speedRatio = maxSpeed / currentSpeed;
+        p.vx *= speedRatio;
+        p.vy *= speedRatio;
       }
 
       // Apply gravitational force from black hole
@@ -396,6 +398,20 @@
         const force = blackHole.mass / (dist * dist);
         const fx = (dx / dist) * force;
         const fy = (dy / dist) * force;
+
+        // For particles outside ISCO, apply velocity correction to maintain circular orbits
+        if (dist > blackHole.iscoRadius) {
+          const angleToBH = Math.atan2(dy, dx);
+          const orbitalAngle = angleToBH + Math.PI / 2;
+          const idealSpeed = Math.sqrt(blackHole.mass / dist) * 0.55;
+          const idealVx = Math.cos(orbitalAngle) * idealSpeed;
+          const idealVy = Math.sin(orbitalAngle) * idealSpeed;
+          
+          // Blend current velocity toward ideal orbital velocity (increased for stability)
+          const blendFactor = 0.08;
+          p.vx = p.vx * (1 - blendFactor) + idealVx * blendFactor;
+          p.vy = p.vy * (1 - blendFactor) + idealVy * blendFactor;
+        }
 
         p.vx += fx * 0.005;
         p.vy += fy * 0.005;
@@ -412,38 +428,44 @@
         // Calculate how much velocity is in the tangential direction
         const tangentialVelocity = p.vx * tangentX + p.vy * tangentY;
 
-        // Apply gentle correction to maintain orbital velocity
+        // Apply gentle correction to maintain orbital velocity (increased for stability)
         if (currentSpeed > 0.1 && dist > blackHole.eventHorizonRadius) {
-          const correction = (idealSpeed - Math.abs(tangentialVelocity)) * 0.02;
+          const correction = (idealSpeed - Math.abs(tangentialVelocity)) * 0.08;
           const direction = tangentialVelocity >= 0 ? 1 : -1;
           p.vx += tangentX * correction * direction;
           p.vy += tangentY * correction * direction;
         }
       }
 
-      // Apply minimal drag to simulate space friction
-      p.vx *= 0.998;
-      p.vy *= 0.998;
+      // Reduced drag for particles in stable orbits outside ISCO
+      if (dist > blackHole.iscoRadius) {
+        p.vx *= 0.9985;
+        p.vy *= 0.9985;
+      } else {
+        // More drag as particles spiral in inside ISCO
+        p.vx *= 0.997;
+        p.vy *= 0.997;
+      }
 
       // Update position
       p.x += p.vx;
       p.y += p.vy;
+
+      // Spiral trajectory for particles inside ISCO
+      if (dist < blackHole.iscoRadius && dist > blackHole.radius) {
+        const angleToBH = Math.atan2(dy, dx);
+        const perpAngle = angleToBH + Math.PI / 2;
+        // Spiral strength increases as particle gets closer to event horizon
+        const spiralStrength = (blackHole.iscoRadius - dist) / (blackHole.iscoRadius - blackHole.radius);
+        p.vx += Math.cos(perpAngle) * spiralStrength * 0.3;
+        p.vy += Math.sin(perpAngle) * spiralStrength * 0.3;
+      }
 
       // Check if particle is in event horizon
       if (dist < blackHole.eventHorizonRadius) {
         // Fade faster the closer to the black hole
         const proximityFactor = 1 - (dist / blackHole.eventHorizonRadius);
         p.life -= 0.06 + (proximityFactor * 0.12); // Faster fade near the core
-
-        // Create accretion disk swirl effect - enhances orbital motion
-        if (dist > blackHole.radius) {
-          const angle = Math.atan2(dy, dx);
-          const perpAngle = angle + Math.PI / 2;
-          // Stronger swirl closer to the event horizon
-          const swirl_strength = (1 - dist / blackHole.eventHorizonRadius) * 0.2;
-          p.vx += Math.cos(perpAngle) * swirl_strength;
-          p.vy += Math.sin(perpAngle) * swirl_strength;
-        }
       }
 
       // Remove dead particles or particles that hit the core
@@ -453,29 +475,88 @@
         continue;
       }
 
-      // Remove particles that go off screen
-      if (p.x < -100 || p.x > canvas.width + 100 || 
-          p.y < -100 || p.y > canvas.height + 100) {
-        particles.splice(i, 1);
-        particles.push(createParticle());
-        continue;
+      // Keep particles in stable orbits - apply stronger correction if too far from black hole
+      // This prevents particles from escaping due to instabilities
+      if (dist > blackHole.accretionDiskRadius * 2) {
+        // Pull particle back towards stable orbit radius
+        const targetDist = blackHole.accretionDiskRadius * 1.5;
+        const pullStrength = (dist - targetDist) / dist;
+        p.vx -= (dx / dist) * pullStrength * 0.5;
+        p.vy -= (dy / dist) * pullStrength * 0.5;
       }
 
-      // Calculate particle brightness and alpha
-      const brightness = Math.min(1, dist / 200);
-      const alpha = p.life * brightness * edgeFade;
+      // Calculate Doppler beaming effect
+      // Radial velocity = component of velocity toward/away from viewer
+      const angleToBH = Math.atan2(dy, dx);
+      const velocityAngle = Math.atan2(p.vy, p.vx);
+      const totalSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      const radialVelocity = Math.cos(velocityAngle - angleToBH) * totalSpeed;
+      
+      // Doppler factor: approaching (negative radial velocity) = brighter
+      // Receding (positive radial velocity) = dimmer
+      const dopplerFactor = 1 - (radialVelocity / 50);
+      const dopplerBrightness = Math.max(0.3, Math.min(1.5, dopplerFactor));
 
-      // Draw particle
-      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      // Distance-based brightness
+      const distanceBrightness = Math.min(1, dist / 200);
+      
+      // Accretion disk brightness boost for particles near ISCO
+      const diskBrightness = dist < blackHole.iscoRadius * 1.3
+        ? 1 + (0.4 * (1 - dist / (blackHole.iscoRadius * 1.3)))
+        : 1;
+      
+      // Combined brightness
+      const baseBrightness = distanceBrightness * dopplerBrightness * diskBrightness;
+      const alpha = Math.min(1, p.life * baseBrightness * edgeFade);
+
+      // Doppler color shift: approaching = bluer/whiter, receding = slightly warmer
+      const colorShift = Math.max(0, Math.min(1, dopplerFactor));
+      const red = 255;
+      const green = Math.floor(220 + colorShift * 35);
+      const blue = Math.floor(180 + colorShift * 75);
+
+      // Gravitational lensing effect
+      let drawX = p.x;
+      let drawY = p.y;
+      let lensingAlpha = alpha;
+
+      // Apply lensing for particles in the lensing region (between event horizon and 2× event horizon)
+      if (dist > blackHole.eventHorizonRadius && dist < blackHole.eventHorizonRadius * 2.5) {
+        // Check if particle is moving toward/behind the black hole
+        const futureX = p.x + p.vx * 8;
+        const futureY = p.y + p.vy * 8;
+        const futureDist = Math.sqrt(
+          Math.pow(blackHole.x - futureX, 2) + Math.pow(blackHole.y - futureY, 2)
+        );
+
+        // If trajectory takes particle closer to black hole, apply lensing
+        if (futureDist < dist && futureDist < blackHole.eventHorizonRadius * 2) {
+          const angleFromCenter = Math.atan2(p.y - blackHole.y, p.x - blackHole.x);
+          const lensingStrength = (blackHole.eventHorizonRadius * 2 - futureDist) / blackHole.eventHorizonRadius;
+          const clampedStrength = Math.min(0.5, lensingStrength * 0.3);
+          
+          // Deflect position slightly around the black hole
+          const deflectionAngle = angleFromCenter + clampedStrength;
+          const lensedDist = dist + clampedStrength * 15;
+          drawX = blackHole.x + Math.cos(deflectionAngle) * lensedDist;
+          drawY = blackHole.y + Math.sin(deflectionAngle) * lensedDist;
+          
+          // Lensed particles are slightly dimmer
+          lensingAlpha = alpha * (1 - clampedStrength * 0.4);
+        }
+      }
+
+      // Draw particle with Doppler-shifted color and lensing
+      ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${lensingAlpha})`;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.arc(drawX, drawY, p.size, 0, Math.PI * 2);
       ctx.fill();
 
-      // Add glow for particles near event horizon
+      // Enhanced glow for particles near event horizon
       if (dist < blackHole.eventHorizonRadius * 1.2) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.15})`;
+        ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${lensingAlpha * 0.15})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+        ctx.arc(drawX, drawY, p.size * 2, 0, Math.PI * 2);
         ctx.fill();
       }
     }
