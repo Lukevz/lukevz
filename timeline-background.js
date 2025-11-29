@@ -19,13 +19,9 @@ class TimelineBackground {
   init() {
     if (this.initialized) return;
 
-    console.log('Timeline background initializing...');
     this.resize();
-    console.log('Canvas size:', this.width, 'x', this.height);
     this.generateSpaceElements();
-    console.log('Space elements generated:', this.elements.length);
     this.draw();
-    console.log('Space scene drawn');
 
     // Add horizontal scroll listener for parallax effect
     const scrollContainer = document.querySelector('.timeline-scroll');
@@ -407,10 +403,8 @@ class TimelineBackground {
 
 // Initialize timeline background when timeline view becomes active
 function initTimelineBackground() {
-  console.log('initTimelineBackground called');
   const timelineView = document.getElementById('timelineView');
   if (!timelineView) {
-    console.log('Timeline view not found');
     return;
   }
 
@@ -431,19 +425,13 @@ function initTimelineBackground() {
 
   const timelineWindow = timelineView.querySelector('.timeline-window');
   if (timelineWindow) {
-    console.log('Timeline window found, inserting canvas');
     // Insert canvas as first child so it's behind everything
     timelineWindow.insertBefore(canvas, timelineWindow.firstChild);
 
     // Initialize immediately if view is already active
     if (timelineView.classList.contains('active')) {
-      console.log('Timeline view is active, initializing background');
       background = new TimelineBackground('timelineCanvas');
-    } else {
-      console.log('Timeline view not active yet, waiting...');
     }
-  } else {
-    console.log('Timeline window not found');
   }
 
   // Observe when timeline view becomes active

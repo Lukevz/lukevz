@@ -45,6 +45,16 @@
   const particles = [];
   const maxParticles = 400;
 
+  // Text animation state
+  let messages = [];
+  let displayedText = '';
+  let currentMessage = '';
+  let charIndex = 0;
+  let delayTimeout = null;
+  let typingInterval = null;
+  let cycleTimeout = null;
+  let currentMessageIndex = 0;
+
   // Celestial bodies - Solar System planets
   // Sizes scaled relative to Earth (size 5 = Earth), colors based on actual appearance
   const celestialBodies = [
@@ -225,6 +235,55 @@
     ctx.beginPath();
     ctx.arc(blackHole.x, blackHole.y, blackHole.radius, 0, Math.PI * 2);
     ctx.fill();
+
+    // Draw text over black hole core (if text is set)
+    if (displayedText) {
+      ctx.save();
+      
+      // Minimalist styling with Doto font (slightly thicker weight)
+      ctx.font = '600 11px "Doto", monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Simple shadow for subtle depth
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.3)';
+      ctx.shadowBlur = 4;
+      
+      // Wrap text to fit within black hole radius
+      const maxWidth = blackHole.radius * 1.6; // 80% of diameter for padding
+      const lineHeight = 14; // Spacing between lines
+      const words = displayedText.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      // Build lines that fit within maxWidth
+      for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = words[i];
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      
+      // Calculate starting Y position to center all lines vertically
+      const totalHeight = lines.length * lineHeight;
+      let startY = blackHole.y - (totalHeight / 2) + (lineHeight / 2);
+      
+      // Draw each line centered
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], blackHole.x, startY + (i * lineHeight));
+      }
+      
+      ctx.restore();
+    }
 
     // Add subtle digital pixel texture over the glow
     const pixelSize = 4;
@@ -428,9 +487,87 @@
   // INITIALIZATION
   // ============================================================================
 
+  // Load messages from markdown file
+  async function loadMessages() {
+    try {
+      const response = await fetch('home messages.md');
+      const text = await response.text();
+      
+      // Parse markdown - extract non-empty lines that aren't headers
+      messages = text
+        .split('\n')
+        .filter(line => line.trim() && !line.startsWith('#'))
+        .map(line => line.trim());
+      
+      if (messages.length > 0) {
+        startTextAnimation();
+      }
+    } catch (error) {
+      // Fallback messages
+      messages = [
+        "a universe of ideas waiting to be explored",
+        "A galaxy of life spiraling forward",
+        "Where time and space converge"
+      ];
+      startTextAnimation();
+    }
+  }
+
+  // Start typing animation for current message
+  function typeMessage() {
+    charIndex = 0;
+    displayedText = '';
+    
+    if (typingInterval) {
+      clearInterval(typingInterval);
+    }
+    
+    typingInterval = setInterval(() => {
+      if (charIndex < currentMessage.length) {
+        displayedText = currentMessage.substring(0, charIndex + 1);
+        charIndex++;
+      } else {
+        // Finished typing
+        clearInterval(typingInterval);
+      }
+    }, 50); // 50ms per character
+  }
+
+  // Cycle to next message
+  function cycleMessage() {
+    // Move to next message (or loop back to start)
+    currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+    currentMessage = messages[currentMessageIndex];
+    
+    typeMessage();
+    
+    // Schedule next cycle in 2-3 minutes (randomly)
+    const nextCycleDelay = 120000 + Math.random() * 60000; // 2-3 minutes
+    cycleTimeout = setTimeout(cycleMessage, nextCycleDelay);
+  }
+
+  // Start the text animation system
+  function startTextAnimation() {
+    // Pick random starting message
+    currentMessageIndex = Math.floor(Math.random() * messages.length);
+    currentMessage = messages[currentMessageIndex];
+    
+    // Start typing after 30 seconds
+    delayTimeout = setTimeout(() => {
+      typeMessage();
+      
+      // Schedule first cycle in 2-3 minutes after typing completes
+      const firstCycleDelay = 120000 + Math.random() * 60000; // 2-3 minutes
+      cycleTimeout = setTimeout(cycleMessage, firstCycleDelay);
+    }, 30000); // 30 seconds delay
+  }
+
   function init() {
     resize();
     initParticles();
+    
+    // Load messages and start animation
+    loadMessages();
     
     // Event listeners
     window.addEventListener('resize', resize);

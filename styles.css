@@ -533,6 +533,28 @@
 
 .weather-icon {
   font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.weather-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  color: inherit;
+}
+
+.weather-icon svg path[data-arcade-2="on"] {
+  stroke-opacity: 0.25;
+}
+
+.weather-icon svg path[data-arcade-3="on"] {
+  stroke-opacity: 0;
 }
 
 .weather-temp {

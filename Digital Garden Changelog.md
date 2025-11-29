@@ -1,4 +1,6 @@
 # Digital Garden Changelog
+V1.1.2 - Dynamic weather icons
+
 V1.1.1 - Added mini media player
 
 V1.1.0 - Added timeline view

@@ -14,9 +14,20 @@ interface Particle {
   distance: number
 }
 
+const MESSAGES = [
+  "a universe of ideas waiting to be explored",
+  "A constellation of thoughts waiting to be connected",
+  "A galaxy of life spiraling forward",
+]
+
 export default function BlackHoleSimulation() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const mouseRef = useRef({ x: 0, y: 0, isHovering: false })
+  const displayedTextRef = useRef("")
+  const textStateRef = useRef<"idle" | "typing" | "visible">("idle")
+  const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const delayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -127,6 +138,25 @@ export default function BlackHoleSimulation() {
       ctx.arc(blackHole.x, blackHole.y, blackHole.radius, 0, Math.PI * 2)
       ctx.fill()
 
+      // Draw text inside black hole if there's text to display
+      // Draw BEFORE particles to ensure it's visible
+      if (displayedTextRef.current && textStateRef.current !== "idle") {
+        ctx.save()
+        // Use a more reliable font stack with better fallbacks for canvas
+        ctx.font = '12px "Geist Mono", "SF Mono", "Monaco", "Consolas", "Courier New", monospace'
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)"
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        
+        // Add subtle shadow for better visibility against black background
+        ctx.shadowColor = "rgba(255, 255, 255, 0.6)"
+        ctx.shadowBlur = 5
+        
+        // Draw text - make sure it's definitely visible
+        ctx.fillText(displayedTextRef.current, blackHole.x, blackHole.y)
+        ctx.restore()
+      }
+
       // Update and draw particles
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i]
@@ -214,6 +244,7 @@ export default function BlackHoleSimulation() {
         }
       }
 
+
       requestAnimationFrame(animate)
     }
 
@@ -223,6 +254,67 @@ export default function BlackHoleSimulation() {
       window.removeEventListener("resize", resizeCanvas)
       canvas.removeEventListener("mousemove", handleMouseMove)
       canvas.removeEventListener("mouseleave", handleMouseLeave)
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current)
+      }
+      if (delayTimeoutRef.current) {
+        clearTimeout(delayTimeoutRef.current)
+      }
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Initialize message selection and timing
+  useEffect(() => {
+    // Randomly select a message
+    const selectedMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)]
+    console.log("Black hole text: Selected message:", selectedMessage)
+
+    // Set initial delay before starting typing
+    console.log("Black hole text: Setting up 3 second delay...")
+    delayTimeoutRef.current = setTimeout(() => {
+      console.log("Black hole text: Delay complete, starting typing animation")
+      textStateRef.current = "typing"
+      displayedTextRef.current = ""
+      
+      // Start typing animation
+      let currentIndex = 0
+      typingIntervalRef.current = setInterval(() => {
+        if (currentIndex < selectedMessage.length) {
+          displayedTextRef.current = selectedMessage.slice(0, currentIndex + 1)
+          console.log("Black hole text: Updating text:", displayedTextRef.current, "State:", textStateRef.current)
+          currentIndex++
+        } else {
+          // Typing complete
+          console.log("Black hole text: Typing complete")
+          if (typingIntervalRef.current) {
+            clearInterval(typingIntervalRef.current)
+            typingIntervalRef.current = null
+          }
+          textStateRef.current = "visible"
+          
+          // Keep text visible for 15+ seconds
+          visibilityTimeoutRef.current = setTimeout(() => {
+            console.log("Black hole text: Hiding text after visibility period")
+            textStateRef.current = "idle"
+            displayedTextRef.current = ""
+          }, 15000)
+        }
+      }, 60) // 60ms per character for typing effect
+    }, 3000) // 3 second initial delay for testing
+
+    return () => {
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current)
+      }
+      if (delayTimeoutRef.current) {
+        clearTimeout(delayTimeoutRef.current)
+      }
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current)
+      }
     }
   }, [])
 

@@ -195,3 +195,4 @@ Concise guide for maintaining consistency and preventing accidental overwrites w
 
 For detailed implementation notes, see `CLAUDE.md`.
 
+
