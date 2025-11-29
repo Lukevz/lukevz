@@ -524,8 +524,22 @@ function parseMarkdown(text) {
   // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
-  // Images
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy">');
+  // Images - fix Bear export paths (relative paths need posts/ prefix)
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+    // If the path is relative (doesn't start with /, http://, or https://), prepend posts/
+    // Bear exports create paths like "Note Name/Image.png" which need to be "posts/Note Name/Image.png"
+    if (src && !src.startsWith('/') && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:')) {
+      // Decode URL-encoded paths (Bear exports use %20 for spaces, etc.)
+      try {
+        const decodedPath = decodeURIComponent(src);
+        src = `posts/${decodedPath}`;
+      } catch (e) {
+        // If decoding fails, use original path
+        src = `posts/${src}`;
+      }
+    }
+    return `<img src="${src}" alt="${alt}" loading="lazy">`;
+  });
 
   // Blockquotes
   html = html.replace(/^&gt; (.*$)/gm, '<blockquote>$1</blockquote>');
@@ -839,7 +853,13 @@ function renderNote(post, updateUrl = true) {
   elements.noteDate.textContent = formatDate(post.date);
   elements.noteDate.setAttribute('datetime', post.date);
 
-  elements.noteTags.innerHTML = post.tags
+  // Filter out status/complete and other status/* tags from display
+  const visibleTags = post.tags.filter(tag => {
+    const rootTag = tag.split('/')[0];
+    return !hiddenTags.includes(rootTag);
+  });
+  
+  elements.noteTags.innerHTML = visibleTags
     .map(tag => `<span class="note-tag">#${tag}</span>`)
     .join('');
 

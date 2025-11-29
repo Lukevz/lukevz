@@ -948,6 +948,7 @@ html {
   /* Fix iOS Safari height issues */
   height: 100%;
   height: -webkit-fill-available;
+  color-scheme: dark;
 }
 
 body {

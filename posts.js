@@ -76,10 +76,6 @@ export default [
     "created": "2024-04-04"
   },
   {
-    "file": "Mistborn by Brandon Sanderson.md",
-    "created": "2025-09-10"
-  },
-  {
     "file": "My last day at PwC.md",
     "created": "2025-11-17"
   },
