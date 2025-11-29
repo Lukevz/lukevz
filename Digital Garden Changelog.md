@@ -1,5 +1,8 @@
 # Digital Garden Changelog
-V1.1.2 - Dynamic weather icons
+V1.1.2 
+- Added dynamic weather icons to reflect Atlanta conditions
+- Added homescreen messages
+- New trailing cursor effect
 
 V1.1.1 - Added mini media player
 
