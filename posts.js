@@ -40,6 +40,10 @@ export default [
     "created": "2025-04-06"
   },
   {
+    "file": "Digital Garden Changelog.md",
+    "created": "2025-11-26"
+  },
+  {
     "file": "Don’t Set Yourself On Fire To Keep Others Warm.md",
     "created": "2025-03-28"
   },

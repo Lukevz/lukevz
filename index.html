@@ -177,6 +177,23 @@
   <!-- Notes View (existing Bear-like interface) -->
   <div class="view notes-view" id="notesView">
     <div class="window-titlebar notes-titlebar">
+      <div class="view-mode-toggle" id="viewModeToggle">
+        <button class="view-mode-btn active" data-mode="three-column" aria-label="Show all columns" title="Show Tags, Notes and Editor">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M2 2h6v20H2V2zm8 0h6v20h-6V2zm8 0h6v20h-6V2z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="view-mode-btn" data-mode="two-column" aria-label="Show notes and editor" title="Show Notes and Editor">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M2 2h9v20H2V2zm11 0h11v20H13V2z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="view-mode-btn" data-mode="one-column" aria-label="Show editor only" title="Show Editor Only">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M2 2h20v20H2V2z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
       <h2>Notes</h2>
       <button class="window-close" aria-label="Close window">
         <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -187,9 +204,6 @@
     <div class="app">
     <!-- Sidebar: Tag Navigation -->
     <nav class="sidebar" aria-label="Tag navigation">
-      <header class="sidebar-header">
-        <h1>Garden</h1>
-      </header>
       <ul class="tag-list" role="list" id="tagList">
         <li>
           <button class="tag-item active" data-tag="all" aria-current="true">
@@ -198,6 +212,7 @@
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             <span>All Notes</span>
+            <span class="tag-count" id="allNotesCount">0</span>
           </button>
         </li>
         <!-- Tags populated by JS -->
@@ -206,10 +221,6 @@
 
     <!-- Post List Pane -->
     <section class="post-list" aria-label="Posts">
-      <header class="post-list-header">
-        <h2 id="currentTag">All Notes</h2>
-        <span class="post-count" id="postCount">0 notes</span>
-      </header>
       <ul class="posts" role="list" id="postsList">
         <!-- Posts populated by JS -->
       </ul>

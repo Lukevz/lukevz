@@ -1,6 +1,7 @@
-# How to use Bear as a CMS![](How%20to%20use%20Bear%20as%20a%20CMS/ChatGPT%20Image%20May%2024,%202025,%2003_00_08%20PM.png)
+# How to use Bear as a CMS
 
-# How to Use Bear as a CMS
+![](How%20to%20use%20Bear%20as%20a%20CMS/ChatGPT%20Image%20May%2024,%202025,%2003_00_08%20PM.png)
+
 Recently, I made the switch to Bear as my daily driver for notes. It's beautiful to write in, supports Markdown, and keeps digital note-taking simple without unnecessary features. While Bear does offer WordPress publishing, it's quite limited—and honestly, in 2025, I'd be happy never looking at another WordPress site again.
 
 I wanted to build out my digital garden without rebuilding all my posts, but I also wanted full control over design and layout. The challenge was finding a way to publish directly from Bear while maintaining the Markdown philosophy of “[file over app](https://stephango.com/file-over-app)"—ensuring your notes last beyond any specific tool or proprietary format.

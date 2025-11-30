@@ -21,8 +21,6 @@ const state = {
 const elements = {
   tagList: document.getElementById('tagList'),
   postsList: document.getElementById('postsList'),
-  currentTag: document.getElementById('currentTag'),
-  postCount: document.getElementById('postCount'),
   noteView: document.getElementById('noteView'),
   noteEmpty: document.getElementById('noteEmpty'),
   noteContent: document.getElementById('noteContent'),
@@ -102,13 +100,36 @@ function setupWindowManagement() {
     const isNowMobile = isMobile();
     if (wasMobile !== isNowMobile) {
       wasMobile = isNowMobile;
-      // If switching to mobile, close all windows except one
-      if (isNowMobile && state.windows.openWindows.size > 1) {
-        const openWindows = Array.from(state.windows.openWindows);
-        const firstWindow = openWindows[0];
-        openWindows.slice(1).forEach(windowId => {
-          const win = document.getElementById(`${windowId}View`);
-          if (win) closeWindow(win);
+      
+      if (isNowMobile) {
+        // Switching to mobile - close all windows except one and remove resize handles
+        if (state.windows.openWindows.size > 1) {
+          const openWindows = Array.from(state.windows.openWindows);
+          const firstWindow = openWindows[0];
+          openWindows.slice(1).forEach(windowId => {
+            const win = document.getElementById(`${windowId}View`);
+            if (win) closeWindow(win);
+          });
+        }
+        // Remove resize handles from all windows
+        windows.forEach(window => {
+          const handles = window.querySelectorAll('.resize-handle');
+          handles.forEach(handle => handle.remove());
+        });
+      } else {
+        // Switching to desktop - add resize handles and enable dragging
+        windows.forEach(window => {
+          const titlebar = window.querySelector('.window-titlebar');
+          const windowId = window.id.replace('View', '');
+          
+          // Only make non-notes windows draggable
+          if (titlebar && windowId !== 'notes') {
+            makeWindowDraggable(window, titlebar);
+          }
+          
+          // Add resize handles
+          addResizeHandles(window);
+          makeWindowResizable(window);
         });
       }
     }
@@ -505,26 +526,179 @@ function parseMarkdown(text) {
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // Headers
-  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+  // Helper function to encode path segments properly
+  function encodePathSegments(path) {
+    // Split by /, encode each segment, then rejoin
+    return path.split('/').map(segment => encodeURIComponent(segment)).join('/');
+  }
 
-  // Bold and Italic
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  html = html.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
-  html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+  // Helper function to process markdown content (used for blockquotes and regular content)
+  function processMarkdownContent(content) {
+    let processed = content;
+    
+    // Headers
+    processed = processed.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
+    processed = processed.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
+    processed = processed.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
+    
+    // Images - fix Bear export paths (relative paths need posts/ prefix)
+    // Process BEFORE text formatting to prevent mangling of URLs with underscores
+    processed = processed.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+      if (src && !src.startsWith('/') && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:')) {
+        try {
+          // Decode the URL-encoded path from Bear export
+          const decodedPath = decodeURIComponent(src);
+          // Encode each path segment separately to handle special characters like commas
+          const encodedPath = encodePathSegments(decodedPath);
+          // Use absolute path from root to avoid any base path issues
+          src = `/posts/${encodedPath}`;
+        } catch (e) {
+          // If decoding fails, try encoding the original path segment by segment
+          try {
+            const encodedPath = encodePathSegments(src);
+            src = `/posts/${encodedPath}`;
+          } catch (e2) {
+            // Last resort: use original path with absolute path
+            src = `/posts/${src}`;
+          }
+        }
+      }
+      return `<img src="${src}" alt="${alt}" loading="lazy">`;
+    });
+    
+    // Links
+    processed = processed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    
+    // Bold and Italic (process bold before italic to avoid conflicts)
+    processed = processed.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    processed = processed.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+    processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    processed = processed.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    processed = processed.replace(/_(.+?)_/g, '<em>$1</em>');
+    
+    // Strikethrough
+    processed = processed.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    
+    return processed;
+  }
 
-  // Strikethrough
-  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  // Process blockquotes FIRST (before other markdown) so we can process markdown inside them
+  // Group consecutive blockquote lines together
+  const blockquoteLines = html.split('\n');
+  const blockquoteProcessedLines = [];
+  let blockquoteContent = [];
+  let inBlockquote = false;
+  
+  function flushBlockquote() {
+    if (blockquoteContent.length > 0) {
+      const content = blockquoteContent.join('\n');
+      const processed = processMarkdownContent(content);
+      // Process lists inside blockquote
+      const listProcessed = processListsInContent(processed);
+      // Process paragraphs inside blockquote
+      const paragraphProcessed = processParagraphsInContent(listProcessed);
+      blockquoteProcessedLines.push(`<blockquote>${paragraphProcessed}</blockquote>`);
+      blockquoteContent = [];
+    }
+    inBlockquote = false;
+  }
+  
+  function processParagraphsInContent(content) {
+    return content.split('\n\n').map(block => {
+      block = block.trim();
+      if (!block) return '';
+      if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') ||
+          block.startsWith('<blockquote') || block.startsWith('<pre') || block.startsWith('<hr') ||
+          block.startsWith('<p>')) {
+        return block;
+      }
+      // Wrap in paragraph if not already a block element
+      if (!block.startsWith('<')) {
+        return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+      }
+      return block;
+    }).join('\n');
+  }
+  
+  function processListsInContent(content) {
+    const listContentLines = content.split('\n');
+    const listProcessedLines = [];
+    let inList = false;
+    let listItems = [];
+    let listType = null;
+    
+    function flushList() {
+      if (listItems.length > 0) {
+        const tag = listType === 'ordered' ? 'ol' : 'ul';
+        processedLines.push(`<${tag}>${listItems.join('')}</${tag}>`);
+        listItems = [];
+      }
+      inList = false;
+      listType = null;
+    }
+    
+    for (const line of listContentLines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        if (inList) flushList();
+        listProcessedLines.push('');
+        continue;
+      }
+      
+      // Check if line is already HTML (from headers, etc.)
+      if (line.startsWith('<')) {
+        if (inList) flushList();
+        listProcessedLines.push(line);
+        continue;
+      }
+      
+      const unorderedMatch = line.match(/^\s*[-*+]\s+(.+)$/);
+      const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+      
+      if (unorderedMatch) {
+        if (listType === 'ordered') flushList();
+        inList = true;
+        listType = 'unordered';
+        listItems.push(`<li>${unorderedMatch[1]}</li>`);
+      } else if (orderedMatch) {
+        if (listType === 'unordered') flushList();
+        inList = true;
+        listType = 'ordered';
+        listItems.push(`<li>${orderedMatch[1]}</li>`);
+      } else {
+        if (inList) flushList();
+        listProcessedLines.push(line);
+      }
+    }
+    flushList();
+    return listProcessedLines.join('\n');
+  }
+  
+  for (let i = 0; i < blockquoteLines.length; i++) {
+    const line = blockquoteLines[i];
+    if (line.startsWith('&gt; ')) {
+      inBlockquote = true;
+      blockquoteContent.push(line.substring(5)); // Remove '&gt; ' prefix
+    } else {
+      if (inBlockquote) {
+        flushBlockquote();
+      }
+      blockquoteProcessedLines.push(line);
+    }
+  }
+  flushBlockquote();
+  
+  html = blockquoteProcessedLines.join('\n');
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  // Now process markdown for non-blockquote content
+  // Headers (allow optional space after #)
+  html = html.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
 
   // Images - fix Bear export paths (relative paths need posts/ prefix)
+  // Process BEFORE text formatting to prevent mangling of URLs with underscores
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
     // If the path is relative (doesn't start with /, http://, or https://), prepend posts/
     // Bear exports create paths like "Note Name/Image.png" which need to be "posts/Note Name/Image.png"
@@ -532,39 +706,123 @@ function parseMarkdown(text) {
       // Decode URL-encoded paths (Bear exports use %20 for spaces, etc.)
       try {
         const decodedPath = decodeURIComponent(src);
-        src = `posts/${decodedPath}`;
+        // Encode each path segment separately to handle special characters like commas
+        const encodedPath = encodePathSegments(decodedPath);
+        // Use absolute path from root to avoid any base path issues
+        src = `/posts/${encodedPath}`;
       } catch (e) {
-        // If decoding fails, use original path
-        src = `posts/${src}`;
+        // If decoding fails, try encoding the original path segment by segment
+        try {
+          const encodedPath = encodePathSegments(src);
+          src = `/posts/${encodedPath}`;
+        } catch (e2) {
+          // Last resort: use original path with absolute path
+          src = `/posts/${src}`;
+        }
       }
     }
     return `<img src="${src}" alt="${alt}" loading="lazy">`;
   });
 
-  // Blockquotes
-  html = html.replace(/^&gt; (.*$)/gm, '<blockquote>$1</blockquote>');
-  html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  // Bold and Italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  // Only match italic if not inside quotes (HTML attributes are in quotes)
+  // This prevents matching underscores in img src="..." or other attributes
+  html = html.replace(/_(.+?)_/g, (match, content, offset, fullString) => {
+    // Check if we're inside quotes (HTML attribute)
+    const before = fullString.substring(0, offset);
+    const after = fullString.substring(offset + match.length);
+    // Count unescaped quotes before and after
+    const quotesBefore = (before.match(/[^\\]"/g) || []).length;
+    const quotesAfter = (after.match(/[^\\]"/g) || []).length;
+    // If odd number of quotes before, we're inside an attribute
+    if (quotesBefore % 2 !== 0) {
+      return match; // Return unchanged if inside HTML attribute
+    }
+    return `<em>${content}</em>`;
+  });
+
+  // Strikethrough
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
 
   // Horizontal rules
   html = html.replace(/^---$/gm, '<hr>');
   html = html.replace(/^\*\*\*$/gm, '<hr>');
 
-  // Unordered lists
-  html = html.replace(/^\s*[-*+] (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  // Process lists - need to handle before paragraph wrapping
+  // Split into lines to process lists properly
+  const lines = html.split('\n');
+  const processedLines = [];
+  let inUnorderedList = false;
+  let inOrderedList = false;
+  let listItems = [];
 
-  // Ordered lists
-  html = html.replace(/^\s*\d+\. (.+)$/gm, '<li>$1</li>');
+  function flushList() {
+    if (listItems.length > 0) {
+      const tag = inOrderedList ? 'ol' : 'ul';
+      processedLines.push(`<${tag}>${listItems.join('')}</${tag}>`);
+      listItems = [];
+    }
+    inUnorderedList = false;
+    inOrderedList = false;
+  }
 
-  // Wrap consecutive list items
-  html = html.replace(/(<li>[\s\S]*?<\/li>)(?=\s*<li>)/g, '$1');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Skip empty lines but don't break lists
+    if (!trimmedLine) {
+      // Empty line - flush list if we're in one, but don't add the empty line yet
+      if (inUnorderedList || inOrderedList) {
+        flushList();
+      }
+      processedLines.push('');
+      continue;
+    }
+    
+    const unorderedMatch = line.match(/^\s*[-*+]\s+(.+)$/);
+    const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+
+    if (unorderedMatch) {
+      if (inOrderedList) {
+        flushList();
+      }
+      inUnorderedList = true;
+      listItems.push(`<li>${unorderedMatch[1]}</li>`);
+    } else if (orderedMatch) {
+      if (inUnorderedList) {
+        flushList();
+      }
+      inOrderedList = true;
+      listItems.push(`<li>${orderedMatch[1]}</li>`);
+    } else {
+      // Not a list item - flush any current list
+      if (inUnorderedList || inOrderedList) {
+        flushList();
+      }
+      processedLines.push(line);
+    }
+  }
+  // Flush any remaining list
+  flushList();
+
+  html = processedLines.join('\n');
 
   // Paragraphs
   html = html.split('\n\n').map(block => {
     block = block.trim();
     if (!block) return '';
     if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') ||
-        block.startsWith('<blockquote') || block.startsWith('<pre') || block.startsWith('<hr')) {
+        block.startsWith('<blockquote') || block.startsWith('<pre') || block.startsWith('<hr') ||
+        block.startsWith('<p>')) {
       return block;
     }
     // Wrap in paragraph if not already a block element
@@ -756,6 +1014,9 @@ function buildTagNav() {
     </li>
   ` : '';
 
+  // Count total notes (excluding Garden Readme)
+  const totalNotes = state.posts.filter(post => post.filename !== 'Garden Readme.md').length;
+
   // Keep "All Notes", add Garden Readme, then add tags
   elements.tagList.innerHTML = `
     <li>
@@ -765,6 +1026,7 @@ function buildTagNav() {
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
         <span>All Notes</span>
+        <span class="tag-count" id="allNotesCount">${totalNotes}</span>
       </button>
     </li>
     ${gardenReadmeButton}
@@ -785,10 +1047,13 @@ function renderPosts(tag = 'all') {
         post.tags.some(t => t === tag || t.startsWith(tag + '/'))
       );
 
-  // Update header (show full path for nested tags)
-  const displayTag = tag === 'all' ? 'All Notes' : tag.split('/').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' / ');
-  elements.currentTag.textContent = displayTag;
-  elements.postCount.textContent = `${filtered.length} note${filtered.length !== 1 ? 's' : ''}`;
+  // Update count in sidebar for "All Notes"
+  if (tag === 'all') {
+    const allNotesCount = document.getElementById('allNotesCount');
+    if (allNotesCount) {
+      allNotesCount.textContent = filtered.length;
+    }
+  }
 
   // Update tag buttons
   document.querySelectorAll('.tag-item').forEach(btn => {
@@ -2905,6 +3170,48 @@ function setupTimelineAnimations() {
 }
 
 /**
+ * Setup view mode toggle for notes view
+ */
+function setupViewModeToggle() {
+  const viewModeToggle = document.getElementById('viewModeToggle');
+  const notesView = document.getElementById('notesView');
+  
+  if (!viewModeToggle || !notesView) return;
+  
+  // Load saved view mode from localStorage or default to three-column
+  const savedViewMode = localStorage.getItem('notesViewMode') || 'three-column';
+  notesView.classList.add(`view-mode-${savedViewMode}`);
+  
+  // Set active button
+  const savedBtn = viewModeToggle.querySelector(`[data-mode="${savedViewMode}"]`);
+  if (savedBtn) {
+    viewModeToggle.querySelectorAll('.view-mode-btn').forEach(btn => btn.classList.remove('active'));
+    savedBtn.classList.add('active');
+  }
+  
+  // Handle view mode button clicks
+  viewModeToggle.addEventListener('click', (e) => {
+    const btn = e.target.closest('.view-mode-btn');
+    if (!btn) return;
+    
+    const mode = btn.dataset.mode;
+    
+    // Update active state
+    viewModeToggle.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Remove all view mode classes
+    notesView.classList.remove('view-mode-three-column', 'view-mode-two-column', 'view-mode-one-column');
+    
+    // Add new view mode class
+    notesView.classList.add(`view-mode-${mode}`);
+    
+    // Save preference
+    localStorage.setItem('notesViewMode', mode);
+  });
+}
+
+/**
  * Initialize app
  */
 async function init() {
@@ -2915,6 +3222,7 @@ async function init() {
   setupInfoPopup();
   setupVersionChangelog();
   setupWindowManagement(); // Initialize window dragging and management
+  setupViewModeToggle(); // Setup view mode toggle for notes
   setupMusicPlayer();
   setupTimelineAnimations(); // Setup timeline scroll animations
   initMenuBar();

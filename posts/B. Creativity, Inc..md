@@ -1,8 +1,6 @@
 # B. Creativity, Inc.
  #commonplace/books 
 
----
-
 > ## Synopsis
 > In *Creativity, Inc.*, Ed Catmull, co-founder of Pixar Animation Studios, explores the principles that foster a thriving creative culture. He emphasizes that true innovation arises from an environment where hierarchy is minimized, playfulness is encouraged, and emotional intelligence is valued. Catmull introduces the concept of the "Braintrust," a group that offers candid feedback while maintaining a focus on collective problem-solving rather than personal egos. He discusses the importance of experimentation, resilience in the face of failure, and the necessity of balancing creativity with the demands of production. Ultimately, Catmull advocates for a leadership style that prioritizes trust, openness, and the recognition that every team member contributes to the creative process. This guide is not just for creatives but for anyone looking to cultivate a vibrant workplace that embraces risk and fosters innovation.
 

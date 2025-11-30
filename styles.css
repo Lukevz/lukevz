@@ -874,6 +874,11 @@
   .mobile-header-menu {
     display: block;
   }
+
+  /* Hide view mode toggle on mobile */
+  .view-mode-toggle {
+    display: none;
+  }
 }
 
 /* CSS Custom Properties */
@@ -1012,6 +1017,43 @@ ul {
   z-index: 1;
 }
 
+/* View Mode States */
+.notes-view.view-mode-three-column .app {
+  grid-template-columns: var(--sidebar-width) var(--post-list-width) 1fr;
+}
+
+.notes-view.view-mode-three-column .sidebar,
+.notes-view.view-mode-three-column .post-list,
+.notes-view.view-mode-three-column .note-view {
+  display: flex;
+}
+
+.notes-view.view-mode-two-column .app {
+  grid-template-columns: var(--post-list-width) 1fr;
+}
+
+.notes-view.view-mode-two-column .sidebar {
+  display: none;
+}
+
+.notes-view.view-mode-two-column .post-list,
+.notes-view.view-mode-two-column .note-view {
+  display: flex;
+}
+
+.notes-view.view-mode-one-column .app {
+  grid-template-columns: 1fr;
+}
+
+.notes-view.view-mode-one-column .sidebar,
+.notes-view.view-mode-one-column .post-list {
+  display: none;
+}
+
+.notes-view.view-mode-one-column .note-view {
+  display: flex;
+}
+
 /* Sidebar */
 .sidebar {
   background: var(--bg-primary);
@@ -1022,21 +1064,13 @@ ul {
   min-height: 0;
 }
 
-.sidebar-header {
-  padding: var(--space-md) var(--space-md);
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-header h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
 .tag-list {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .tag-item {
@@ -1065,6 +1099,16 @@ ul {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+}
+
+.tag-item span {
+  flex: 1;
+}
+
+.tag-item .tag-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: auto;
 }
 
 /* Nested Tag Tree */
@@ -1136,24 +1180,6 @@ ul {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.post-list-header {
-  padding: var(--space-lg);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.post-list-header h2 {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.post-count {
-  font-size: 0.75rem;
-  color: var(--text-muted);
 }
 
 .posts {
@@ -1502,10 +1528,6 @@ ul {
     display: flex;
   }
 
-  .post-list-header {
-    padding: var(--space-md);
-  }
-
   .post-item {
     padding: var(--space-md);
   }
@@ -1718,6 +1740,19 @@ ul {
   cursor: nwse-resize;
 }
 
+/* Add visual indicator on hover for resize handles */
+.resize-handle.resize-top-left:hover::after,
+.resize-handle.resize-top-right:hover::after,
+.resize-handle.resize-bottom-left:hover::after,
+.resize-handle.resize-bottom-right:hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0.3;
+  border-radius: 2px;
+}
+
 .view.resizing {
   user-select: none;
 }
@@ -1743,7 +1778,7 @@ ul {
   left: 50%;
   transform: translateX(-50%);
   width: min(500px, calc(100vw - 64px));
-  height: calc(100vh - 120px); /* Full height minus top spacing and bottom margin */
+  height: 600px; /* Reasonable default height - user can resize */
   max-height: calc(100vh - 120px);
   background: var(--bg-primary);
   backdrop-filter: blur(var(--glass-blur));
@@ -1802,6 +1837,51 @@ ul {
   min-height: 40px;
   flex-shrink: 0;
   position: relative;
+}
+
+/* View Mode Toggle */
+.view-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 0px;
+  position: absolute;
+  left: var(--space-md);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.view-mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 0px;
+  color: #ffffff;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: var(--cursor-pointer);
+}
+
+.view-mode-btn:hover {
+  color: #ffffff;
+  background: var(--bg-hover);
+}
+
+.view-mode-btn.active {
+  color: #ffffff;
+  background: var(--bg-active);
+}
+
+.view-mode-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .window-titlebar h2 {
@@ -2008,7 +2088,7 @@ ul {
   left: 50%;
   transform: translateX(-50%);
   width: min(500px, calc(100vw - 64px));
-  height: calc(100vh - 120px); /* Full height minus top spacing and bottom margin */
+  height: 600px; /* Reasonable default height - user can resize */
   max-height: calc(100vh - 120px);
   background: var(--bg-primary);
   backdrop-filter: blur(var(--glass-blur));
