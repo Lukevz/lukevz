@@ -1438,6 +1438,11 @@ ul {
     grid-template-columns: var(--sidebar-width) 1fr;
   }
 
+  /* Hide view mode toggle on tablet and smaller */
+  .view-mode-toggle {
+    display: none !important;
+  }
+
   .note-view {
     display: none;
   }
