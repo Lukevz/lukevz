@@ -697,6 +697,9 @@
   border: none;
   background: transparent;
   cursor: pointer;
+  position: relative;
+  z-index: 10001;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .hamburger-menu-btn:hover {
@@ -729,7 +732,7 @@
   border: 1px solid var(--border);
   border-radius: 0px;
   box-shadow: 0 16px 48px var(--shadow-color);
-  z-index: 10000;
+  z-index: 10000 !important;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
@@ -746,6 +749,9 @@
 
 .mobile-header-menu-content {
   padding: var(--space-md);
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobile-menu-apps {
@@ -772,6 +778,8 @@
   font-weight: 500;
   text-align: left;
   width: 100%;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-menu-app-btn:hover {
@@ -828,6 +836,7 @@
   .top-menu-bar {
     padding: var(--space-xs) var(--space-md);
     gap: var(--space-sm);
+    z-index: 10002 !important;
   }
 
   .menu-left {
@@ -1536,9 +1545,10 @@ ul {
     right: 0;
     bottom: 0;
     background: var(--bg-primary-solid);
-    z-index: 50;
+    z-index: 1050;
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar {
@@ -1605,6 +1615,9 @@ ul {
   width: 100%;
   text-align: left;
   font-size: 0.9375rem;
+  position: relative;
+  z-index: 100;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .note-back:hover {
@@ -1613,6 +1626,7 @@ ul {
 
 .note-back:active {
   background: var(--bg-active);
+  color: var(--accent-hover);
 }
 
 .note-back svg {
@@ -3265,7 +3279,7 @@ ul {
   box-shadow: 0 24px 80px var(--shadow-color);
   overflow: hidden;
   flex-direction: column;
-  z-index: 1010;
+  z-index: 1050;
 }
 
 .life-stories-container {
@@ -3424,6 +3438,12 @@ ul {
     width: calc(100vw - 24px) !important;
     height: calc(100vh - 72px - 24px) !important;
     height: calc(100vh - 72px - 24px - env(safe-area-inset-bottom)) !important;
+    z-index: 1050 !important;
+  }
+
+  .life-stories-view .building-viewport {
+    position: relative;
+    z-index: 1;
   }
 
   .elevator-sidebar {
