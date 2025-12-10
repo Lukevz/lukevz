@@ -3444,6 +3444,29 @@ function initLifeStories() {
       }
     }
   });
+
+  // Shared helper to apply scroll delta across input types
+  function applyScrollDelta(deltaY, sensitivity = 300) {
+    if (lifeStoriesState.floors.length === 0) return;
+
+    const minFloor = Math.min(...lifeStoriesState.floors.map(f => f.number));
+    const maxFloor = Math.max(...lifeStoriesState.floors.map(f => f.number));
+
+    const floorDelta = deltaY / sensitivity;
+    let newScrollPosition = lifeStoriesState.scrollPosition - floorDelta;
+
+    newScrollPosition = Math.max(minFloor, Math.min(maxFloor, newScrollPosition));
+
+    lifeStoriesState.scrollPosition = newScrollPosition;
+
+    const newCurrentFloor = Math.round(newScrollPosition);
+    if (newCurrentFloor !== lifeStoriesState.currentFloor) {
+      lifeStoriesState.currentFloor = newCurrentFloor;
+      updateLifeStoriesFloorDisplay();
+    }
+
+    drawLifeStoriesBuildingContinuous();
+  }
   
   // Mouse wheel scrolling with continuous smooth movement
   // Attach to the entire life stories view for better coverage
@@ -3455,34 +3478,41 @@ function initLifeStories() {
 
       e.preventDefault();
       e.stopPropagation();
+      applyScrollDelta(e.deltaY);
+    }, { passive: false });
+  }
 
-      const minFloor = Math.min(...lifeStoriesState.floors.map(f => f.number));
-      const maxFloor = Math.max(...lifeStoriesState.floors.map(f => f.number));
+  // Touch scrolling for mobile
+  const scrollTarget = viewport || lifeStoriesView;
+  if (scrollTarget) {
+    let lastTouchY = null;
 
-      // Convert scroll delta to fractional floor movement
-      // Larger divisor = slower scrolling, smaller = faster
-      const scrollSensitivity = 300; // pixels to scroll one full floor
-      const floorDelta = e.deltaY / scrollSensitivity;
+    scrollTarget.addEventListener('touchstart', (e) => {
+      if (lifeStoriesState.floors.length === 0) return;
+      if (e.touches.length !== 1) return;
+      lastTouchY = e.touches[0].clientY;
+    }, { passive: true });
 
-      // Update scroll position continuously (inverted: scroll down = lower floors)
-      let newScrollPosition = lifeStoriesState.scrollPosition - floorDelta;
+    scrollTarget.addEventListener('touchmove', (e) => {
+      if (lifeStoriesState.floors.length === 0) return;
+      if (lastTouchY === null || e.touches.length !== 1) return;
 
-      // Clamp to valid floor range
-      newScrollPosition = Math.max(minFloor, Math.min(maxFloor, newScrollPosition));
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - lastTouchY;
+      lastTouchY = currentY;
 
-      // Update state
-      lifeStoriesState.scrollPosition = newScrollPosition;
+      // Negative to match natural scroll (drag up moves content up)
+      applyScrollDelta(-deltaY, 180);
+      e.preventDefault();
+      e.stopPropagation();
+    }, { passive: false });
 
-      // Update current floor (rounded value for UI display)
-      const newCurrentFloor = Math.round(newScrollPosition);
-      if (newCurrentFloor !== lifeStoriesState.currentFloor) {
-        lifeStoriesState.currentFloor = newCurrentFloor;
-        updateLifeStoriesFloorDisplay();
-      }
+    const resetTouchScroll = () => {
+      lastTouchY = null;
+    };
 
-      // Redraw with new position
-      drawLifeStoriesBuildingContinuous();
-    });
+    scrollTarget.addEventListener('touchend', resetTouchScroll);
+    scrollTarget.addEventListener('touchcancel', resetTouchScroll);
   }
   
   // Animation loop removed - scrolling is now instant with no transitions
