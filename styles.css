@@ -723,7 +723,7 @@
   right: 20px;
   max-width: 280px;
   width: calc(100% - 40px);
-  background: var(--bg-secondary);
+  background: rgba(36, 36, 36, 0.98);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border);
@@ -1390,6 +1390,40 @@ ul {
   list-style: decimal;
 }
 
+/* Checkboxes in markdown */
+.note-body li.task-item {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.note-body li.task-item input[type="checkbox"] {
+  margin-top: 0.3em;
+  flex-shrink: 0;
+  cursor: not-allowed;
+}
+
+.note-body li.task-item.completed {
+  opacity: 0.6;
+}
+
+.note-body li.task-item.completed > span:last-child {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Iframes (YouTube embeds, etc.) */
+.note-body iframe {
+  max-width: 100%;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  margin: var(--space-md) 0;
+  display: block;
+  border: none;
+}
+
 .note-body img {
   max-width: 100%;
   height: auto;
@@ -1562,9 +1596,23 @@ ul {
   padding: var(--space-md) var(--space-lg);
   color: var(--accent);
   font-weight: 500;
+  border: none;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--bg-primary-solid);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  width: 100%;
+  text-align: left;
+  font-size: 0.9375rem;
+}
+
+.note-back:hover {
+  background: var(--bg-hover);
+}
+
+.note-back:active {
+  background: var(--bg-active);
 }
 
 .note-back svg {
@@ -3353,6 +3401,9 @@ ul {
   background: var(--bg-tertiary);
   position: relative;
   scroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 #buildingCanvas {

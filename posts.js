@@ -4,6 +4,10 @@
  */
 export default [
   {
+    "file": "After watching the hulk, my dream about work.md",
+    "created": "2025-04-19"
+  },
+  {
     "file": "B. Building A Second Brain.md",
     "created": "2025-01-19"
   },
@@ -36,12 +40,24 @@ export default [
     "created": "2025-04-06"
   },
   {
+    "file": "Biggest mistakes I see in UX.md",
+    "created": "2025-11-15"
+  },
+  {
     "file": "Character and Competence The Two Pillars.md",
     "created": "2025-04-06"
   },
   {
-    "file": "Digital Garden Changelog.md",
-    "created": "2025-11-26"
+    "file": "Clarify, compromise, collaborate.md",
+    "created": "2025-04-23"
+  },
+  {
+    "file": "Closing the Gap Between Brain and Body.md",
+    "created": "2025-04-06"
+  },
+  {
+    "file": "Distinguishing Journal Entries from Proper Notes A Systematic Approach to Thought Organization.md",
+    "created": "2025-02-12"
   },
   {
     "file": "Don’t Set Yourself On Fire To Keep Others Warm.md",
@@ -60,6 +76,10 @@ export default [
     "created": "2025-05-24"
   },
   {
+    "file": "Humans shouldn't just excel in one area. An organization can generalize but a person should specialize. A corporation should consist of people that each have their own unique talents but bring a collective excellence to the company..md",
+    "created": "2025-04-15"
+  },
+  {
     "file": "In the creative process, job titles and hierarchy are meaningless.md",
     "created": "2025-04-06"
   },
@@ -68,12 +88,12 @@ export default [
     "created": "2025-03-15"
   },
   {
-    "file": "It's not the critic who counts 2.md",
-    "created": "2025-01-20"
-  },
-  {
     "file": "It's not the critic who counts.md",
     "created": "2025-04-13"
+  },
+  {
+    "file": "Lost in helixes.md",
+    "created": "2025-04-16"
   },
   {
     "file": "Mistakes not to make as a leader.md",
@@ -92,6 +112,10 @@ export default [
     "created": "2025-03-16"
   },
   {
+    "file": "People say they’re in the same boat, but who’s the captain and who’s the sailor.md",
+    "created": "2025-04-15"
+  },
+  {
     "file": "Protecting the Ugly Baby.md",
     "created": "2025-04-06"
   },
@@ -105,7 +129,7 @@ export default [
   },
   {
     "file": "The Rise of Digital Gardens & Personal Operating Systems.md",
-    "created": "2025-11-26"
+    "created": "2025-12-10"
   },
   {
     "file": "The UX request checklist.md",
@@ -120,6 +144,10 @@ export default [
     "created": "2024-09-13"
   },
   {
+    "file": "Translate Before You Speak.md",
+    "created": "2025-04-06"
+  },
+  {
     "file": "Trust as a Cultural Operating System.md",
     "created": "2025-04-06"
   },
@@ -128,8 +156,28 @@ export default [
     "created": "2025-04-06"
   },
   {
+    "file": "What’s the minimum you need to do to keep making progress up hill. Eventually you will hit the top and slide down in neutral but do the minimum to not be in reverse.md",
+    "created": "2025-04-16"
+  },
+  {
     "file": "When you’re building something avoid being in the world so you don’t get ideas and focus on the thing you are working on - Cal Newport.md",
     "created": "2025-11-08"
+  },
+  {
+    "file": "culture building leaning results-driven or results-driven leaning culture building one is focused on people the other is focused on performance..md",
+    "created": "2025-04-29"
+  },
+  {
+    "file": "making a good documentary or almost any pitch is about making it feel like a conversation. like interviews in a docuseries stitched together well and mixed in feels like everyone recorded the same day in the same room not all disjointed isolat.md",
+    "created": "2025-04-25"
+  },
+  {
+    "file": "muscle memory can be found again when you rekindle the loves and interests you had when that muscle was first developed. I had band and it allowed me to steady myself just like I’ve started playing video games and practicing drum pad and cha.md",
+    "created": "2025-05-02"
+  },
+  {
+    "file": "share content through the lens of what you’d tell a friend.md",
+    "created": "2025-04-30"
   },
   {
     "file": "“HONESTY IS AN EXPENSIVGIFT, DON'T EXPECT IT FROM CHEAP PEOPLE.”.md",

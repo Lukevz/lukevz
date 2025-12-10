@@ -522,7 +522,20 @@ const defaultMusicFolders = ['Ambience', 'Music', 'Podcasts'];
 function parseMarkdown(text) {
   let html = text;
 
-  // Escape HTML
+  // Preserve iframes and other allowed HTML elements before escaping
+  const preservedElements = [];
+  const iframePlaceholder = '\u0000\u0001IFRAMEBLOCK';
+
+  // Extract and preserve iframes
+  html = html.replace(/<iframe[^>]*>.*?<\/iframe>/gs, (match) => {
+    preservedElements.push(match);
+    const placeholder = `${iframePlaceholder}${preservedElements.length}\u0001\u0000`;
+    console.log('Preserved iframe:', match.substring(0, 100));
+    console.log('Placeholder:', placeholder);
+    return placeholder;
+  });
+
+  // Escape HTML (but not our placeholders)
   html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // Code blocks (before other transformations)
@@ -615,7 +628,7 @@ function parseMarkdown(text) {
       if (!block) return '';
       if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') ||
           block.startsWith('<blockquote') || block.startsWith('<pre') || block.startsWith('<hr') ||
-          block.startsWith('<p>')) {
+          block.startsWith('<p>') || block.startsWith(iframePlaceholder)) {
         return block;
       }
       // Wrap in paragraph if not already a block element
@@ -632,17 +645,17 @@ function parseMarkdown(text) {
     let inList = false;
     let listItems = [];
     let listType = null;
-    
+
     function flushList() {
       if (listItems.length > 0) {
         const tag = listType === 'ordered' ? 'ol' : 'ul';
-        processedLines.push(`<${tag}>${listItems.join('')}</${tag}>`);
+        listProcessedLines.push(`<${tag}>${listItems.join('')}</${tag}>`);
         listItems = [];
       }
       inList = false;
       listType = null;
     }
-    
+
     for (const line of listContentLines) {
       const trimmed = line.trim();
       if (!trimmed) {
@@ -650,18 +663,27 @@ function parseMarkdown(text) {
         listProcessedLines.push('');
         continue;
       }
-      
+
       // Check if line is already HTML (from headers, etc.)
       if (line.startsWith('<')) {
         if (inList) flushList();
         listProcessedLines.push(line);
         continue;
       }
-      
-      const unorderedMatch = line.match(/^\s*[-*+]\s+(.+)$/);
+
+      // Check for checkbox items first
+      const checkboxMatch = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.+)$/);
+      const unorderedMatch = !checkboxMatch ? line.match(/^\s*[-*+]\s+(.+)$/) : null;
       const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
-      
-      if (unorderedMatch) {
+
+      if (checkboxMatch) {
+        if (listType === 'ordered') flushList();
+        inList = true;
+        listType = 'unordered';
+        const isChecked = checkboxMatch[1].toLowerCase() === 'x';
+        const content = checkboxMatch[2];
+        listItems.push(`<li class="task-item${isChecked ? ' completed' : ''}"><input type="checkbox" ${isChecked ? 'checked' : ''} disabled> ${content}</li>`);
+      } else if (unorderedMatch) {
         if (listType === 'ordered') flushList();
         inList = true;
         listType = 'unordered';
@@ -782,7 +804,7 @@ function parseMarkdown(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
-    
+
     // Skip empty lines but don't break lists
     if (!trimmedLine) {
       // Empty line - flush list if we're in one, but don't add the empty line yet
@@ -792,11 +814,21 @@ function parseMarkdown(text) {
       processedLines.push('');
       continue;
     }
-    
-    const unorderedMatch = line.match(/^\s*[-*+]\s+(.+)$/);
+
+    // Check for checkbox items first (before regular list items)
+    const checkboxMatch = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.+)$/);
+    const unorderedMatch = !checkboxMatch ? line.match(/^\s*[-*+]\s+(.+)$/) : null;
     const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
 
-    if (unorderedMatch) {
+    if (checkboxMatch) {
+      if (inOrderedList) {
+        flushList();
+      }
+      inUnorderedList = true;
+      const isChecked = checkboxMatch[1].toLowerCase() === 'x';
+      const content = checkboxMatch[2];
+      listItems.push(`<li class="task-item${isChecked ? ' completed' : ''}"><input type="checkbox" ${isChecked ? 'checked' : ''} disabled> ${content}</li>`);
+    } else if (unorderedMatch) {
       if (inOrderedList) {
         flushList();
       }
@@ -827,7 +859,7 @@ function parseMarkdown(text) {
     if (!block) return '';
     if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') ||
         block.startsWith('<blockquote') || block.startsWith('<pre') || block.startsWith('<hr') ||
-        block.startsWith('<p>')) {
+        block.startsWith('<p>') || block.startsWith(iframePlaceholder)) {
       return block;
     }
     // Wrap in paragraph if not already a block element
@@ -836,6 +868,16 @@ function parseMarkdown(text) {
     }
     return block;
   }).join('\n');
+
+  // Restore preserved iframes
+  html = html.replace(/\u0000\u0001IFRAMEBLOCK(\d+)\u0001\u0000/g, (_match, index) => {
+    console.log('Restoring iframe at index:', index);
+    const iframe = preservedElements[parseInt(index) - 1]; // -1 because we used length (1-based) not index (0-based)
+    console.log('Restored iframe:', iframe ? iframe.substring(0, 100) : 'NOT FOUND');
+    return iframe;
+  });
+
+  console.log('Final HTML contains iframe tag:', html.includes('<iframe'));
 
   return html;
 }
@@ -896,6 +938,12 @@ function parsePost(content, filename, createdDate = null) {
 
   // Clean hashtags from body for display (supports nested tags)
   const cleanBody = body.replace(/#([a-zA-Z][\w-]*(?:\/[\w-]+)*)/g, '').trim();
+
+  // Debug: log if this post contains iframe
+  if (cleanBody.includes('<iframe')) {
+    console.log('[PARSE] Post with iframe detected:', filename);
+    console.log('[PARSE] Body contains iframe:', cleanBody.substring(0, 300));
+  }
 
   // Generate excerpt
   const excerpt = cleanBody
@@ -1043,12 +1091,10 @@ function buildTagNav() {
  * Render post list
  */
 function renderPosts(tag = 'all') {
-  // Filter out Garden Readme from the post list
-  const postsWithoutReadme = state.posts.filter(post => post.filename !== 'Garden Readme.md');
-  
+  // Include all posts (including Garden Readme)
   const filtered = tag === 'all'
-    ? postsWithoutReadme
-    : postsWithoutReadme.filter(post =>
+    ? state.posts
+    : state.posts.filter(post =>
         post.tags.some(t => t === tag || t.startsWith(tag + '/'))
       );
 
@@ -1097,7 +1143,6 @@ function renderPosts(tag = 'all') {
         role="button"
         aria-label="Open ${post.title}">
       <h3 class="post-item-title">${post.title}</h3>
-      <p class="post-item-excerpt">${post.excerpt}</p>
       <time class="post-item-date" datetime="${post.date}">${formatDate(post.date)}</time>
     </li>
   `).join('');
@@ -1133,7 +1178,13 @@ function renderNote(post, updateUrl = true) {
     .map(tag => `<span class="note-tag">#${tag}</span>`)
     .join('');
 
-  elements.noteBody.innerHTML = parseMarkdown(post.body);
+  const parsedContent = parseMarkdown(post.body);
+  console.log('[NOTE] Post body length:', post.body.length);
+  console.log('[NOTE] Post body contains <iframe:', post.body.includes('<iframe'));
+  console.log('[NOTE] Parsed content length:', parsedContent.length);
+  console.log('[NOTE] Parsed content contains <iframe:', parsedContent.includes('<iframe'));
+  console.log('[NOTE] First 500 chars of parsed:', parsedContent.substring(0, 500));
+  elements.noteBody.innerHTML = parsedContent;
 
   // Add back button for mobile
   if (!document.querySelector('.note-back')) {
