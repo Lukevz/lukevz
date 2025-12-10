@@ -3197,3 +3197,208 @@ ul {
     height: 16px;
   }
 }
+
+/* ==================== */
+/* Life Stories View    */
+/* ==================== */
+
+.life-stories-view {
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(700px, calc(100vw - 64px));
+  height: 700px;
+  max-height: calc(100vh - 120px);
+  background: var(--bg-primary);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: 0px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 80px var(--shadow-color);
+  overflow: hidden;
+  flex-direction: column;
+  z-index: 1010;
+}
+
+.life-stories-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.elevator-sidebar {
+  width: 80px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.elevator-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.elevator-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 0px;
+  color: var(--text-primary);
+  cursor: var(--cursor-pointer);
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.elevator-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+  transform: scale(1.05);
+}
+
+.elevator-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.elevator-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.elevator-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.floor-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+}
+
+.floor-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-family: 'Doto', var(--font-sans);
+}
+
+.floor-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'Doto', var(--font-sans);
+  line-height: 1;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.floor-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-xs);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1px;
+}
+
+.floor-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: var(--cursor-pointer);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  min-height: 32px;
+  font-family: 'Doto', var(--font-sans);
+}
+
+.floor-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.floor-btn.active {
+  background: var(--bg-active);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.floor-btn.milestone {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.building-viewport {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-tertiary);
+  position: relative;
+  scroll-behavior: auto;
+}
+
+#buildingCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Mobile adjustments for Life Stories view */
+@media (max-width: 768px) {
+  .life-stories-view {
+    top: 72px !important;
+    left: 12px !important;
+    transform: none !important;
+    width: calc(100vw - 24px) !important;
+    height: calc(100vh - 72px - 24px) !important;
+    height: calc(100vh - 72px - 24px - env(safe-area-inset-bottom)) !important;
+  }
+
+  .elevator-sidebar {
+    width: 60px;
+  }
+
+  .elevator-controls {
+    padding: var(--space-sm);
+  }
+
+  .elevator-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .elevator-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .floor-number {
+    font-size: 1.25rem;
+  }
+
+  .floor-btn {
+    font-size: 0.625rem;
+    min-height: 28px;
+  }
+}

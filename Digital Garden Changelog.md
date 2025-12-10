@@ -1,8 +1,12 @@
 # Digital Garden Changelog
-V1.1.2 
+V1.2.2 – Added Life Stories app
+- Added a new app to browse through key chapters and milestone in my life
+
+V1.1.2
 - Added dynamic weather icons to reflect Atlanta conditions
 - Added homescreen messages
 - New trailing cursor effect
+- Added new note view modes
 
 V1.1.1 - Added mini media player
 

@@ -1,10 +1,10 @@
-# Live Goals
+# Goals
 #life/northstar #status/complete
 
 # 2025 Goals
 
 - [x] Monetize my YouTube channel
-- [ ] Read [20 books](~https://www.goodreads.com/readingchallenges/annual?ref=web_ingress~)
+- [ ] Read [20 books](https://www.goodreads.com/readingchallenges/annual?ref=web_ingress~)
 - [x] Go camping 🏕️
 
 # Current Projects

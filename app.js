@@ -397,6 +397,11 @@ function openWindow(windowId) {
     hideMiniPlayer();
   }
 
+  // Initialize life stories when opened
+  if (windowId === 'lifeStories') {
+    initLifeStories();
+  }
+
   state.currentView = windowId;
 }
 
@@ -1697,8 +1702,8 @@ function parseChangelog(content) {
       continue;
     }
     
-    // Match version headers like "V1.0.3 - description" or "V1.0.3"
-    const versionMatch = trimmed.match(/^V?(\d+\.\d+\.\d+)(?:\s*-\s*(.+))?$/i);
+    // Match version headers like "V1.0.3 - description" or "V1.0.3" (supports both hyphen and en-dash)
+    const versionMatch = trimmed.match(/^V?(\d+\.\d+\.\d+)(?:\s*[-–]\s*(.+))?$/i);
     if (versionMatch) {
       // Save previous version if exists
       if (currentVersion) {
@@ -2099,6 +2104,80 @@ const musicState = {
 const defaultArtworkMarkup = document.getElementById('artworkContainer')
   ? document.getElementById('artworkContainer').innerHTML
   : '';
+
+/**
+ * Life Stories State
+ */
+const lifeStoriesState = {
+  floors: [], // Will be populated automatically from images folder
+  currentFloor: 0,
+  canvas: null,
+  ctx: null,
+  images: {},
+  initialized: false,
+  scrollPosition: 0, // Continuous scroll position (fractional floor number)
+  scrollVelocity: 0, // Scroll velocity for smooth deceleration
+  targetScrollPosition: null, // For smooth scrolling to specific floors
+  animationFrame: null, // For continuous animation loop
+  scrollAccumulator: 0 // Accumulate scroll delta before snapping to floor
+};
+
+/**
+ * Discover available images in the life-stories folder
+ * Tries to load images and builds floors array dynamically
+ */
+async function discoverLifeStoriesImages() {
+  const discoveredFloors = [];
+  const maxFloorCheck = 100; // Check up to floor 100
+  const checkPromises = [];
+
+  // Add Floor 0 (Lobby) - always present, no image needed
+  discoveredFloors.push({
+    number: 0,
+    image: null, // Will be drawn programmatically
+    milestone: false,
+    isLobby: true
+  });
+
+  // Try to discover images by attempting to load them
+  for (let i = 1; i <= maxFloorCheck; i++) {
+    const imagePath = `images/life-stories/${i}.png`;
+    checkPromises.push(
+      new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          // Image exists, add it as a floor
+          discoveredFloors.push({
+            number: i,
+            image: imagePath,
+            milestone: false // Can be customized later if needed
+          });
+          // Pre-load the image
+          lifeStoriesState.images[imagePath] = img;
+          resolve();
+        };
+        img.onerror = () => {
+          // Image doesn't exist, skip it
+          resolve();
+        };
+        img.src = imagePath;
+      })
+    );
+  }
+
+  await Promise.all(checkPromises);
+
+  // Sort floors by number
+  discoveredFloors.sort((a, b) => a.number - b.number);
+
+  // Mark the highest floor as a milestone
+  if (discoveredFloors.length > 1) {
+    const highestFloor = discoveredFloors[discoveredFloors.length - 1];
+    highestFloor.milestone = true;
+  }
+
+  return discoveredFloors;
+}
 
 /**
  * Load and parse music.md for tracks
@@ -3209,6 +3288,477 @@ function setupViewModeToggle() {
     // Save preference
     localStorage.setItem('notesViewMode', mode);
   });
+}
+
+/**
+ * Initialize Life Stories view
+ */
+function initLifeStories() {
+  const canvas = document.getElementById('buildingCanvas');
+  const floorList = document.getElementById('floorList');
+  const elevatorUp = document.getElementById('elevatorUp');
+  const elevatorDown = document.getElementById('elevatorDown');
+  const currentFloorNumber = document.getElementById('currentFloorNumber');
+  
+  if (!canvas || !floorList) return;
+  
+  if (lifeStoriesState.initialized) {
+    // Already initialized, just redraw
+    drawLifeStoriesBuildingContinuous();
+    return;
+  }
+  
+  lifeStoriesState.canvas = canvas;
+  lifeStoriesState.ctx = canvas.getContext('2d');
+  
+  // Set canvas size
+  const viewport = document.getElementById('buildingViewport');
+  if (viewport) {
+    const resizeCanvas = () => {
+      canvas.width = viewport.clientWidth;
+      canvas.height = viewport.clientHeight;
+      drawLifeStoriesBuildingContinuous();
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+  }
+  
+  // Discover and load images, then initialize UI
+  discoverLifeStoriesImages().then((discoveredFloors) => {
+    if (discoveredFloors.length === 0) {
+      // No images found, show placeholder
+      drawLifeStoriesBuildingContinuous();
+      return;
+    }
+    
+    // Update floors array with discovered images
+    lifeStoriesState.floors = discoveredFloors;
+    
+    // Always start at Floor 0 (Lobby)
+    lifeStoriesState.currentFloor = 0;
+    lifeStoriesState.scrollPosition = 0;
+    
+    // Update UI
+    if (currentFloorNumber) {
+      currentFloorNumber.textContent = lifeStoriesState.currentFloor;
+    }
+    
+    drawLifeStoriesBuildingContinuous();
+    renderLifeStoriesFloorList();
+    updateLifeStoriesElevatorControls();
+  });
+  
+  // Elevator controls
+  if (elevatorUp) {
+    elevatorUp.addEventListener('click', () => {
+      const maxFloor = lifeStoriesState.floors.length > 0 
+        ? Math.max(...lifeStoriesState.floors.map(f => f.number))
+        : 0;
+      const currentFloor = Math.round(lifeStoriesState.scrollPosition);
+      if (currentFloor < maxFloor) {
+        // Find next available floor
+        const nextFloor = lifeStoriesState.floors.find(f => f.number > currentFloor);
+        if (nextFloor) {
+          smoothScrollToFloor(nextFloor.number);
+        }
+      }
+    });
+  }
+  
+  if (elevatorDown) {
+    elevatorDown.addEventListener('click', () => {
+      const minFloor = lifeStoriesState.floors.length > 0 
+        ? Math.min(...lifeStoriesState.floors.map(f => f.number))
+        : 1;
+      const currentFloor = Math.round(lifeStoriesState.scrollPosition);
+      if (currentFloor > minFloor) {
+        // Find previous available floor
+        const prevFloor = [...lifeStoriesState.floors]
+          .reverse()
+          .find(f => f.number < currentFloor);
+        if (prevFloor) {
+          smoothScrollToFloor(prevFloor.number);
+        }
+      }
+    });
+  }
+  
+  // Floor list buttons
+  floorList.addEventListener('click', (e) => {
+    const floorBtn = e.target.closest('.floor-btn');
+    if (floorBtn) {
+      const floorNumber = parseInt(floorBtn.dataset.floor);
+      if (floorNumber && floorNumber !== Math.round(lifeStoriesState.scrollPosition)) {
+        smoothScrollToFloor(floorNumber);
+      }
+    }
+  });
+  
+  // Mouse wheel scrolling with continuous smooth movement
+  // Attach to the entire life stories view for better coverage
+  const lifeStoriesView = document.getElementById('lifeStoriesView');
+  if (lifeStoriesView) {
+    lifeStoriesView.addEventListener('wheel', (e) => {
+      // Only handle if we have floors
+      if (lifeStoriesState.floors.length === 0) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const minFloor = Math.min(...lifeStoriesState.floors.map(f => f.number));
+      const maxFloor = Math.max(...lifeStoriesState.floors.map(f => f.number));
+
+      // Convert scroll delta to fractional floor movement
+      // Larger divisor = slower scrolling, smaller = faster
+      const scrollSensitivity = 300; // pixels to scroll one full floor
+      const floorDelta = e.deltaY / scrollSensitivity;
+
+      // Update scroll position continuously (inverted: scroll down = lower floors)
+      let newScrollPosition = lifeStoriesState.scrollPosition - floorDelta;
+
+      // Clamp to valid floor range
+      newScrollPosition = Math.max(minFloor, Math.min(maxFloor, newScrollPosition));
+
+      // Update state
+      lifeStoriesState.scrollPosition = newScrollPosition;
+
+      // Update current floor (rounded value for UI display)
+      const newCurrentFloor = Math.round(newScrollPosition);
+      if (newCurrentFloor !== lifeStoriesState.currentFloor) {
+        lifeStoriesState.currentFloor = newCurrentFloor;
+        updateLifeStoriesFloorDisplay();
+      }
+
+      // Redraw with new position
+      drawLifeStoriesBuildingContinuous();
+    });
+  }
+  
+  // Animation loop removed - scrolling is now instant with no transitions
+  
+  // Instant scroll to a specific floor (no smooth animation)
+  function smoothScrollToFloor(targetFloor) {
+    lifeStoriesState.scrollPosition = targetFloor;
+    lifeStoriesState.targetScrollPosition = null;
+    lifeStoriesState.scrollVelocity = 0;
+    
+    // Update current floor immediately
+    const newCurrentFloor = Math.round(lifeStoriesState.scrollPosition);
+    if (newCurrentFloor !== lifeStoriesState.currentFloor) {
+      lifeStoriesState.currentFloor = newCurrentFloor;
+      updateLifeStoriesFloorDisplay();
+    }
+    
+    // Draw immediately without animation
+    drawLifeStoriesBuildingContinuous();
+  }
+  
+  // Update floor display and list based on current scroll position
+  function updateLifeStoriesFloorDisplay() {
+    if (currentFloorNumber) {
+      currentFloorNumber.textContent = lifeStoriesState.currentFloor;
+    }
+    updateLifeStoriesFloorList();
+    updateLifeStoriesElevatorControls();
+  }
+  
+  function updateLifeStoriesElevatorControls() {
+    if (lifeStoriesState.floors.length === 0) {
+      if (elevatorUp) elevatorUp.disabled = true;
+      if (elevatorDown) elevatorDown.disabled = true;
+      return;
+    }
+    
+    const maxFloor = Math.max(...lifeStoriesState.floors.map(f => f.number));
+    const minFloor = Math.min(...lifeStoriesState.floors.map(f => f.number));
+    const currentFloor = Math.round(lifeStoriesState.scrollPosition);
+    
+    if (elevatorUp) {
+      elevatorUp.disabled = currentFloor >= maxFloor;
+    }
+    if (elevatorDown) {
+      elevatorDown.disabled = currentFloor <= minFloor;
+    }
+  }
+  
+  function updateLifeStoriesFloorList() {
+    floorList.querySelectorAll('.floor-btn').forEach(btn => {
+      const floorNum = parseInt(btn.dataset.floor);
+      btn.classList.toggle('active', floorNum === lifeStoriesState.currentFloor);
+    });
+  }
+  
+  function renderLifeStoriesFloorList() {
+    floorList.innerHTML = '';
+    lifeStoriesState.floors.forEach(floor => {
+      const btn = document.createElement('button');
+      btn.className = 'floor-btn';
+      if (floor.milestone) {
+        btn.classList.add('milestone');
+      }
+      if (floor.number === lifeStoriesState.currentFloor) {
+        btn.classList.add('active');
+      }
+      btn.dataset.floor = floor.number;
+      btn.textContent = floor.number;
+      btn.setAttribute('aria-label', `Go to floor ${floor.number}`);
+      floorList.appendChild(btn);
+    });
+  }
+  
+  // Draw the Floor 0 lobby screen
+  function drawLobby(ctx, canvas, x, y, width, height) {
+    // Background - darker base
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(x, y, width, height);
+
+    // Pixelated floor pattern
+    const tileSize = 40;
+    for (let tx = 0; tx < width / tileSize; tx++) {
+      for (let ty = 0; ty < height / tileSize; ty++) {
+        const isLight = (tx + ty) % 2 === 0;
+        ctx.fillStyle = isLight ? '#2a2a2a' : '#1f1f1f';
+        ctx.fillRect(x + tx * tileSize, y + ty * tileSize, tileSize, tileSize);
+      }
+    }
+
+    // Draw welcome sign in the center
+    const signWidth = Math.min(width * 0.8, 600);
+    const signHeight = Math.min(height * 0.6, 350);
+    const signX = x + (width - signWidth) / 2;
+    const signY = y + (height - signHeight) / 2;
+
+    // Sign background - pixelated frame
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(signX, signY, signWidth, signHeight);
+
+    // Sign border - pixel art style
+    const borderWidth = 8;
+    ctx.fillStyle = '#444';
+    ctx.fillRect(signX, signY, signWidth, borderWidth); // top
+    ctx.fillRect(signX, signY + signHeight - borderWidth, signWidth, borderWidth); // bottom
+    ctx.fillRect(signX, signY, borderWidth, signHeight); // left
+    ctx.fillRect(signX + signWidth - borderWidth, signY, borderWidth, signHeight); // right
+
+    // Corner decorations
+    ctx.fillStyle = '#666';
+    const cornerSize = 16;
+    ctx.fillRect(signX, signY, cornerSize, cornerSize); // top-left
+    ctx.fillRect(signX + signWidth - cornerSize, signY, cornerSize, cornerSize); // top-right
+    ctx.fillRect(signX, signY + signHeight - cornerSize, cornerSize, cornerSize); // bottom-left
+    ctx.fillRect(signX + signWidth - cornerSize, signY + signHeight - cornerSize, cornerSize, cornerSize); // bottom-right
+
+    // Text content
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Title
+    const titleSize = Math.min(signWidth / 12, 48);
+    ctx.font = `bold ${titleSize}px monospace`;
+    ctx.fillText('LIFE STORIES', signX + signWidth / 2, signY + signHeight * 0.25);
+
+    // Subtitle
+    const subtitleSize = Math.min(signWidth / 20, 24);
+    ctx.font = `${subtitleSize}px monospace`;
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('A Pixelated Journey', signX + signWidth / 2, signY + signHeight * 0.38);
+
+    // Description
+    const descSize = Math.min(signWidth / 28, 16);
+    ctx.font = `${descSize}px monospace`;
+    ctx.fillStyle = '#999';
+    const lines = [
+      'Highlights and key moments of my life.',
+      'Each floor represents a year of age.',
+      '',
+      'Scroll up to begin your journey →'
+    ];
+    lines.forEach((line, i) => {
+      ctx.fillText(line, signX + signWidth / 2, signY + signHeight * 0.55 + i * (descSize + 8));
+    });
+
+    // Elevator indicator at bottom
+    ctx.fillStyle = '#555';
+    const elevatorWidth = 60;
+    const elevatorHeight = 80;
+    const elevatorX = signX + signWidth / 2 - elevatorWidth / 2;
+    const elevatorY = signY + signHeight + 40;
+
+    if (elevatorY + elevatorHeight < y + height) {
+      ctx.fillRect(elevatorX, elevatorY, elevatorWidth, elevatorHeight);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(elevatorX + 5, elevatorY + 5, elevatorWidth - 10, elevatorHeight - 10);
+
+      // Elevator doors
+      ctx.fillStyle = '#666';
+      ctx.fillRect(elevatorX + 10, elevatorY + 10, (elevatorWidth - 20) / 2 - 2, elevatorHeight - 20);
+      ctx.fillRect(elevatorX + elevatorWidth / 2 + 2, elevatorY + 10, (elevatorWidth - 20) / 2 - 2, elevatorHeight - 20);
+    }
+  }
+
+  // Draw building with continuous scrolling (interpolate between floors with vertical movement)
+  function drawLifeStoriesBuildingContinuous() {
+    const ctx = lifeStoriesState.ctx;
+    const canvas = lifeStoriesState.canvas;
+    if (!ctx || !canvas) return;
+    
+    // Clear canvas
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    if (lifeStoriesState.floors.length === 0) {
+      // Draw placeholder when no images
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('No images found', canvas.width / 2, canvas.height / 2 - 10);
+      ctx.fillText('Add images to images/life-stories/', canvas.width / 2, canvas.height / 2 + 10);
+      return;
+    }
+    
+    // Simple vertical stacking like a webpage - no fancy transitions
+    // Floor 1 is ground level. Scrolling down (higher floor numbers) = going UP the building
+    // Minimal spacing between images (10px gap)
+    const gapBetweenFloors = 10;
+    const scrollPos = lifeStoriesState.scrollPosition;
+    
+    // Calculate the base Y position based on scroll position
+    // Position floors consecutively by their index in the array, not by floor number
+    const minFloor = Math.min(...lifeStoriesState.floors.map(f => f.number));
+    const maxFloor = Math.max(...lifeStoriesState.floors.map(f => f.number));
+
+    // Map floor number to array index for continuous positioning
+    const floorToIndex = new Map();
+    lifeStoriesState.floors.forEach((floor, index) => {
+      floorToIndex.set(floor.number, index);
+    });
+
+    // Convert scroll position (floor number) to index-based position
+    // Interpolate between floor indices
+    let scrollIndex = 0;
+    if (scrollPos <= minFloor) {
+      scrollIndex = 0;
+    } else if (scrollPos >= maxFloor) {
+      scrollIndex = lifeStoriesState.floors.length - 1;
+    } else {
+      // Find the two floors we're between
+      let lowerFloor = null;
+      let upperFloor = null;
+      for (let i = 0; i < lifeStoriesState.floors.length - 1; i++) {
+        if (lifeStoriesState.floors[i].number <= scrollPos && lifeStoriesState.floors[i + 1].number > scrollPos) {
+          lowerFloor = lifeStoriesState.floors[i];
+          upperFloor = lifeStoriesState.floors[i + 1];
+          break;
+        }
+      }
+      if (lowerFloor && upperFloor) {
+        const t = (scrollPos - lowerFloor.number) / (upperFloor.number - lowerFloor.number);
+        const lowerIndex = floorToIndex.get(lowerFloor.number);
+        const upperIndex = floorToIndex.get(upperFloor.number);
+        scrollIndex = lowerIndex + t * (upperIndex - lowerIndex);
+      }
+    }
+
+    // Save canvas state
+    ctx.save();
+
+    // Draw all visible floors in the viewport
+    lifeStoriesState.floors.forEach((floor, arrayIndex) => {
+      // Handle Floor 0 (Lobby) specially
+      if (floor.isLobby) {
+        // Use canvas height as the standard height for the lobby
+        const lobbyHeight = canvas.height;
+
+        // Calculate vertical position based on array index (consecutive)
+        const baseYPosition = arrayIndex * (lobbyHeight + gapBetweenFloors);
+
+        // Offset by scroll position (scrolling down moves content up)
+        const scrollOffset = scrollIndex * (lobbyHeight + gapBetweenFloors);
+        const y = canvas.height - lobbyHeight - baseYPosition + scrollOffset;
+
+        // Only draw if lobby is visible in viewport
+        if (y < canvas.height + lobbyHeight && y > -lobbyHeight) {
+          drawLobby(ctx, canvas, 0, y, canvas.width, lobbyHeight);
+        }
+        return;
+      }
+
+      // Draw regular floor image
+      const img = lifeStoriesState.images[floor.image];
+      if (!img) return;
+
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const imgWidth = img.width * scale;
+      const imgHeight = img.height * scale;
+      const x = (canvas.width - imgWidth) / 2;
+
+      // Calculate vertical position based on array index (consecutive)
+      // Each floor takes up its image height + gap
+      const baseYPosition = arrayIndex * (imgHeight + gapBetweenFloors);
+
+      // Offset by scroll position (scrolling down moves content up)
+      const scrollOffset = scrollIndex * (imgHeight + gapBetweenFloors);
+      const y = canvas.height - imgHeight - baseYPosition + scrollOffset;
+
+      // Only draw if floor is visible in viewport (with some margin)
+      if (y < canvas.height + imgHeight && y > -imgHeight) {
+        ctx.globalAlpha = 1.0;
+        ctx.drawImage(img, x, y, imgWidth, imgHeight);
+      }
+    });
+    
+    // Restore canvas state
+    ctx.restore();
+    
+    // Reset alpha
+    ctx.globalAlpha = 1.0;
+  }
+  
+  function drawLifeStoriesBuilding() {
+    const ctx = lifeStoriesState.ctx;
+    const canvas = lifeStoriesState.canvas;
+    if (!ctx || !canvas) return;
+    
+    const currentFloor = lifeStoriesState.floors.find(f => f.number === lifeStoriesState.currentFloor);
+    
+    // Clear canvas
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw current floor image if available
+    if (currentFloor && currentFloor.image && lifeStoriesState.images[currentFloor.image]) {
+      const img = lifeStoriesState.images[currentFloor.image];
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const x = (canvas.width - img.width * scale) / 2;
+      const y = (canvas.height - img.height * scale) / 2;
+      
+      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    } else {
+      // Draw placeholder
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#666';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      if (lifeStoriesState.floors.length === 0) {
+        ctx.fillText('No images found', canvas.width / 2, canvas.height / 2 - 10);
+        ctx.fillText('Add images to images/life-stories/', canvas.width / 2, canvas.height / 2 + 10);
+      } else {
+        ctx.fillText(`Floor ${lifeStoriesState.currentFloor}`, canvas.width / 2, canvas.height / 2);
+      }
+    }
+  }
+  
+  
+  lifeStoriesState.initialized = true;
 }
 
 /**
