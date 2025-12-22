@@ -18,13 +18,18 @@
   const ctx = canvas.getContext('2d', { alpha: true });
   if (!ctx) return;
 
+  // Disable image smoothing for crisp pixel-perfect particles
+  ctx.imageSmoothingEnabled = false;
+
   // Configuration
   const config = {
-    particleCount: 6000,
-    streamLineCount: 80,
+    particleCount: 12000, // Much higher for dense streams
+    streamLineCount: 120,
     centerX: 0,
     centerY: 0,
     voidRadius: 60,
+    voidOffsetX: -150, // Offset void to create asymmetric sweep
+    voidOffsetY: -80,
     maxRadius: 900,
     fps: 30
   };
@@ -63,8 +68,8 @@
     const r = spiralRadius(theta);
     const angle = theta + armOffset;
     return {
-      x: config.centerX + r * Math.cos(angle),
-      y: config.centerY + r * Math.sin(angle) * 0.6, // Perspective tilt
+      x: config.centerX + config.voidOffsetX + r * Math.cos(angle),
+      y: config.centerY + config.voidOffsetY + r * Math.sin(angle) * 0.6, // Perspective tilt
       r: r
     };
   }
@@ -128,7 +133,8 @@
       ctx.lineTo(stream.points[i].x, stream.points[i].y);
     }
 
-    ctx.strokeStyle = `rgba(200, 190, 180, ${stream.opacity})`;
+    // Cool silver/white for stream lines
+    ctx.strokeStyle = `rgba(185, 195, 210, ${stream.opacity})`;
     ctx.lineWidth = stream.width;
     ctx.stroke();
   }
@@ -144,12 +150,14 @@
 
     // Random distance from center (theta determines radius in spiral)
     const theta = 0.5 + Math.random() * 25;
-    const spread = (Math.random() - 0.5) * 1.5; // Perpendicular spread
+
+    // Much tighter spread for dense streams (silk-like flow)
+    const spread = (Math.random() - 0.5) * 0.6; // Reduced from 1.5 to 0.6
 
     const basePoint = spiralPoint(theta, armOffset);
 
-    // Add some random scatter
-    const scatter = 30 + Math.random() * 100;
+    // Tighter scatter for dense concentrations
+    const scatter = 15 + Math.random() * 40; // Reduced from 30-130 to 15-55
     const scatterAngle = Math.random() * Math.PI * 2;
 
     const x = basePoint.x + Math.cos(scatterAngle) * scatter * spread;
@@ -158,22 +166,25 @@
     // Distance from center
     const dist = Math.sqrt(Math.pow(x - config.centerX, 2) + Math.pow(y - config.centerY, 2));
 
-    // Color - mostly white/cream with some warm highlights
+    // Color - 80% cool silver/white, 20% warm orange/gold highlights
     const colorRoll = Math.random();
     let color;
-    if (colorRoll < 0.6) {
-      // White/cream
+    if (colorRoll < 0.80) {
+      // Cool silver/white - predominant color
       const brightness = 200 + Math.random() * 55;
-      color = { r: brightness, g: brightness - 5, b: brightness - 10 };
-    } else if (colorRoll < 0.8) {
-      // Warm orange/gold
-      color = { r: 255, g: 180 + Math.random() * 60, b: 100 + Math.random() * 80 };
-    } else if (colorRoll < 0.9) {
-      // Subtle blue
-      color = { r: 180 + Math.random() * 40, g: 200 + Math.random() * 40, b: 255 };
+      // Add cool blue tint
+      color = {
+        r: brightness - 15,
+        g: brightness - 8,
+        b: brightness + 5
+      };
     } else {
-      // Purple hint
-      color = { r: 200 + Math.random() * 40, g: 150 + Math.random() * 50, b: 220 + Math.random() * 35 };
+      // Warm orange/gold highlights - only 20%
+      color = {
+        r: 255,
+        g: 180 + Math.random() * 60,
+        b: 100 + Math.random() * 80
+      };
     }
 
     return {
@@ -256,10 +267,17 @@
 
     if (alpha < 0.05) return;
 
+    // Use fillRect for crisp 1px particles instead of arc
     ctx.fillStyle = `rgba(${Math.round(p.color.r)}, ${Math.round(p.color.g)}, ${Math.round(p.color.b)}, ${alpha})`;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
+
+    // Draw 1px square for sharpest rendering
+    if (p.size < 1.5) {
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+    } else {
+      // Slightly larger particles still use rect for crispness
+      const size = Math.round(p.size);
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), size, size);
+    }
   }
 
   // ============================================================================
@@ -267,18 +285,22 @@
   // ============================================================================
 
   function drawCoreGlow() {
+    const coreX = config.centerX + config.voidOffsetX;
+    const coreY = config.centerY + config.voidOffsetY;
+
     const gradient = ctx.createRadialGradient(
-      config.centerX, config.centerY, 0,
-      config.centerX, config.centerY, 200
+      coreX, coreY, 0,
+      coreX, coreY, 200
     );
-    gradient.addColorStop(0, 'rgba(255, 250, 240, 0.15)');
-    gradient.addColorStop(0.3, 'rgba(255, 240, 220, 0.08)');
-    gradient.addColorStop(0.6, 'rgba(255, 230, 200, 0.03)');
+    // Cool white core instead of warm cream
+    gradient.addColorStop(0, 'rgba(235, 240, 255, 0.15)');
+    gradient.addColorStop(0.3, 'rgba(220, 230, 255, 0.08)');
+    gradient.addColorStop(0.6, 'rgba(200, 215, 240, 0.03)');
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(config.centerX, config.centerY, 200, 0, Math.PI * 2);
+    ctx.arc(coreX, coreY, 200, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -333,8 +355,8 @@
     }
     lastFrame = timestamp;
 
-    // Fade trail effect
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    // Clear canvas completely for crisp rendering (no motion blur)
+    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Update center position
@@ -428,9 +450,9 @@
     config.centerX = canvas.width / 2;
     config.centerY = canvas.height / 2;
 
-    // Adjust particle count for screen size
+    // Adjust particle count for screen size - much higher for dense streams
     const area = canvas.width * canvas.height;
-    config.particleCount = Math.min(8000, Math.max(3000, Math.floor(area / 200)));
+    config.particleCount = Math.min(15000, Math.max(8000, Math.floor(area / 100)));
   }
 
   function init() {
