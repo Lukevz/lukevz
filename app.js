@@ -1196,7 +1196,27 @@ function renderNote(post, updateUrl = true) {
       </svg>
       <span>Back</span>
     `;
-    backBtn.addEventListener('click', closeNote);
+    
+    // Track if touch was used to prevent double-firing
+    let touchUsed = false;
+    
+    // Handle touch events for better mobile responsiveness
+    backBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      touchUsed = true;
+      closeNote();
+      // Reset flag after a short delay
+      setTimeout(() => { touchUsed = false; }, 300);
+    });
+    
+    // Handle click for desktop and as fallback
+    backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Skip if touch already handled this
+      if (touchUsed) return;
+      closeNote();
+    });
+    
     elements.noteView.insertBefore(backBtn, elements.noteView.firstChild);
   }
 
@@ -1488,10 +1508,21 @@ function setupEventListeners() {
         performViewSwitch('notes');
       }
     } else {
-      // No note in URL, clear current note
-      if (state.currentPost) {
-        state.currentPost = null;
-        renderNote(null, false);
+      // No note in URL, close note view on mobile/tablet
+      // This handles the case where user presses browser back button
+      if (elements.noteView && elements.noteView.classList.contains('active')) {
+        elements.noteView.classList.remove('active');
+      }
+      state.currentPost = null;
+      document.querySelectorAll('.post-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      // Show empty state
+      if (elements.noteEmpty) {
+        elements.noteEmpty.classList.remove('hidden');
+      }
+      if (elements.noteContent) {
+        elements.noteContent.classList.add('hidden');
       }
     }
   });
