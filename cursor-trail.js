@@ -48,14 +48,14 @@
 
   // Trail configuration
   const config = {
-    maxParticles: 15,           // Keep particle count low for performance
-    particleLifetime: 800,      // Milliseconds before particle dies
-    particleSpawnDelay: 70,     // Milliseconds between particle spawns (increased to emit fewer)
-    particleSize: 3,            // Base size of particles
-    glowSize: 8,                // Size of glow effect
+    maxParticles: 40,           // More points so it reads as a continuous jetstream
+    particleLifetime: 1200,     // Longer persistence for a smoother trail
+    particleSpawnDelay: 22,     // Denser sampling so it connects cleanly
+    particleSize: 2.4,          // Base size of particles (used as stream width reference)
+    glowSize: 10,               // Outer glow width reference
     trailColor: '120, 180, 255', // RGB for blue glow (matches accent color)
     suctionStrength: 0.6,       // How strongly particles are pulled to black hole (more subtle)
-    velocityInherit: 0.15,       // How much of cursor velocity particles inherit
+    velocityInherit: 0.08,      // Less "spray", more coherent jetstream
     suctionDelay: 250          // Milliseconds before particles start being sucked in
   };
 
@@ -91,11 +91,12 @@
     return {
       x: x,
       y: y,
-      vx: vx * config.velocityInherit + (Math.random() - 0.5) * 0.5,
-      vy: vy * config.velocityInherit + (Math.random() - 0.5) * 0.5,
+      vx: vx * config.velocityInherit + (Math.random() - 0.5) * 0.12,
+      vy: vy * config.velocityInherit + (Math.random() - 0.5) * 0.12,
       birthTime: Date.now(),
       life: 1.0,
-      size: config.particleSize * (0.7 + Math.random() * 0.6)
+      size: config.particleSize * (0.75 + Math.random() * 0.5),
+      alpha: 1
     };
   }
 
@@ -163,7 +164,7 @@
     // Try to spawn new particle
     maybeSpawnParticle(currentTime);
 
-    // Update and draw particles
+    // Update particles
     for (let i = state.particles.length - 1; i >= 0; i--) {
       const p = state.particles[i];
       const age = currentTime - p.birthTime;
@@ -202,8 +203,8 @@
       }
 
       // Apply drag to slow particles down naturally
-      p.vx *= 0.97;
-      p.vy *= 0.97;
+      p.vx *= 0.935;
+      p.vy *= 0.935;
 
       // Update position
       p.x += p.vx;
@@ -222,30 +223,74 @@
         continue;
       }
 
-      // Calculate size based on life (shrink as it ages)
-      const size = p.size * p.life;
+      p.alpha = alpha;
+    }
 
-      // Draw outer glow (larger, more transparent)
-      const glowAlpha = alpha * 0.15;
-      ctx.fillStyle = `rgba(${config.trailColor}, ${glowAlpha})`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, config.glowSize * p.life, 0, Math.PI * 2);
-      ctx.fill();
+    // Render as a continuous jetstream instead of individual dots.
+    if (state.particles.length < 2) return;
 
-      // Draw middle glow
-      const midGlowAlpha = alpha * 0.3;
-      ctx.fillStyle = `rgba(${config.trailColor}, ${midGlowAlpha})`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, size * 2, 0, Math.PI * 2);
-      ctx.fill();
+    const points = state.particles
+      .slice()
+      .sort((a, b) => a.birthTime - b.birthTime);
 
-      // Draw core particle (brighter, smaller)
-      const coreAlpha = alpha * 0.6;
-      ctx.fillStyle = `rgba(${config.trailColor}, ${coreAlpha})`;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    // Glow pass
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      const segAlpha = Math.min(a.alpha, b.alpha);
+      if (segAlpha <= 0.01) continue;
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const segDist = Math.sqrt(dx * dx + dy * dy);
+      // Skip huge jumps (e.g. cursor teleporting or tab switching)
+      if (segDist > 90) continue;
+
+      const width = config.glowSize * (0.15 + 0.85 * segAlpha);
+      ctx.strokeStyle = `rgba(${config.trailColor}, ${segAlpha * 0.14})`;
+      ctx.lineWidth = width;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    // Core pass
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      const segAlpha = Math.min(a.alpha, b.alpha);
+      if (segAlpha <= 0.01) continue;
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const segDist = Math.sqrt(dx * dx + dy * dy);
+      if (segDist > 90) continue;
+
+      const width = a.size * (0.25 + 0.95 * segAlpha);
+      ctx.strokeStyle = `rgba(${config.trailColor}, ${segAlpha * 0.55})`;
+      ctx.lineWidth = Math.max(0.75, width);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    // Subtle bright "nozzle" at the head
+    const head = points[points.length - 1];
+    if (head && head.alpha > 0.1) {
+      ctx.fillStyle = `rgba(${config.trailColor}, ${Math.min(1, head.alpha) * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, Math.max(1.2, head.size * 0.7), 0, Math.PI * 2);
       ctx.fill();
     }
+
+    ctx.restore();
   }
 
   // Initialize the trail system
@@ -271,4 +316,3 @@
     init();
   }
 })();
-

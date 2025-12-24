@@ -12,9 +12,15 @@ const state = {
   currentView: null,
   expandedTags: new Set(), // Track expanded parent tags
   windows: {
-    openWindows: new Set(), // Track which windows are open
-    highestZIndex: 10 // Track highest z-index for window stacking
-  }
+    openWindows: new Set() // Track which windows are open
+  },
+  thoughtTrains: [],            // Array of parsed train objects
+  currentTrainIndex: 0,         // Currently focused card index
+  filteredTrains: [],           // Trains after tag filtering
+  trainTags: new Map(),         // Tag → count mapping
+  currentTrainTag: 'all',       // Active tag filter
+  isTrainExpanded: false,       // Track if detail view is open
+  labs: []                      // Array of parsed lab objects
 };
 
 // DOM Elements
@@ -32,8 +38,30 @@ const elements = {
 };
 
 // ==========================================
-// Window Management System
+// View Management System
 // ==========================================
+
+const LAST_OPEN_WINDOW_STORAGE_KEY = 'lastOpenWindowId';
+
+function getLastOpenWindowId() {
+  try {
+    return localStorage.getItem(LAST_OPEN_WINDOW_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setLastOpenWindowId(windowId) {
+  try {
+    if (!windowId) {
+      localStorage.removeItem(LAST_OPEN_WINDOW_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(LAST_OPEN_WINDOW_STORAGE_KEY, windowId);
+  } catch {
+    // ignore
+  }
+}
 
 /**
  * Check if we're on mobile
@@ -43,273 +71,10 @@ function isMobile() {
 }
 
 /**
- * Add resize handles to a window (corners only)
- */
-function addResizeHandles(window) {
-  const handles = [
-    'top-left', 'top-right', 'bottom-left', 'bottom-right'
-  ];
-
-  handles.forEach(position => {
-    const handle = document.createElement('div');
-    handle.className = `resize-handle resize-${position}`;
-    handle.dataset.position = position;
-    window.appendChild(handle);
-  });
-}
-
-/**
- * Make windows draggable and manage window operations
+ * Setup view management (simplified - no dragging/resizing)
  */
 function setupWindowManagement() {
-  const windows = document.querySelectorAll('.view');
-
-  windows.forEach(window => {
-    const titlebar = window.querySelector('.window-titlebar');
-    const closeBtn = window.querySelector('.window-close');
-    const windowId = window.id.replace('View', '');
-
-    // Only enable dragging and resizing on desktop
-    if (!isMobile()) {
-      // Only make non-notes windows draggable
-      if (titlebar && windowId !== 'notes') {
-        makeWindowDraggable(window, titlebar);
-      }
-
-      // Add resize handles
-      addResizeHandles(window);
-      makeWindowResizable(window);
-
-      // Bring window to front when clicked
-      window.addEventListener('mousedown', () => {
-        bringWindowToFront(window);
-      });
-    }
-
-    if (closeBtn) {
-      closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        closeWindow(window);
-      });
-    }
-  });
-
-  // Handle window resize - re-initialize if switching between mobile/desktop
-  let wasMobile = isMobile();
-  window.addEventListener('resize', () => {
-    const isNowMobile = isMobile();
-    if (wasMobile !== isNowMobile) {
-      wasMobile = isNowMobile;
-      
-      if (isNowMobile) {
-        // Switching to mobile - close all windows except one and remove resize handles
-        if (state.windows.openWindows.size > 1) {
-          const openWindows = Array.from(state.windows.openWindows);
-          const firstWindow = openWindows[0];
-          openWindows.slice(1).forEach(windowId => {
-            const win = document.getElementById(`${windowId}View`);
-            if (win) closeWindow(win);
-          });
-        }
-        // Remove resize handles from all windows
-        windows.forEach(window => {
-          const handles = window.querySelectorAll('.resize-handle');
-          handles.forEach(handle => handle.remove());
-        });
-      } else {
-        // Switching to desktop - add resize handles and enable dragging
-        windows.forEach(window => {
-          const titlebar = window.querySelector('.window-titlebar');
-          const windowId = window.id.replace('View', '');
-          
-          // Only make non-notes windows draggable
-          if (titlebar && windowId !== 'notes') {
-            makeWindowDraggable(window, titlebar);
-          }
-          
-          // Add resize handles
-          addResizeHandles(window);
-          makeWindowResizable(window);
-        });
-      }
-    }
-  });
-}
-
-/**
- * Make a window draggable by its titlebar
- */
-function makeWindowDraggable(window, titlebar) {
-  let isDragging = false;
-  let currentX;
-  let currentY;
-  let initialX;
-  let initialY;
-  let xOffset = 0;
-  let yOffset = 0;
-
-  // Get current position from inline styles or compute it
-  const computedStyle = window.computedStyleMap ? window.computedStyleMap() : getComputedStyle(window);
-  const currentTop = parseInt(window.style.top) || parseInt(computedStyle.get ? computedStyle.get('top').value : computedStyle.top);
-  const currentLeft = parseInt(window.style.left) || parseInt(computedStyle.get ? computedStyle.get('left').value : computedStyle.left);
-
-  if (!isNaN(currentTop) && !isNaN(currentLeft)) {
-    xOffset = currentLeft;
-    yOffset = currentTop;
-    setTranslate(currentLeft, currentTop, window);
-  }
-
-  titlebar.addEventListener('mousedown', dragStart);
-  document.addEventListener('mousemove', drag);
-  document.addEventListener('mouseup', dragEnd);
-
-  function dragStart(e) {
-    // Don't drag if clicking on close button or other interactive elements
-    if (e.target.closest('.window-close') || e.target.closest('.social-icon') || e.target.closest('button:not(.window-close)')) {
-      return;
-    }
-
-    initialX = e.clientX - xOffset;
-    initialY = e.clientY - yOffset;
-
-    if (e.target === titlebar || titlebar.contains(e.target)) {
-      isDragging = true;
-      window.classList.add('dragging');
-      bringWindowToFront(window);
-    }
-  }
-
-  function drag(e) {
-    if (isDragging) {
-      e.preventDefault();
-
-      currentX = e.clientX - initialX;
-      currentY = e.clientY - initialY;
-
-      xOffset = currentX;
-      yOffset = currentY;
-
-      setTranslate(currentX, currentY, window);
-    }
-  }
-
-  function dragEnd(e) {
-    initialX = currentX;
-    initialY = currentY;
-    isDragging = false;
-    window.classList.remove('dragging');
-  }
-
-  function setTranslate(xPos, yPos, el) {
-    el.style.left = `${xPos}px`;
-    el.style.top = `${yPos}px`;
-    el.style.transform = 'none'; // Override any existing transforms
-  }
-}
-
-/**
- * Make a window resizable by its edges
- */
-function makeWindowResizable(window) {
-  const handles = window.querySelectorAll('.resize-handle');
-
-  handles.forEach(handle => {
-    handle.addEventListener('mousedown', initResize);
-  });
-
-  let isResizing = false;
-  let currentHandle = null;
-  let originalWidth, originalHeight, originalX, originalY, originalMouseX, originalMouseY;
-
-  function initResize(e) {
-    // Don't allow resize if clicking on titlebar or its children
-    if (e.target.closest('.window-titlebar')) {
-      return;
-    }
-    
-    e.preventDefault();
-    e.stopPropagation();
-
-    isResizing = true;
-    currentHandle = e.target.dataset.position;
-
-    originalWidth = window.offsetWidth;
-    originalHeight = window.offsetHeight;
-    originalX = window.offsetLeft;
-    originalY = window.offsetTop;
-    originalMouseX = e.clientX;
-    originalMouseY = e.clientY;
-
-    window.classList.add('resizing');
-    bringWindowToFront(window);
-
-    document.addEventListener('mousemove', resize);
-    document.addEventListener('mouseup', stopResize);
-  }
-
-  function resize(e) {
-    if (!isResizing) return;
-
-    const deltaX = e.clientX - originalMouseX;
-    const deltaY = e.clientY - originalMouseY;
-
-    let newWidth = originalWidth;
-    let newHeight = originalHeight;
-    let newX = originalX;
-    let newY = originalY;
-
-    // Minimum dimensions
-    const minWidth = 300;
-    const minHeight = 200;
-
-    // Handle different resize directions
-    if (currentHandle.includes('right')) {
-      newWidth = Math.max(minWidth, originalWidth + deltaX);
-    }
-    if (currentHandle.includes('left')) {
-      const widthChange = originalWidth - deltaX;
-      if (widthChange >= minWidth) {
-        newWidth = widthChange;
-        newX = originalX + deltaX;
-      }
-    }
-    if (currentHandle.includes('bottom')) {
-      newHeight = Math.max(minHeight, originalHeight + deltaY);
-    }
-    if (currentHandle.includes('top')) {
-      const heightChange = originalHeight - deltaY;
-      if (heightChange >= minHeight) {
-        newHeight = heightChange;
-        newY = originalY + deltaY;
-      }
-    }
-
-    // Apply new dimensions and position
-    window.style.width = `${newWidth}px`;
-    window.style.height = `${newHeight}px`;
-    window.style.left = `${newX}px`;
-    window.style.top = `${newY}px`;
-    window.style.right = 'auto';
-    window.style.bottom = 'auto';
-    window.style.transform = 'none';
-  }
-
-  function stopResize() {
-    isResizing = false;
-    currentHandle = null;
-    window.classList.remove('resizing');
-
-    document.removeEventListener('mousemove', resize);
-    document.removeEventListener('mouseup', stopResize);
-  }
-}
-
-/**
- * Bring window to front by managing z-index
- */
-function bringWindowToFront(window) {
-  state.windows.highestZIndex++;
-  window.style.zIndex = state.windows.highestZIndex;
+  // No setup needed - views are full-screen now
 }
 
 /**
@@ -354,23 +119,41 @@ function closeWindow(window) {
       hideMiniPlayer();
     }
   }
+
+  // Update top menu bar - remove solid state when no apps are active
+  if (state.windows.openWindows.size === 0) {
+    setLastOpenWindowId(null);
+    const topMenuBar = document.getElementById('topMenuBar');
+    if (topMenuBar) {
+      topMenuBar.classList.remove('app-active');
+    }
+  }
 }
 
 /**
  * Open a window
  */
-function openWindow(windowId) {
+async function openWindow(windowId) {
   const window = document.getElementById(`${windowId}View`);
-  if (!window) return;
+  if (!window) {
+    setLastOpenWindowId(null);
+    return;
+  }
 
   window.classList.add('active');
   state.windows.openWindows.add(windowId);
-  bringWindowToFront(window);
+  setLastOpenWindowId(windowId);
 
   // Update nav icon button state
   const navBtn = document.querySelector(`.nav-icon-btn[data-view="${windowId}"]`);
   if (navBtn) {
     navBtn.classList.add('active');
+  }
+
+  // Update top menu bar to solid state when app is active
+  const topMenuBar = document.getElementById('topMenuBar');
+  if (topMenuBar) {
+    topMenuBar.classList.add('app-active');
   }
 
   // Handle special cases for specific windows
@@ -402,27 +185,34 @@ function openWindow(windowId) {
     initLifeStories();
   }
 
+  // Initialize thought train when opened
+  if (windowId === 'thoughtTrain') {
+    if (state.thoughtTrains.length === 0) {
+      await loadThoughtTrains();
+    }
+    renderThoughtTrainCards();
+  }
+
   state.currentView = windowId;
 }
 
 /**
- * Toggle window open/closed
+ * Toggle view open/closed (single view mode - only one view at a time)
  */
 function toggleWindow(windowId) {
   if (state.windows.openWindows.has(windowId)) {
+    // If clicking the same view, close it
     const window = document.getElementById(`${windowId}View`);
     closeWindow(window);
   } else {
-    // On mobile, close all other windows first (single window mode)
-    if (isMobile()) {
-      const openWindows = Array.from(state.windows.openWindows);
-      openWindows.forEach(openWindowId => {
-        if (openWindowId !== windowId) {
-          const win = document.getElementById(`${openWindowId}View`);
-          if (win) closeWindow(win);
-        }
-      });
-    }
+    // Close all other views first (single view mode)
+    const openWindows = Array.from(state.windows.openWindows);
+    openWindows.forEach(openWindowId => {
+      if (openWindowId !== windowId) {
+        const win = document.getElementById(`${openWindowId}View`);
+        if (win) closeWindow(win);
+      }
+    });
     openWindow(windowId);
   }
 }
@@ -511,10 +301,11 @@ const tagIcons = {
 const musicFolderIcons = {
   Ambience: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><path d="M7.75,2c-.689,0-1.25,.561-1.25,1.25s.561,1.25,1.25,1.25,1.25-.561,1.25-1.25-.561-1.25-1.25-1.25Z" fill="currentColor"></path><path d="M10.194,6.846l-4.273,5.812c-.486,.66-.014,1.592,.806,1.592H15.273c.82,0,1.291-.932,.806-1.592l-4.273-5.812c-.4-.543-1.212-.543-1.611,0Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><path d="M7.731,10.195l-2.128-2.879c-.3-.406-.906-.406-1.206,0l-2.763,3.738c-.366,.495-.012,1.196,.603,1.196h3.984" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>',
   Music: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><path d="M9.615,2.382l3.5-.477c.6-.082,1.135,.385,1.135,.991v1.731c0,.5-.369,.923-.865,.991l-4.635,.632V3.373c0-.5,.369-.923,.865-.991Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><line x1="8.75" y1="6.25" x2="8.75" y2="13.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line><circle cx="6" cy="13.5" r="2.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></circle><path d="M4.493,5.742l-.946-.315-.316-.947c-.102-.306-.609-.306-.711,0l-.316,.947-.946,.315c-.153,.051-.257,.194-.257,.356s.104,.305,.257,.356l.946,.315,.316,.947c.051,.153,.194,.256,.355,.256s.305-.104,.355-.256l.316-.947,.946-.315c.153-.051,.257-.194,.257-.356s-.104-.305-.257-.356Z" fill="currentColor"></path><path d="M16.658,10.99l-1.263-.421-.421-1.263c-.137-.408-.812-.408-.949,0l-.421,1.263-1.263,.421c-.204,.068-.342,.259-.342,.474s.138,.406,.342,.474l1.263,.421,.421,1.263c.068,.204,.26,.342,.475,.342s.406-.138,.475-.342l.421-1.263,1.263-.421c.204-.068,.342-.259,.342-.474s-.138-.406-.342-.474Z" fill="currentColor"></path><circle cx="5.25" cy="2.25" r=".75" fill="currentColor"></circle></svg>',
-  Podcasts: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="5.75" y="1.75" width="6.5" height="9.5" rx="3.25" ry="3.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></rect><path d="M15.25,8c0,3.452-2.798,6.25-6.25,6.25h0c-3.452,0-6.25-2.798-6.25-6.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><line x1="9" y1="14.25" x2="9" y2="16.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line></svg>'
+  Podcasts: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="5.75" y="1.75" width="6.5" height="9.5" rx="3.25" ry="3.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></rect><path d="M15.25,8c0,3.452-2.798,6.25-6.25,6.25h0c-3.452,0-6.25-2.798-6.25-6.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><line x1="9" y1="14.25" x2="9" y2="16.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line></svg>',
+  Sounds: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="2" y="5" width="2" height="8" rx="1"/><rect x="6" y="3" width="2" height="12" rx="1"/><rect x="10" y="7" width="2" height="6" rx="1"/><rect x="14" y="9" width="2" height="2" rx="1"/></svg>'
 };
 
-const defaultMusicFolders = ['Ambience', 'Music', 'Podcasts'];
+const defaultMusicFolders = ['Ambience', 'Music', 'Podcasts', 'Sounds'];
 
 /**
  * Lightweight Markdown Parser
@@ -958,6 +749,133 @@ function parsePost(content, filename, createdDate = null) {
     tags: tags.length > 0 ? tags : ['notes'],
     body: cleanBody,
     excerpt,
+    filename
+  };
+}
+
+/**
+ * Parse Thought Train markdown with custom frontmatter
+ * @param {string} content - The markdown content
+ * @param {string} filename - The filename
+ * @param {string|null} createdDate - Optional creation date from manifest
+ */
+function parseThoughtTrain(content, filename, createdDate = null) {
+  let frontmatter = {};
+  let body = content;
+
+  // Extract YAML frontmatter
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (frontmatterMatch) {
+    const yaml = frontmatterMatch[1];
+
+    // Parse YAML fields
+    yaml.split('\n').forEach(line => {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex === -1) return;
+
+      const key = line.substring(0, colonIndex).trim();
+      const value = line.substring(colonIndex + 1).trim();
+
+      if (!key || !value) return;
+
+      // Handle arrays (route field)
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          // Parse array, handling both single and double quotes
+          const arrayContent = value.slice(1, -1);
+          frontmatter[key] = arrayContent
+            .split(',')
+            .map(item => item.trim().replace(/^["']|["']$/g, ''))
+            .filter(item => item.length > 0);
+        } catch (e) {
+          frontmatter[key] = [];
+        }
+      } else {
+        // Remove quotes from string values
+        frontmatter[key] = value.replace(/^["']|["']$/g, '');
+      }
+    });
+
+    body = content.replace(frontmatterMatch[0], '').trim();
+  }
+
+  // Extract Bear hashtags from body
+  const hashtagMatches = body.matchAll(/#([a-zA-Z][\w-]*(?:\/[\w-]+)*)/g);
+  const tags = [...new Set([
+    ...(frontmatter.tags || []),
+    ...Array.from(hashtagMatches, m => m[1])
+  ])];
+
+  // Clean body of hashtags for display
+  const cleanBody = body.replace(/#([a-zA-Z][\w-]*(?:\/[\w-]+)*)/g, '').trim();
+
+  return {
+    title: frontmatter.title || filename.replace('.md', ''),
+    date: frontmatter.date || createdDate || new Date().toISOString().split('T')[0],
+    startPoint: frontmatter.startPoint || '',
+    endPoint: frontmatter.endPoint || '',
+    route: Array.isArray(frontmatter.route) ? frontmatter.route : [],
+    takeaways: frontmatter.takeaways || '',
+    quote: frontmatter.quote || '',
+    whyCared: frontmatter.whyCared || '',
+    nextRabbitHole: frontmatter.nextRabbitHole || '',
+    tags,
+    body: cleanBody,
+    filename
+  };
+}
+
+/**
+ * Parse lab markdown file with frontmatter
+ */
+function parseLab(content, filename, createdDate = null) {
+  let frontmatter = {};
+  let body = content;
+
+  // Extract YAML frontmatter
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (frontmatterMatch) {
+    const yaml = frontmatterMatch[1];
+
+    // Parse YAML fields
+    yaml.split('\n').forEach(line => {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex === -1) return;
+
+      const key = line.substring(0, colonIndex).trim();
+      const value = line.substring(colonIndex + 1).trim();
+
+      if (!key || !value) return;
+
+      // Handle arrays
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          const arrayContent = value.slice(1, -1);
+          frontmatter[key] = arrayContent
+            .split(',')
+            .map(item => item.trim().replace(/^["']|["']$/g, ''))
+            .filter(item => item.length > 0);
+        } catch (e) {
+          frontmatter[key] = [];
+        }
+      } else {
+        // Remove quotes from string values
+        frontmatter[key] = value.replace(/^["']|["']$/g, '');
+      }
+    });
+
+    body = content.replace(frontmatterMatch[0], '').trim();
+  }
+
+  return {
+    title: frontmatter.title || filename.replace('.md', ''),
+    description: frontmatter.description || '',
+    thumbnail: frontmatter.thumbnail || '',
+    url: frontmatter.url || '',
+    view: frontmatter.view || '',
+    tags: frontmatter.tags || [],
+    date: frontmatter.date || createdDate || new Date().toISOString().split('T')[0],
+    body,
     filename
   };
 }
@@ -1596,6 +1514,549 @@ async function loadPosts() {
 }
 
 /**
+ * Load thought trains from thought-trains.js manifest
+ */
+async function loadThoughtTrains() {
+  try {
+    const { default: manifest } = await import('./thought-trains.js');
+
+    const trains = await Promise.all(
+      manifest.map(async ({ file, created }) => {
+        try {
+          const response = await fetch(`thought-train/${encodeURIComponent(file)}`);
+          if (response.ok) {
+            const content = await response.text();
+            return parseThoughtTrain(content, file, created);
+          }
+        } catch (err) {
+          console.warn(`Failed to load thought train ${file}:`, err);
+        }
+        return null;
+      })
+    );
+
+    state.thoughtTrains = trains
+      .filter(t => t !== null)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    state.filteredTrains = state.thoughtTrains;
+
+    buildTrainTagMap();
+  } catch (err) {
+    console.error('Failed to load thought trains:', err);
+    state.thoughtTrains = [];
+  }
+}
+
+/**
+ * Build tag map for thought trains
+ */
+function buildTrainTagMap() {
+  state.trainTags.clear();
+
+  state.thoughtTrains.forEach(train => {
+    train.tags.forEach(tag => {
+      state.trainTags.set(tag, (state.trainTags.get(tag) || 0) + 1);
+    });
+  });
+}
+
+/**
+ * Load labs from labs/ folder
+ */
+async function loadLabs() {
+  try {
+    const { default: manifest } = await import('./labs.js');
+
+    const labs = await Promise.all(
+      manifest.map(async ({ file, created }) => {
+        try {
+          const response = await fetch(`labs/${encodeURIComponent(file)}`);
+          if (response.ok) {
+            const content = await response.text();
+            return parseLab(content, file, created);
+          }
+        } catch (err) {
+          console.warn(`Failed to load lab ${file}:`, err);
+        }
+        return null;
+      })
+    );
+
+    state.labs = labs
+      .filter(l => l !== null)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    renderLabsGrid();
+  } catch (err) {
+    // labs.js doesn't exist yet or no labs - this is fine
+    state.labs = [];
+  }
+}
+
+/**
+ * Render labs grid
+ */
+function renderLabsGrid() {
+  const container = document.getElementById('labsGrid');
+  if (!container) return;
+
+  if (state.labs.length === 0) {
+    container.innerHTML = '<div class="labs-empty">No labs yet</div>';
+    return;
+  }
+
+  container.innerHTML = state.labs.map(lab => `
+    <div class="labs-card" data-lab="${lab.filename}" ${lab.url ? `data-url="${lab.url}"` : ''} ${lab.view ? `data-view="${lab.view}"` : ''}>
+      <div class="labs-card-thumbnail">
+        ${lab.thumbnail
+          ? `<img src="${lab.thumbnail}" alt="${lab.title}" loading="lazy">`
+          : `<div class="labs-card-placeholder">${lab.title.charAt(0).toUpperCase()}</div>`
+        }
+      </div>
+      <div class="labs-card-content">
+        <h3 class="labs-card-title">${lab.title}</h3>
+        <p class="labs-card-description">${lab.description}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+/**
+ * Setup labs interactions
+ */
+function setupLabsInteractions() {
+  const grid = document.getElementById('labsGrid');
+  grid?.addEventListener('click', (e) => {
+    const card = e.target.closest('.labs-card');
+    if (!card) return;
+
+    const url = card.dataset.url;
+    const view = card.dataset.view;
+    if (view) {
+      switchView(view);
+    } else if (url) {
+      window.open(url, '_blank', 'noopener');
+    } else {
+      openLabsModal(card.dataset.lab);
+    }
+  });
+
+  // Modal close handlers
+  const modal = document.getElementById('labsModal');
+  const closeBtn = modal?.querySelector('.labs-modal-close');
+  const overlay = modal?.querySelector('.labs-modal-overlay');
+
+  closeBtn?.addEventListener('click', closeLabsModal);
+  overlay?.addEventListener('click', closeLabsModal);
+
+  // Close on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.getAttribute('aria-hidden') === 'false') {
+      closeLabsModal();
+    }
+  });
+}
+
+/**
+ * Open labs modal
+ */
+function openLabsModal(filename) {
+  const lab = state.labs.find(l => l.filename === filename);
+  if (!lab) return;
+
+  document.getElementById('labsModalTitle').textContent = lab.title;
+  document.getElementById('labsModalBody').innerHTML = parseMarkdown(lab.body);
+
+  const modal = document.getElementById('labsModal');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+/**
+ * Close labs modal
+ */
+function closeLabsModal() {
+  document.getElementById('labsModal').setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Render thought train cards in 3D stack
+ */
+function renderThoughtTrainCards() {
+  const container = document.getElementById('trainStack3D');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  const trains = state.currentTrainTag === 'all'
+    ? state.thoughtTrains
+    : state.filteredTrains;
+
+  if (trains.length === 0) {
+    container.innerHTML = `
+      <div class="train-empty-state">
+        <p>No thought trains yet. Add markdown files to /thought-train/ folder.</p>
+      </div>
+    `;
+    return;
+  }
+
+  trains.forEach((train, index) => {
+    const card = createTrainCard(train, index);
+    container.appendChild(card);
+  });
+
+  updateTrainCardPositions();
+  updateNavIndicator();
+}
+
+/**
+ * Create a single train card element
+ */
+function createTrainCard(train, index) {
+  const card = document.createElement('article');
+  card.className = 'train-card';
+  card.dataset.index = index;
+
+  const routeCount = Array.isArray(train.route) ? train.route.length : 0;
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const escapeHtml = (str) => {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
+
+  card.innerHTML = `
+    <div class="train-card-stub">
+      <div class="train-stub-date">${formatDate(train.date)}</div>
+      <div class="train-stub-number">#${String(index + 1).padStart(3, '0')}</div>
+    </div>
+
+    <div class="train-card-compact">
+      <h4 class="train-card-title">${escapeHtml(train.title)}</h4>
+      <div class="train-card-journey">
+        <span class="train-start">${escapeHtml(train.startPoint)}</span>
+        <span class="train-arrow">→</span>
+        <span class="train-end">${escapeHtml(train.endPoint)}</span>
+      </div>
+      <p class="train-stop-count">${routeCount} stop${routeCount !== 1 ? 's' : ''}</p>
+    </div>
+
+    <div class="train-card-expanded">
+      <h4 class="train-card-title">${escapeHtml(train.title)}</h4>
+      ${train.route.length ? `
+        <div class="train-route">
+          <strong>Route:</strong>
+          <ol>${train.route.map(stop => `<li>${escapeHtml(stop)}</li>`).join('')}</ol>
+        </div>
+      ` : ''}
+      ${train.takeaways ? `
+        <div class="train-takeaway">
+          <strong>Takeaway:</strong> ${escapeHtml(train.takeaways)}
+        </div>
+      ` : ''}
+      ${train.quote ? `
+        <blockquote class="train-quote">${escapeHtml(train.quote)}</blockquote>
+      ` : ''}
+      ${train.whyCared ? `
+        <div class="train-why">
+          <strong>Why I cared:</strong> ${escapeHtml(train.whyCared)}
+        </div>
+      ` : ''}
+      ${train.nextRabbitHole ? `
+        <div class="train-next">
+          <strong>Next rabbit hole:</strong> ${escapeHtml(train.nextRabbitHole)}
+        </div>
+      ` : ''}
+      ${train.tags.length ? `
+        <div class="train-tags">
+          ${train.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  // Add click handler to expand card
+  card.addEventListener('click', () => {
+    if (card.dataset.position === 'center') {
+      expandTrainDetail(train, index);
+    }
+  });
+
+  return card;
+}
+
+/**
+ * Update card positions for 3D stack effect
+ */
+function updateTrainCardPositions() {
+  const cards = document.querySelectorAll('.train-card');
+  const currentIndex = state.currentTrainIndex;
+
+  cards.forEach((card, index) => {
+    const offset = index - currentIndex;
+
+    if (offset === 0) {
+      card.dataset.position = 'center';
+    } else if (offset === 1) {
+      card.dataset.position = 'next-1';
+    } else if (offset === 2) {
+      card.dataset.position = 'next-2';
+    } else if (offset === 3) {
+      card.dataset.position = 'next-3';
+    } else if (offset === -1) {
+      card.dataset.position = 'prev-1';
+    } else if (offset === -2) {
+      card.dataset.position = 'prev-2';
+    } else if (offset === -3) {
+      card.dataset.position = 'prev-3';
+    } else {
+      card.dataset.position = 'hidden';
+    }
+  });
+}
+
+/**
+ * Navigate to next train
+ */
+function navigateToNextTrain() {
+  if (state.isTrainExpanded) return; // Don't navigate in detail view
+
+  const trains = state.currentTrainTag === 'all'
+    ? state.thoughtTrains
+    : state.filteredTrains;
+  const maxIndex = trains.length - 1;
+
+  if (state.currentTrainIndex < maxIndex) {
+    state.currentTrainIndex++;
+    updateTrainCardPositions();
+    updateNavIndicator();
+  }
+}
+
+/**
+ * Navigate to previous train
+ */
+function navigateToPrevTrain() {
+  if (state.isTrainExpanded) return; // Don't navigate in detail view
+
+  if (state.currentTrainIndex > 0) {
+    state.currentTrainIndex--;
+    updateTrainCardPositions();
+    updateNavIndicator();
+  }
+}
+
+/**
+ * Update navigation indicator
+ */
+function updateNavIndicator() {
+  const indicator = document.querySelector('.train-nav-indicator');
+  const trains = state.currentTrainTag === 'all'
+    ? state.thoughtTrains
+    : state.filteredTrains;
+  const total = trains.length;
+
+  if (indicator && total > 0) {
+    indicator.textContent = `${state.currentTrainIndex + 1} / ${total}`;
+  }
+}
+
+/**
+ * Expand train card to full detail view
+ */
+function expandTrainDetail(train, index) {
+  state.isTrainExpanded = true;
+
+  const container = document.getElementById('trainStackContainer');
+  if (!container) return;
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const escapeHtml = (str) => {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
+
+  const routeCount = Array.isArray(train.route) ? train.route.length : 0;
+
+  container.innerHTML = `
+    <div class="train-detail-view">
+      <div class="train-detail-header">
+        <button class="train-detail-back" id="trainDetailBack">
+          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/>
+          </svg>
+          Back
+        </button>
+        <div class="train-detail-meta">
+          <span class="train-stub-date">${formatDate(train.date)}</span>
+          <span class="train-stub-number">#${String(index + 1).padStart(3, '0')}</span>
+        </div>
+      </div>
+
+      <div class="train-detail-content">
+        <h2 class="train-detail-title">${escapeHtml(train.title)}</h2>
+
+        <div class="train-detail-journey">
+          <span class="train-start">${escapeHtml(train.startPoint)}</span>
+          <span class="train-arrow">→</span>
+          <span class="train-end">${escapeHtml(train.endPoint)}</span>
+          <span class="train-stop-count">${routeCount} stop${routeCount !== 1 ? 's' : ''}</span>
+        </div>
+
+        ${train.route.length ? `
+          <div class="train-route">
+            <strong>Route:</strong>
+            <ol>${train.route.map(stop => `<li>${escapeHtml(stop)}</li>`).join('')}</ol>
+          </div>
+        ` : ''}
+
+        ${train.takeaways ? `
+          <div class="train-takeaway">
+            <strong>Takeaway:</strong> ${escapeHtml(train.takeaways)}
+          </div>
+        ` : ''}
+
+        ${train.quote ? `
+          <blockquote class="train-quote">${escapeHtml(train.quote)}</blockquote>
+        ` : ''}
+
+        ${train.whyCared ? `
+          <div class="train-why">
+            <strong>Why I cared:</strong> ${escapeHtml(train.whyCared)}
+          </div>
+        ` : ''}
+
+        ${train.nextRabbitHole ? `
+          <div class="train-next">
+            <strong>Next rabbit hole:</strong> ${escapeHtml(train.nextRabbitHole)}
+          </div>
+        ` : ''}
+
+        ${train.tags.length ? `
+          <div class="train-tags">
+            ${train.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  // Add back button handler using event delegation
+  // Remove any existing listeners first
+  container.removeEventListener('click', handleDetailViewClick);
+  container.addEventListener('click', handleDetailViewClick);
+
+  // Hide navigation controls
+  const navControls = document.querySelector('.train-nav-controls');
+  if (navControls) {
+    navControls.style.display = 'none';
+  }
+}
+
+/**
+ * Handle clicks within the detail view
+ */
+function handleDetailViewClick(e) {
+  // Check if clicked element or its parent is the back button
+  const backButton = e.target.closest('.train-detail-back');
+  if (backButton) {
+    e.preventDefault();
+    e.stopPropagation();
+    collapseTrainDetail();
+  }
+}
+
+/**
+ * Collapse detail view back to card stack
+ */
+function collapseTrainDetail() {
+  state.isTrainExpanded = false;
+  renderThoughtTrainCards();
+
+  // Show navigation controls again
+  const navControls = document.querySelector('.train-nav-controls');
+  if (navControls) {
+    navControls.style.display = 'flex';
+  }
+}
+
+/**
+ * Setup thought train interactions
+ */
+function setupThoughtTrainInteractions() {
+  // Navigation buttons
+  const prevBtn = document.querySelector('.train-nav-prev');
+  const nextBtn = document.querySelector('.train-nav-next');
+
+  if (prevBtn) prevBtn.addEventListener('click', navigateToPrevTrain);
+  if (nextBtn) nextBtn.addEventListener('click', navigateToNextTrain);
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (!state.windows.openWindows.has('thoughtTrain')) return;
+
+    if (e.key === 'Escape' && state.isTrainExpanded) {
+      e.preventDefault();
+      collapseTrainDetail();
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      navigateToNextTrain();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      navigateToPrevTrain();
+    }
+  });
+
+  // Mouse wheel
+  const container = document.getElementById('trainStackContainer');
+  if (container) {
+    container.addEventListener('wheel', (e) => {
+      if (!state.windows.openWindows.has('thoughtTrain')) return;
+      // Allow natural scrolling when detail view is expanded
+      if (state.isTrainExpanded) return;
+      e.preventDefault();
+      if (e.deltaY > 0) {
+        navigateToNextTrain();
+      } else {
+        navigateToPrevTrain();
+      }
+    }, { passive: false });
+
+    // Touch swipe (mobile)
+    let touchStartY = 0;
+    container.addEventListener('touchstart', (e) => {
+      // Don't track swipes in detail view
+      if (state.isTrainExpanded) return;
+      touchStartY = e.touches[0].clientY;
+    });
+
+    container.addEventListener('touchend', (e) => {
+      // Don't handle swipes in detail view
+      if (state.isTrainExpanded) return;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diff = touchStartY - touchEndY;
+
+      if (Math.abs(diff) > 50) { // Minimum swipe distance
+        if (diff > 0) {
+          navigateToNextTrain();
+        } else {
+          navigateToPrevTrain();
+        }
+      }
+    });
+  }
+}
+
+/**
  * Switch between views (tasks, notes, music)
  * Uses CSS fade transition for smooth, mobile-friendly effect
  */
@@ -1610,10 +2071,15 @@ function switchView(viewName) {
  * Perform the actual view switch
  */
 function performViewSwitch(viewName) {
-  // Update view visibility
+  // Update view visibility and window tracking
   document.querySelectorAll('.view').forEach(view => {
     view.classList.remove('active');
   });
+
+  // Clear all open windows and set only the new one
+  state.windows.openWindows.clear();
+  state.windows.openWindows.add(viewName);
+
   const targetView = document.getElementById(`${viewName}View`);
   if (targetView) {
     targetView.classList.add('active');
@@ -1644,6 +2110,20 @@ function performViewSwitch(viewName) {
     }
   }
 
+  // Initialize life stories when switching to it
+  if (viewName === 'lifeStories') {
+    initLifeStories();
+  }
+
+  // Initialize thought train when switching to it
+  if (viewName === 'thoughtTrain') {
+    if (state.thoughtTrains.length === 0) {
+      loadThoughtTrains().then(() => renderThoughtTrainCards());
+    } else {
+      renderThoughtTrainCards();
+    }
+  }
+
   state.currentView = viewName;
 }
 
@@ -1658,7 +2138,9 @@ function setupTopMenuNav() {
     const btn = e.target.closest('.nav-icon-btn');
     if (btn) {
       const viewName = btn.dataset.view;
-      toggleWindow(viewName);
+      if (viewName) {
+        toggleWindow(viewName);
+      }
     }
   });
 }
@@ -1709,7 +2191,9 @@ function setupHamburgerMenu() {
   mobileMenu.querySelectorAll('.mobile-menu-app-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const viewName = btn.dataset.view;
-      toggleWindow(viewName);
+      if (viewName) {
+        toggleWindow(viewName);
+      }
       
       // Close the menu after selection
       mobileMenu.classList.remove('show');
@@ -1981,11 +2465,16 @@ async function loadGoals() {
     let html = '';
     let currentSection = null;
     let listItems = [];
+    let rowNumber = 0; // Row counter, resets per section
 
     const flushList = () => {
       if (listItems.length > 0 && currentSection) {
         html += `<section class="tasks-section">
-          <h2>${currentSection}</h2>
+          <div class="tasks-section-header">
+            <span class="tasks-section-header-number">#</span>
+            <h2 class="tasks-section-header-title">${currentSection}</h2>
+            <span class="tasks-section-header-status">Status</span>
+          </div>
           <ul class="tasks-list">
             ${listItems.join('')}
           </ul>
@@ -2001,29 +2490,35 @@ async function loadGoals() {
       if (trimmed.startsWith('# ')) {
         flushList();
         currentSection = trimmed.slice(2);
+        rowNumber = 0; // Reset row number for each section
       }
       // Checkbox list item: - [x] or - [ ]
       else if (trimmed.match(/^- \[(x| )\] /)) {
+        rowNumber++;
         const isChecked = trimmed.startsWith('- [x]');
         let text = trimmed.slice(6); // Remove "- [x] " or "- [ ] "
         // Parse markdown links [text](url)
         text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        const statusClass = isChecked ? 'completed' : 'pending';
         listItems.push(`
           <li class="task-item${isChecked ? ' completed' : ''}">
-            <span class="task-checkbox${isChecked ? ' checked' : ''}"></span>
-            <span>${text}</span>
+            <span class="task-row-number">${rowNumber}</span>
+            <span class="task-text">${text}</span>
+            <span class="task-status-indicator ${statusClass}"></span>
           </li>
         `);
       }
-      // Regular list item: - text
+      // Regular list item: - text (active/in-progress items)
       else if (trimmed.startsWith('- ')) {
+        rowNumber++;
         let text = trimmed.slice(2);
         // Parse markdown links
         text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
         listItems.push(`
           <li class="task-item">
-            <span class="task-status active"></span>
-            <span>${text}</span>
+            <span class="task-row-number">${rowNumber}</span>
+            <span class="task-text">${text}</span>
+            <span class="task-status-indicator active"></span>
           </li>
         `);
       }
@@ -2041,10 +2536,12 @@ async function loadGoals() {
  * Update menu bar time
  */
 function updateMenuTime() {
+  // Always show Eastern Standard Time (EST)
   const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  const seconds = now.getSeconds().toString().padStart(2, '0');
+  const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const hours = estTime.getHours();
+  const minutes = estTime.getMinutes().toString().padStart(2, '0');
+  const seconds = estTime.getSeconds().toString().padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours % 12 || 12;
   const timeString = `${displayHours}:${minutes}:${seconds} ${ampm}`;
@@ -2180,7 +2677,9 @@ const musicState = {
   player: null,
   apiReady: false,
   pendingVideoId: null,
-  progressTimer: null
+  progressTimer: null,
+  shuffleEnabled: false,
+  repeatMode: 'none' // 'none' | 'all' | 'one'
 };
 
 const defaultArtworkMarkup = document.getElementById('artworkContainer')
@@ -2755,23 +3254,25 @@ function resetPlayerForFolder() {
 }
 
 function renderMusicFolders() {
-  const folderBar = document.getElementById('musicFolders');
-  if (!folderBar) return;
+  const folderList = document.getElementById('musicFolders');
+  if (!folderList) return;
 
   const folders = musicState.folders.length ? musicState.folders : defaultMusicFolders;
 
-  folderBar.innerHTML = folders.map((folder) => {
+  folderList.innerHTML = folders.map((folder) => {
     const isActive = folder === musicState.activeFolder;
     const icon = musicFolderIcons[folder] || '';
+    const trackCount = musicState.allTracks.filter(t => t.folder === folder).length;
     return `
-      <button class="folder-tab${isActive ? ' active' : ''}" data-folder="${folder}" role="tab" aria-selected="${isActive}" tabindex="${isActive ? '0' : '-1'}">
-        <span class="folder-icon">${icon}</span>
-        <span class="folder-label">${folder}</span>
+      <button class="zen-folder-item${isActive ? ' active' : ''}" data-folder="${folder}" role="tab" aria-selected="${isActive}" tabindex="${isActive ? '0' : '-1'}">
+        <span class="zen-folder-icon">${icon}</span>
+        <span class="zen-folder-name">${folder}</span>
+        <span class="zen-folder-count">${trackCount}</span>
       </button>
     `;
   }).join('');
 
-  folderBar.querySelectorAll('.folder-tab').forEach((btn) => {
+  folderList.querySelectorAll('.zen-folder-item').forEach((btn) => {
     btn.addEventListener('click', () => switchFolder(btn.dataset.folder));
   });
 }
@@ -3010,7 +3511,36 @@ window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
  */
 function playNext() {
   if (musicState.tracks.length === 0) return;
-  const nextIndex = (musicState.currentIndex + 1) % musicState.tracks.length;
+
+  // Handle repeat one
+  if (musicState.repeatMode === 'one') {
+    playTrack(musicState.currentIndex);
+    return;
+  }
+
+  let nextIndex;
+
+  if (musicState.shuffleEnabled) {
+    // Random track (not the current one)
+    const availableIndices = musicState.tracks.map((_, i) => i).filter(i => i !== musicState.currentIndex);
+    if (availableIndices.length === 0) {
+      nextIndex = 0;
+    } else {
+      nextIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    }
+  } else {
+    nextIndex = musicState.currentIndex + 1;
+
+    // Handle end of playlist
+    if (nextIndex >= musicState.tracks.length) {
+      if (musicState.repeatMode === 'all') {
+        nextIndex = 0;
+      } else {
+        return; // Stop at end
+      }
+    }
+  }
+
   playTrack(nextIndex);
 }
 
@@ -3019,10 +3549,20 @@ function playNext() {
  */
 function playPrev() {
   if (musicState.tracks.length === 0) return;
-  const prevIndex = musicState.currentIndex <= 0
-    ? musicState.tracks.length - 1
-    : musicState.currentIndex - 1;
-  playTrack(prevIndex);
+
+  if (musicState.shuffleEnabled) {
+    // Random track when shuffle is on
+    const availableIndices = musicState.tracks.map((_, i) => i).filter(i => i !== musicState.currentIndex);
+    const prevIndex = availableIndices.length > 0
+      ? availableIndices[Math.floor(Math.random() * availableIndices.length)]
+      : 0;
+    playTrack(prevIndex);
+  } else {
+    const prevIndex = musicState.currentIndex <= 0
+      ? musicState.tracks.length - 1
+      : musicState.currentIndex - 1;
+    playTrack(prevIndex);
+  }
 }
 
 /**
@@ -3112,7 +3652,7 @@ function setupMusicPlayer() {
   if (playBtn) playBtn.addEventListener('click', togglePlay);
   if (prevBtn) prevBtn.addEventListener('click', playPrev);
   if (nextBtn) nextBtn.addEventListener('click', playNext);
-  
+
   // Connect mini player play/pause button
   if (miniPlayerPlayBtn) {
     miniPlayerPlayBtn.addEventListener('click', togglePlay);
@@ -3129,6 +3669,55 @@ function setupMusicPlayer() {
       musicState.player.seekTo(duration * percent, true);
     });
   }
+
+  // Setup Zen device buttons
+  setupZenControls();
+}
+
+/**
+ * Setup Zen device button controls
+ */
+function setupZenControls() {
+  // Up/Down for track navigation
+  const upBtn = document.getElementById('zenBtnUp');
+  const downBtn = document.getElementById('zenBtnDown');
+  if (upBtn) upBtn.addEventListener('click', playPrev);
+  if (downBtn) downBtn.addEventListener('click', playNext);
+
+  // Left/Right buttons (already handled by prevBtn/nextBtn IDs)
+  const leftBtn = document.getElementById('zenBtnLeft');
+  const rightBtn = document.getElementById('zenBtnRight');
+  if (leftBtn) leftBtn.addEventListener('click', playPrev);
+  if (rightBtn) rightBtn.addEventListener('click', playNext);
+
+  // Shuffle toggle
+  const shuffleBtn = document.getElementById('zenBtnShuffle');
+  if (shuffleBtn) {
+    shuffleBtn.addEventListener('click', () => {
+      musicState.shuffleEnabled = !musicState.shuffleEnabled;
+      shuffleBtn.classList.toggle('active', musicState.shuffleEnabled);
+    });
+  }
+
+  // Repeat toggle
+  const repeatBtn = document.getElementById('zenBtnRepeat');
+  if (repeatBtn) {
+    repeatBtn.addEventListener('click', () => {
+      const modes = ['none', 'all', 'one'];
+      const currentIndex = modes.indexOf(musicState.repeatMode);
+      musicState.repeatMode = modes[(currentIndex + 1) % modes.length];
+
+      // Update button visual state
+      repeatBtn.classList.toggle('active', musicState.repeatMode !== 'none');
+      repeatBtn.setAttribute('aria-label', `Repeat: ${musicState.repeatMode}`);
+    });
+  }
+
+  // Back/Menu buttons (could show folder list - for now just no-op)
+  const backBtn = document.getElementById('zenBtnBack');
+  const menuBtn = document.getElementById('zenBtnMenu');
+  if (backBtn) backBtn.addEventListener('click', () => console.log('Back button clicked'));
+  if (menuBtn) menuBtn.addEventListener('click', () => console.log('Menu button clicked'));
 }
 
 /**
@@ -3293,41 +3882,6 @@ function showSystemAlert() {
   setTimeout(() => {
     alert.classList.remove('show');
   }, 12000);
-}
-
-/**
- * Setup timeline scroll animations
- */
-function setupTimelineAnimations() {
-  const timelineScroll = document.querySelector('.timeline-scroll');
-  const timelineItems = document.querySelectorAll('.timeline-item');
-  
-  if (!timelineScroll || timelineItems.length === 0) return;
-
-  // Use Intersection Observer for fade-in effect
-  const observerOptions = {
-    root: timelineScroll,
-    rootMargin: '0px',
-    threshold: 0.2
-  };
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('fade-in');
-      }
-    });
-  }, observerOptions);
-
-  // Observe each timeline item
-  timelineItems.forEach(item => {
-    observer.observe(item);
-  });
-
-  // Add sequential delay for staggered animation
-  timelineItems.forEach((item, index) => {
-    item.style.transitionDelay = `${index * 0.1}s`;
-  });
 }
 
 /**
@@ -3886,12 +4440,21 @@ async function init() {
   setupWindowManagement(); // Initialize window dragging and management
   setupViewModeToggle(); // Setup view mode toggle for notes
   setupMusicPlayer();
-  setupTimelineAnimations(); // Setup timeline scroll animations
   initMenuBar();
   await loadPosts();
   await loadGoals();
   await loadMusic();
-  
+  await loadThoughtTrains();
+  setupThoughtTrainInteractions();
+  await loadLabs();
+  setupLabsInteractions();
+
+  // Restore last-open view after refresh
+  const lastOpenWindowId = getLastOpenWindowId();
+  if (lastOpenWindowId) {
+    await openWindow(lastOpenWindowId);
+  }
+
   // Initialize mini player state
   const miniPlayer = document.getElementById('miniPlayer');
   if (miniPlayer) {

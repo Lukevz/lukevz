@@ -1,4 +1,9 @@
 # Digital Garden Changelog
+V1.3.0 – Light mode, Zen mp3 player, and Labs Page
+- Added light theme for content
+- Styled mp3 player to look like my first mp3 player, the Zen Mosaic
+- Reorganized experimental apps and codelets into a new Labs Page
+
 V1.2.2 – Added Life Stories app
 - Added a new app to browse through key chapters and milestone in my life
 
