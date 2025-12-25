@@ -2222,25 +2222,39 @@ function setupHamburgerMenu() {
  */
 function setupInfoPopup() {
   const infoButton = document.getElementById('infoButton');
+  const infoIconBtn = document.getElementById('infoIconBtn');
   const infoPopup = document.getElementById('infoPopup');
-  if (!infoButton || !infoPopup) return;
+  if ((!infoButton && !infoIconBtn) || !infoPopup) return;
 
   const setOpen = (isOpen) => {
     infoPopup.classList.toggle('show', isOpen);
-    infoButton.setAttribute('aria-expanded', String(isOpen));
+    if (infoButton) infoButton.setAttribute('aria-expanded', String(isOpen));
+    if (infoIconBtn) infoIconBtn.setAttribute('aria-expanded', String(isOpen));
   };
 
-  infoButton.addEventListener('click', (event) => {
-    event.stopPropagation();
-    const isOpen = !infoPopup.classList.contains('show');
-    setOpen(isOpen);
-  });
+  // Add click handlers for both buttons
+  if (infoButton) {
+    infoButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = !infoPopup.classList.contains('show');
+      setOpen(isOpen);
+    });
+  }
+
+  if (infoIconBtn) {
+    infoIconBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = !infoPopup.classList.contains('show');
+      setOpen(isOpen);
+    });
+  }
 
   // Close when clicking outside
   document.addEventListener('click', (event) => {
     if (!infoPopup.classList.contains('show')) return;
     if (event.target === infoPopup || infoPopup.contains(event.target)) return;
-    if (event.target === infoButton || infoButton.contains(event.target)) return;
+    if (infoButton && (event.target === infoButton || infoButton.contains(event.target))) return;
+    if (infoIconBtn && (event.target === infoIconBtn || infoIconBtn.contains(event.target))) return;
     setOpen(false);
   });
 
@@ -2342,9 +2356,14 @@ async function loadChangelog() {
     if (versions.length > 0) {
       const latestVersion = versions[0].version;
       const versionEl = document.getElementById('appVersion');
+      const versionInlineEl = document.getElementById('appVersionInline');
       if (versionEl) {
         versionEl.textContent = `v${latestVersion}`;
         versionEl.setAttribute('aria-label', `Version ${latestVersion}`);
+      }
+      if (versionInlineEl) {
+        versionInlineEl.textContent = `v${latestVersion}`;
+        versionInlineEl.setAttribute('aria-label', `Version ${latestVersion}`);
       }
     }
     
@@ -2392,8 +2411,9 @@ function hideChangelogModal() {
  */
 function setupVersionChangelog() {
   const versionEl = document.getElementById('appVersion');
+  const versionInlineEl = document.getElementById('appVersionInline');
   const modal = document.getElementById('changelogModal');
-  if (!versionEl || !modal) return;
+  if ((!versionEl && !versionInlineEl) || !modal) return;
 
   // Load changelog on page load to get latest version
   let changelogLoaded = false;
@@ -2401,25 +2421,36 @@ function setupVersionChangelog() {
     changelogLoaded = true;
   });
 
-  versionEl.addEventListener('click', async () => {
+  // Add event listeners for both version elements
+  const showVersion = async () => {
     if (!changelogLoaded) {
       await loadChangelog();
       changelogLoaded = true;
     }
     showChangelogModal();
-  });
+  };
 
-  // Also support keyboard navigation
-  versionEl.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      if (!changelogLoaded) {
-        await loadChangelog();
-        changelogLoaded = true;
+  if (versionEl) {
+    versionEl.addEventListener('click', showVersion);
+
+    versionEl.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        await showVersion();
       }
-      showChangelogModal();
-    }
-  });
+    });
+  }
+
+  if (versionInlineEl) {
+    versionInlineEl.addEventListener('click', showVersion);
+
+    versionInlineEl.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        await showVersion();
+      }
+    });
+  }
 
   // Close button
   const closeBtn = modal.querySelector('.changelog-modal-close');

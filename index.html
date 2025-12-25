@@ -41,6 +41,12 @@
         <span class="weather-icon" id="weatherIcon">--</span>
         <span class="weather-temp" id="weatherTemp">--</span>
       </span>
+      <!-- Info Icon (Desktop Only) -->
+      <button class="info-icon-btn" id="infoIconBtn" aria-label="View info" aria-expanded="false">
+        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M3 3h2v18H3V3zm16 0H5v2h14v14H5v2h16V3h-2zm-8 6h2V7h-2v2zm2 8h-2v-6h2v6z" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
     <div class="menu-center">
       <!-- Navigation Icons -->
@@ -84,12 +90,6 @@
 	      </nav>
 	    </div>
     <div class="menu-right">
-      <!-- Hamburger Menu Button (Mobile Only) -->
-      <button class="hamburger-menu-btn" id="hamburgerMenuBtn" aria-label="Menu" aria-expanded="false">
-        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm16 5H4v2h16v-2z" fill="currentColor"/>
-        </svg>
-      </button>
       <div class="social-icons" id="socialIcons">
         <a href="https://x.com/lukevz" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="X (Twitter)">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M18.42,14.009L27.891,3h-2.244l-8.224,9.559L10.855,3H3.28l9.932,14.455L3.28,29h2.244l8.684-10.095,6.936,10.095h7.576l-10.301-14.991h0Zm-3.074,3.573l-1.006-1.439L6.333,4.69h3.447l6.462,9.243,1.006,1.439,8.4,12.015h-3.447l-6.854-9.804h0Z"/></svg>
@@ -112,6 +112,14 @@
           <span class="social-label">LinkedIn</span>
         </a>
       </div>
+      <!-- Version (Desktop Only) -->
+      <span class="app-version-inline" id="appVersionInline">Loading...</span>
+      <!-- Hamburger Menu Button (Mobile Only) -->
+      <button class="hamburger-menu-btn" id="hamburgerMenuBtn" aria-label="Menu" aria-expanded="false">
+        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm16 5H4v2h16v-2z" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
     </div>
   </header>

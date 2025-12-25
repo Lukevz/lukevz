@@ -437,6 +437,7 @@
 .top-menu-bar {
   position: fixed;
   top: 20px;
+  top: calc(20px + env(safe-area-inset-top));
   left: 0;
   right: 0;
   width: 100%;
@@ -452,6 +453,7 @@
 
 .top-menu-bar.app-active {
   top: 0;
+  top: env(safe-area-inset-top);
   background: var(--bg-primary);
   border-bottom-color: var(--border);
 }
@@ -462,7 +464,7 @@
   justify-content: space-between;
   gap: var(--space-xl);
   width: 100%;
-  max-width: 1170px;
+  max-width: 1400px; /* Wider to use full width */
 }
 
 .menu-left,
@@ -473,8 +475,8 @@
 }
 
 .menu-left {
-  min-width: 180px;
   gap: var(--space-sm);
+  flex-shrink: 0; /* Don't shrink */
 }
 
 .menu-location {
@@ -502,10 +504,9 @@
 
 .menu-center {
   justify-content: center;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  flex: 1; /* Take remaining space */
+  position: static; /* Remove absolute positioning */
+  transform: none;
 }
 
 .menu-nav {
@@ -621,8 +622,76 @@
 
 .menu-right {
   gap: var(--space-sm);
-  min-width: 180px;
+  flex-shrink: 0; /* Don't shrink */
   justify-content: flex-end;
+}
+
+/* Info icon button in navbar (Desktop only) */
+.info-icon-btn {
+  display: none; /* Hidden on mobile, shown on desktop */
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: var(--cursor-pointer);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  border-radius: 0;
+}
+
+.info-icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.info-icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Desktop: Show info icon in navbar */
+@media (min-width: 769px) {
+  .info-icon-btn {
+    display: flex;
+  }
+
+  /* Hide bottom-fixed info button on desktop */
+  .info-button {
+    display: none;
+  }
+}
+
+/* Version badge in navbar (Desktop only) */
+.app-version-inline {
+  display: none; /* Hidden on mobile, shown on desktop */
+  font-family: 'Doto', var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.8;
+  cursor: pointer;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.app-version-inline:hover {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+/* Desktop: Show version in navbar */
+@media (min-width: 769px) {
+  .app-version-inline {
+    display: block;
+  }
+
+  /* Hide bottom-fixed version on desktop */
+  .app-version {
+    display: none;
+  }
 }
 
 .follow-btn {
@@ -783,7 +852,7 @@
 .mobile-header-menu {
   display: none;
   position: fixed;
-  top: calc(72px + env(safe-area-inset-top));
+  top: calc(84px + env(safe-area-inset-top)); /* 64px menubar + 20px offset */
   right: 20px;
   max-width: 280px;
   width: calc(100% - 40px);
@@ -799,6 +868,12 @@
   transform: translateY(-8px);
   transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
   pointer-events: none;
+}
+
+/* When app is active/docked, adjust for no offset */
+.top-menu-bar.app-active ~ .mobile-header-menu,
+body.app-active .mobile-header-menu {
+  top: calc(64px + env(safe-area-inset-top)); /* No 20px offset when docked */
 }
 
 .mobile-header-menu.show {
@@ -963,6 +1038,10 @@
   /* Sizing */
   --sidebar-width: 220px;
   --post-list-width: 300px;
+
+  /* Touch targets for mobile */
+  --touch-target-min: 44px;
+  --touch-target-comfortable: 48px;
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -1180,7 +1259,7 @@ ul {
   border-radius: 6px;
   color: var(--text-secondary);
   text-align: left;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), transform 0.05s ease-out;
 }
 
 .tag-item:hover {
@@ -1191,6 +1270,21 @@ ul {
 .tag-item.active {
   background: var(--bg-active);
   color: var(--text-primary);
+}
+
+/* Mobile: Better touch targets and readability */
+@media (max-width: 768px) {
+  .tag-item {
+    min-height: var(--touch-target-min); /* 44px minimum */
+    color: var(--text-primary); /* Better contrast */
+    padding: var(--space-sm) var(--space-md);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tag-item:active {
+    background: var(--bg-active);
+    transform: scale(0.98);
+  }
 }
 
 .tag-item .icon {
@@ -1231,7 +1325,7 @@ ul {
   border-radius: 4px;
   color: var(--text-muted);
   flex-shrink: 0;
-  transition: transform var(--transition-fast), color var(--transition-fast);
+  transition: transform var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .tag-toggle:hover {
@@ -1247,6 +1341,21 @@ ul {
 
 .tag-toggle.expanded .icon-toggle {
   transform: rotate(90deg);
+}
+
+/* Mobile: Larger touch targets for toggle buttons */
+@media (max-width: 768px) {
+  .tag-toggle {
+    min-width: var(--touch-target-min); /* 44px */
+    min-height: var(--touch-target-min);
+    margin-left: calc((var(--touch-target-min) - 18px) / -2); /* Negative margin to prevent layout shift */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tag-toggle:active {
+    background: var(--bg-active);
+    color: var(--accent);
+  }
 }
 
 .tag-toggle-spacer {
@@ -1633,7 +1742,8 @@ ul {
     display: flex;
     flex-direction: column;
     position: fixed;
-    top: 108px; /* Account for top menu bar + view mode toggle */
+    top: 64px; /* Mobile menubar height (view mode toggle is hidden) */
+    top: calc(64px + env(safe-area-inset-top)); /* Add safe area */
     left: 0;
     right: 0;
     bottom: 0;
@@ -1642,17 +1752,20 @@ ul {
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom); /* Prevent bottom cutoff */
   }
 
   .sidebar {
     position: fixed;
     left: 0;
-    top: 108px; /* Account for top menu bar + view mode toggle */
+    top: 64px; /* Mobile menubar height */
+    top: calc(64px + env(safe-area-inset-top)); /* Add safe area */
     bottom: 0;
     width: var(--sidebar-width);
     z-index: 999; /* Below top menu bar (1001) */
     transform: translateX(-100%);
     transition: transform var(--transition-normal);
+    padding-bottom: env(safe-area-inset-bottom); /* Prevent bottom cutoff */
   }
 
   .sidebar.open {
@@ -2108,6 +2221,7 @@ ul {
   /* Full-screen views adjust for mobile header */
   .view {
     padding-top: 64px; /* Smaller header on mobile */
+    padding-top: calc(64px + env(safe-area-inset-top)); /* Add safe area to all views */
     /* Respect safe area on iOS Safari */
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -2134,6 +2248,40 @@ ul {
 
   .menu-left {
     min-width: auto;
+  }
+
+  /* Global Touch UX Improvements */
+
+  /* Prevent double-tap zoom on buttons */
+  button {
+    touch-action: manipulation;
+  }
+
+  /* Active state feedback for all interactive elements */
+  button:not(:disabled):active,
+  .clickable:active,
+  .post-item:active,
+  .nav-icon-btn:active,
+  .mobile-menu-app-btn:active {
+    transform: scale(0.97);
+    transition: transform 0.05s ease-out;
+  }
+
+  /* Allow vertical scrolling in scrollable containers */
+  .sidebar,
+  .post-list,
+  .note-view,
+  .zen-playlist,
+  .tasks-container {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better tap highlighting */
+  a,
+  button,
+  .clickable {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -2693,32 +2841,183 @@ ul {
   border-radius: 4px;
 }
 
-/* Mobile adjustments for music view */
+/* Mobile adjustments for music view - Complete Redesign */
 @media (max-width: 768px) {
+  /* MOBILE MUSIC PLAYER - Complete Redesign for Touch */
+
+  .music-view {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: calc(64px + env(safe-area-inset-top));
+  }
+
   .zen-layout {
-    grid-template-columns: 1fr;
-    gap: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 0;
     padding: 0;
   }
 
+  /* Folder tabs at top - horizontal scroll */
   .zen-sidebar {
-    max-height: 250px;
+    position: sticky;
+    top: calc(64px + env(safe-area-inset-top));
+    max-height: none;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+    padding: 0;
+    order: 1;
   }
 
+  .zen-sidebar-header {
+    display: none; /* Hide on mobile */
+  }
+
+  .zen-folder-list {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .zen-folder-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .folder-tab {
+    flex-shrink: 0;
+    min-height: var(--touch-target-comfortable); /* 48px */
+    padding: 0 var(--space-lg);
+    white-space: nowrap;
+  }
+
+  /* Playlist - scrollable middle area */
+  .zen-playlist {
+    flex: 1;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: calc(240px + env(safe-area-inset-bottom)); /* Space for fixed player */
+    order: 2;
+  }
+
+  .playlist-item {
+    min-height: var(--touch-target-comfortable);
+    padding: var(--space-md);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .playlist-item:active {
+    background: var(--bg-active);
+    transform: scale(0.98);
+  }
+
+  /* Player controls - Fixed card at bottom */
   .zen-device-container {
-    padding-top: var(--space-md);
-    padding-left: 0;
-    padding-right: 0;
-    padding-bottom: var(--space-lg);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+    order: 3;
   }
 
   .zen-device {
+    max-width: none;
     width: 100%;
-    max-width: 340px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: var(--space-md);
   }
 
-  .zen-playlist {
-    max-height: 200px;
+  /* Hide ornamental Zen branding on mobile */
+  .zen-branding {
+    display: none;
+  }
+
+  /* Screen layout - horizontal with artwork */
+  .zen-screen {
+    border-radius: 8px;
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+
+  .zen-screen-content {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto auto;
+    gap: var(--space-sm) var(--space-md);
+    align-items: center;
+  }
+
+  .zen-artwork {
+    grid-row: 1 / 4;
+    grid-column: 1;
+    width: 64px !important;
+    height: 64px !important;
+    flex: none;
+  }
+
+  .zen-track-title {
+    grid-row: 1;
+    grid-column: 2;
+    font-size: 0.9375rem;
+  }
+
+  .zen-track-artist {
+    grid-row: 2;
+    grid-column: 2;
+    font-size: 0.8125rem;
+  }
+
+  .zen-progress {
+    grid-row: 3;
+    grid-column: 2;
+  }
+
+  /* Button grid - horizontal 1x5 for mobile */
+  .zen-mosaic-grid {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-sm);
+    padding: 0;
+    background: transparent;
+    margin-bottom: 0;
+  }
+
+  .zen-btn {
+    flex: 1;
+    min-height: var(--touch-target-comfortable);
+    aspect-ratio: auto;
+    border-radius: 8px;
+    font-size: 0;
+  }
+
+  /* Show only essential buttons on mobile: prev, play, next */
+  .zen-btn-back,
+  .zen-btn-menu,
+  .zen-btn-shuffle,
+  .zen-btn-repeat {
+    display: none;
+  }
+
+  .zen-btn-up,
+  .zen-btn-down {
+    display: flex; /* These are prev/next */
+  }
+
+  .zen-btn-select {
+    min-width: 64px; /* Play button slightly larger */
   }
 }
 
