@@ -1377,8 +1377,47 @@ function setupEventListeners() {
       if (post) {
         state.currentPost = post;
         renderNote(post);
-        
+
         // On mobile, close sidebar after selecting a post
+        if (window.innerWidth <= 768) {
+          const sidebar = document.querySelector('.sidebar');
+          if (sidebar && sidebar.classList.contains('open')) {
+            toggleSidebar();
+          }
+        }
+      }
+    }
+  });
+
+  // Tag clicks in note content
+  elements.noteView.addEventListener('click', (e) => {
+    const noteTag = e.target.closest('.note-tag');
+    if (noteTag) {
+      e.preventDefault();
+      // Extract tag from text content (remove the # prefix)
+      const tagText = noteTag.textContent.trim().replace(/^#/, '');
+
+      // Find matching tag button in sidebar
+      const tagBtn = document.querySelector(`.tag-item[data-tag="${tagText}"]`);
+      if (tagBtn) {
+        // Update state and filter posts
+        state.currentTag = tagText;
+        renderPosts(tagText);
+
+        // Update active states
+        document.querySelectorAll('.tag-item').forEach(btn => {
+          btn.classList.remove('active');
+          btn.removeAttribute('aria-current');
+        });
+        tagBtn.classList.add('active');
+        tagBtn.setAttribute('aria-current', 'true');
+
+        // Close note view if open on mobile
+        if (window.innerWidth <= 1024 && elements.noteView && elements.noteView.classList.contains('active')) {
+          closeNote();
+        }
+
+        // Close sidebar on mobile
         if (window.innerWidth <= 768) {
           const sidebar = document.querySelector('.sidebar');
           if (sidebar && sidebar.classList.contains('open')) {
@@ -2356,14 +2395,9 @@ async function loadChangelog() {
     if (versions.length > 0) {
       const latestVersion = versions[0].version;
       const versionEl = document.getElementById('appVersion');
-      const versionInlineEl = document.getElementById('appVersionInline');
       if (versionEl) {
         versionEl.textContent = `v${latestVersion}`;
         versionEl.setAttribute('aria-label', `Version ${latestVersion}`);
-      }
-      if (versionInlineEl) {
-        versionInlineEl.textContent = `v${latestVersion}`;
-        versionInlineEl.setAttribute('aria-label', `Version ${latestVersion}`);
       }
     }
     
@@ -2411,9 +2445,8 @@ function hideChangelogModal() {
  */
 function setupVersionChangelog() {
   const versionEl = document.getElementById('appVersion');
-  const versionInlineEl = document.getElementById('appVersionInline');
   const modal = document.getElementById('changelogModal');
-  if ((!versionEl && !versionInlineEl) || !modal) return;
+  if (!versionEl || !modal) return;
 
   // Load changelog on page load to get latest version
   let changelogLoaded = false;
@@ -2421,36 +2454,25 @@ function setupVersionChangelog() {
     changelogLoaded = true;
   });
 
-  // Add event listeners for both version elements
-  const showVersion = async () => {
+  versionEl.addEventListener('click', async () => {
     if (!changelogLoaded) {
       await loadChangelog();
       changelogLoaded = true;
     }
     showChangelogModal();
-  };
+  });
 
-  if (versionEl) {
-    versionEl.addEventListener('click', showVersion);
-
-    versionEl.addEventListener('keydown', async (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        await showVersion();
+  // Also support keyboard navigation
+  versionEl.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!changelogLoaded) {
+        await loadChangelog();
+        changelogLoaded = true;
       }
-    });
-  }
-
-  if (versionInlineEl) {
-    versionInlineEl.addEventListener('click', showVersion);
-
-    versionInlineEl.addEventListener('keydown', async (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        await showVersion();
-      }
-    });
-  }
+      showChangelogModal();
+    }
+  });
 
   // Close button
   const closeBtn = modal.querySelector('.changelog-modal-close');

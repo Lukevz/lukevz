@@ -519,7 +519,6 @@
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border);
   border-radius: 0px;
-  box-shadow: 0 4px 24px var(--shadow-color);
 }
 
 .nav-icon-btn {
@@ -660,36 +659,6 @@
 
   /* Hide bottom-fixed info button on desktop */
   .info-button {
-    display: none;
-  }
-}
-
-/* Version badge in navbar (Desktop only) */
-.app-version-inline {
-  display: none; /* Hidden on mobile, shown on desktop */
-  font-family: 'Doto', var(--font-sans);
-  font-size: 0.75rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  opacity: 0.8;
-  cursor: pointer;
-  transition: opacity var(--transition-fast), color var(--transition-fast);
-}
-
-.app-version-inline:hover {
-  opacity: 1;
-  color: var(--text-secondary);
-}
-
-/* Desktop: Show version in navbar */
-@media (min-width: 769px) {
-  .app-version-inline {
-    display: block;
-  }
-
-  /* Hide bottom-fixed version on desktop */
-  .app-version {
     display: none;
   }
 }
@@ -1174,6 +1143,7 @@ ul {
 .app {
   display: grid;
   grid-template-columns: var(--sidebar-width) var(--post-list-width) 1fr;
+  grid-template-rows: 100%;
   height: 100%;
   position: relative;
   z-index: 1;
@@ -1233,6 +1203,7 @@ ul {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
 }
 
 .notes-view .tag-list,
@@ -1387,11 +1358,13 @@ ul {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
 .posts {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .post-item {
@@ -1441,6 +1414,7 @@ ul {
   background: var(--bg-secondary);
   overflow-y: auto;
   position: relative;
+  min-height: 0;
 }
 
 .note-empty {
@@ -1508,6 +1482,13 @@ ul {
   background: var(--bg-active);
   border-radius: 4px;
   color: var(--text-secondary);
+  cursor: var(--cursor-pointer);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.note-tag:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* Note Body Typography */
@@ -1679,6 +1660,19 @@ ul {
     grid-template-columns: var(--sidebar-width) 1fr;
   }
 
+  /* Ensure post-list fills available space and scrolls */
+  .notes-view .post-list {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .notes-view .posts {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* Keep view mode toggle accessible on tablet */
   .notes-view .view-mode-toggle {
     position: fixed;
@@ -1703,6 +1697,7 @@ ul {
     background: var(--bg-primary-solid); /* Solid background to prevent transparency */
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   .note-content {
@@ -1965,7 +1960,14 @@ ul {
 
 /* Notes View - Full-screen with 3-pane layout */
 .notes-view {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .notes-view .view-mode-toggle {
@@ -1973,15 +1975,16 @@ ul {
   width: 100%;
   margin: 0 auto;
   background: var(--bg-primary);
+  flex-shrink: 0;
 }
 
 .notes-view .app {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
   max-width: 1170px;
   width: 100%;
   margin: 0 auto;
+  height: 100%; /* Ensure grid fills flex space */
 }
 
 /* View Mode Toggle */
@@ -5168,7 +5171,6 @@ ul {
   .top-menu-bar:not(.app-active) .menu-nav {
     background: rgba(36, 36, 36, 0.85);
     border-color: rgba(61, 61, 61, 0.7);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   }
 
   .top-menu-bar:not(.app-active) .nav-icon-btn {

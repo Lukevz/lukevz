@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  .view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-top: 72px;
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .notes-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  .view-mode-toggle {
+    background: #2a2a2a;
+    padding: 8px;
+    border-bottom: 1px solid #444;
+    flex-shrink: 0;
+  }
+  
+  .app {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 250px 300px 1fr;
+    overflow: hidden;
+  }
+  
+  .sidebar, .post-list, .note-view {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    border-right: 1px solid #444;
+  }
+  
+  .tag-list, .posts {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  
+  .note-view {
+    overflow-y: auto;
+  }
+  
+  .item {
+    padding: 12px;
+    border-bottom: 1px solid #333;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+  <div class="view notes-view">
+    <div class="view-mode-toggle">Toggle Bar</div>
+    <div class="app">
+      <div class="sidebar">
+        <div class="tag-list">
+          <div class="item">Tag 1</div>
+          <div class="item">Tag 2</div>
+          <div class="item">Tag 3</div>
+          <div class="item">Tag 4</div>
+          <div class="item">Tag 5</div>
+          <div class="item">Tag 6</div>
+          <div class="item">Tag 7</div>
+          <div class="item">Tag 8</div>
+          <div class="item">Tag 9</div>
+          <div class="item">Tag 10</div>
+          <div class="item">Tag 11</div>
+          <div class="item">Tag 12</div>
+          <div class="item">Tag 13</div>
+          <div class="item">Tag 14</div>
+          <div class="item">Tag 15</div>
+          <div class="item">Tag 16</div>
+          <div class="item">Tag 17</div>
+          <div class="item">Tag 18</div>
+          <div class="item">Tag 19</div>
+          <div class="item">Tag 20</div>
+        </div>
+      </div>
+      <div class="post-list">
+        <div class="posts">
+          <div class="item">Post 1</div>
+          <div class="item">Post 2</div>
+          <div class="item">Post 3</div>
+          <div class="item">Post 4</div>
+          <div class="item">Post 5</div>
+          <div class="item">Post 6</div>
+          <div class="item">Post 7</div>
+          <div class="item">Post 8</div>
+          <div class="item">Post 9</div>
+          <div class="item">Post 10</div>
+          <div class="item">Post 11</div>
+          <div class="item">Post 12</div>
+          <div class="item">Post 13</div>
+          <div class="item">Post 14</div>
+          <div class="item">Post 15</div>
+          <div class="item">Post 16</div>
+          <div class="item">Post 17</div>
+          <div class="item">Post 18</div>
+          <div class="item">Post 19</div>
+          <div class="item">Post 20</div>
+        </div>
+      </div>
+      <div class="note-view">
+        <div class="item">Content 1</div>
+        <div class="item">Content 2</div>
+        <div class="item">Content 3</div>
+        <div class="item">Content 4</div>
+        <div class="item">Content 5</div>
+        <div class="item">Content 6</div>
+        <div class="item">Content 7</div>
+        <div class="item">Content 8</div>
+        <div class="item">Content 9</div>
+        <div class="item">Content 10</div>
+        <div class="item">Content 11</div>
+        <div class="item">Content 12</div>
+        <div class="item">Content 13</div>
+        <div class="item">Content 14</div>
+        <div class="item">Content 15</div>
+        <div class="item">Content 16</div>
+        <div class="item">Content 17</div>
+        <div class="item">Content 18</div>
+        <div class="item">Content 19</div>
+        <div class="item">Content 20</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
