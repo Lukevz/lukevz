@@ -441,10 +441,11 @@
   left: 0;
   right: 0;
   width: 100%;
+  height: 52px; /* Match toolbar height */
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-sm) var(--space-lg);
+  padding: 0;
   z-index: 10002;
   background: transparent;
   border-bottom: 1px solid transparent;
@@ -464,7 +465,6 @@
   justify-content: space-between;
   gap: var(--space-xl);
   width: 100%;
-  max-width: 1400px; /* Wider to use full width */
 }
 
 .menu-left,
@@ -477,6 +477,8 @@
 .menu-left {
   gap: var(--space-sm);
   flex-shrink: 0; /* Don't shrink */
+  z-index: 1; /* Ensure it appears above centered nav if needed */
+  padding-left: 20px; /* Match version stamp positioning */
 }
 
 .menu-location {
@@ -503,10 +505,14 @@
 }
 
 .menu-center {
-  justify-content: center;
-  flex: 1; /* Take remaining space */
-  position: static; /* Remove absolute positioning */
-  transform: none;
+  position: absolute;
+  left: 50vw; /* Center relative to viewport */
+  transform: translateX(-50%);
+  pointer-events: none; /* Allow clicks through to background */
+}
+
+.menu-center > * {
+  pointer-events: auto; /* Re-enable clicks on children */
 }
 
 .menu-nav {
@@ -526,8 +532,7 @@
   align-items: center;
   justify-content: center;
   gap: 0;
-  height: 40px;
-  padding: 0 var(--space-sm);
+  padding: var(--space-sm);
   border-radius: 0px;
   color: var(--text-primary);
   transition: color var(--transition-fast), background var(--transition-fast), gap var(--transition-fast);
@@ -623,6 +628,8 @@
   gap: var(--space-sm);
   flex-shrink: 0; /* Don't shrink */
   justify-content: flex-end;
+  z-index: 1; /* Ensure it appears above centered nav if needed */
+  padding-right: 20px; /* Match version stamp positioning */
 }
 
 /* Info icon button in navbar (Desktop only) */
@@ -651,15 +658,14 @@
   height: 20px;
 }
 
-/* Desktop: Show info icon in navbar */
+/* Desktop: Hide info icon in navbar, keep at bottom left */
 @media (min-width: 769px) {
   .info-icon-btn {
-    display: flex;
+    display: none;
   }
 
-  /* Hide bottom-fixed info button on desktop */
   .info-button {
-    display: none;
+    display: flex;
   }
 }
 
@@ -714,6 +720,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+  margin-right: -6px; /* Align rightmost icon edge with version stamp */
 }
 
 /* On mobile, hide social icons by default and show them in dropdown */
@@ -814,7 +821,7 @@
 .hamburger-menu-btn svg {
   width: 26px;
   height: 26px;
-  filter: brightness(0) invert(1);
+  color: var(--text-primary);
 }
 
 /* Mobile Header Menu Dropdown */
@@ -939,13 +946,18 @@ body.app-active .mobile-header-menu {
 /* Mobile adjustments for top menu bar */
 @media (max-width: 768px) {
   .top-menu-bar {
-    padding: var(--space-xs) var(--space-md);
+    padding: 0;
     gap: var(--space-sm);
     z-index: 10002 !important;
   }
 
   .menu-left {
     min-width: auto;
+    padding-left: 16px; /* Match version stamp positioning on mobile */
+  }
+
+  .menu-right {
+    padding-right: 16px; /* Match version stamp positioning on mobile */
   }
 
   .menu-time {
@@ -5109,11 +5121,11 @@ ul {
   }
 
   .hamburger-menu-btn svg {
-    filter: brightness(0);
+    color: var(--text-primary);
   }
 
   .hamburger-menu-btn.active svg {
-    filter: none;
+    color: var(--accent);
   }
 
   .mobile-menu-app-btn svg {
