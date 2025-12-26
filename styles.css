@@ -2858,181 +2858,185 @@ ul {
 
 /* Mobile adjustments for music view - Complete Redesign */
 @media (max-width: 768px) {
-  /* MOBILE MUSIC PLAYER - Complete Redesign for Touch */
+  /* MOBILE MUSIC PLAYER */
 
   .music-view {
     padding-left: 0;
     padding-right: 0;
-    padding-top: calc(64px + env(safe-area-inset-top));
-  }
-
-  .zen-layout {
+    padding-top: calc(52px + env(safe-area-inset-top));
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    height: 100%;
+  }
+
+  .music-view .zen-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     gap: 0;
     padding: 0;
+    max-width: none;
   }
 
-  /* Folder tabs at top - horizontal scroll */
-  .zen-sidebar {
-    position: sticky;
-    top: calc(64px + env(safe-area-inset-top));
-    max-height: none;
-    background: var(--bg-primary);
-    border-bottom: 1px solid var(--border);
-    z-index: 10;
-    padding: 0;
-    order: 1;
+  /* Sidebar contains folders and playlist - reorder children */
+  .music-view .zen-sidebar {
+    display: contents;
   }
 
-  .zen-sidebar-header {
-    display: none; /* Hide on mobile */
-  }
-
-  .zen-folder-list {
-    display: flex;
-    flex-direction: row;
-    gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-md);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .zen-folder-list::-webkit-scrollbar {
+  .music-view .zen-sidebar-header {
     display: none;
   }
 
-  .folder-tab {
-    flex-shrink: 0;
-    min-height: var(--touch-target-comfortable); /* 48px */
-    padding: 0 var(--space-lg);
-    white-space: nowrap;
+  /* Folder tabs - 2x2 grid at top */
+  .music-view .zen-folder-list {
+    order: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
   }
 
-  /* Playlist - scrollable middle area */
-  .zen-playlist {
+  .music-view .zen-folder-item {
+    min-height: var(--touch-target-min);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    width: 100%;
+  }
+
+  .music-view .zen-folder-item.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+  }
+
+  /* Player - below folders */
+  .music-view .zen-device-container {
+    order: 2;
+    position: relative;
+    padding: var(--space-md);
+    padding-bottom: var(--space-md);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Playlist - scrollable at bottom */
+  .music-view .zen-playlist {
+    order: 3;
     flex: 1;
-    max-height: none;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    margin-bottom: calc(240px + env(safe-area-inset-bottom)); /* Space for fixed player */
-    order: 2;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .playlist-item {
+  .music-view .zen-playlist .playlist-item {
     min-height: var(--touch-target-comfortable);
     padding: var(--space-md);
     -webkit-tap-highlight-color: transparent;
   }
 
-  .playlist-item:active {
+  .music-view .zen-playlist .playlist-item:active {
     background: var(--bg-active);
     transform: scale(0.98);
   }
 
-  /* Player controls - Fixed card at bottom */
-  .zen-device-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 0;
-    background: var(--bg-primary);
-    border-top: 1px solid var(--border);
-    z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom);
-    order: 3;
-  }
-
-  .zen-device {
+  .music-view .zen-device {
     max-width: none;
     width: 100%;
     background: transparent;
     border: none;
     box-shadow: none;
-    padding: var(--space-md);
+    padding: 0;
   }
 
-  /* Hide ornamental Zen branding on mobile */
-  .zen-branding {
+  .music-view .zen-branding {
     display: none;
   }
 
   /* Screen layout - horizontal with artwork */
-  .zen-screen {
+  .music-view .zen-screen {
     border-radius: 8px;
     padding: var(--space-md);
     margin-bottom: var(--space-md);
   }
 
-  .zen-screen-content {
+  .music-view .zen-screen-content {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 72px 1fr;
     grid-template-rows: auto auto auto;
-    gap: var(--space-sm) var(--space-md);
+    gap: var(--space-xs) var(--space-md);
     align-items: center;
   }
 
-  .zen-artwork {
+  .music-view .zen-artwork {
     grid-row: 1 / 4;
     grid-column: 1;
-    width: 64px !important;
-    height: 64px !important;
+    width: 72px;
+    height: 72px;
     flex: none;
   }
 
-  .zen-track-title {
+  .music-view .zen-track-title {
     grid-row: 1;
     grid-column: 2;
     font-size: 0.9375rem;
   }
 
-  .zen-track-artist {
+  .music-view .zen-track-artist {
     grid-row: 2;
     grid-column: 2;
     font-size: 0.8125rem;
   }
 
-  .zen-progress {
+  .music-view .zen-progress {
     grid-row: 3;
     grid-column: 2;
   }
 
-  /* Button grid - horizontal 1x5 for mobile */
-  .zen-mosaic-grid {
-    display: flex;
-    flex-direction: row;
+  /* Button grid - 3x3 */
+  .music-view .zen-mosaic-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
     gap: var(--space-sm);
     padding: 0;
     background: transparent;
     margin-bottom: 0;
+    width: 100%;
+    max-width: none;
+    min-height: 160px;
   }
 
-  .zen-btn {
-    flex: 1;
-    min-height: var(--touch-target-comfortable);
+  .music-view .zen-btn {
+    min-height: 48px;
     aspect-ratio: auto;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 0;
+    width: 100%;
   }
 
-  /* Show only essential buttons on mobile: prev, play, next */
-  .zen-btn-back,
-  .zen-btn-menu,
-  .zen-btn-shuffle,
-  .zen-btn-repeat {
-    display: none;
+  .music-view .zen-btn svg {
+    width: 28px;
+    height: 28px;
   }
 
-  .zen-btn-up,
-  .zen-btn-down {
-    display: flex; /* These are prev/next */
-  }
-
-  .zen-btn-select {
-    min-width: 64px; /* Play button slightly larger */
+  /* Show all 9 buttons in grid */
+  .music-view .zen-btn-back,
+  .music-view .zen-btn-menu,
+  .music-view .zen-btn-shuffle,
+  .music-view .zen-btn-repeat,
+  .music-view .zen-btn-up,
+  .music-view .zen-btn-down,
+  .music-view .zen-btn-left,
+  .music-view .zen-btn-right,
+  .music-view .zen-btn-select {
+    display: flex;
   }
 }
 
@@ -3441,37 +3445,7 @@ ul {
     0 2px 6px rgba(0,0,0,0.2);
 }
 
-/* Mobile Adjustments for Zen Theme */
-@media (max-width: 768px) {
-  .music-view .music-container {
-    gap: var(--space-md);
-    padding: 0;
-  }
-
-  .music-view .music-player {
-    padding: 0;
-  }
-
-  .music-view .music-artwork {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-  }
-
-  .music-view .music-folders {
-    gap: var(--space-sm);
-    padding: var(--space-sm) 1rem;
-  }
-
-  .music-view .folder-tab {
-    min-height: 44px;
-    padding: 0.35rem 1rem;
-    letter-spacing: 0.18em;
-  }
-
-  .music-view .music-playlist {
-    max-height: 320px;
-  }
-}
+/* Mobile Adjustments for Zen Theme - See earlier comprehensive mobile styles */
 
 
 /* ==================== */
