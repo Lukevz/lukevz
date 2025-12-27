@@ -2937,6 +2937,7 @@ ul {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding-bottom: env(safe-area-inset-bottom);
+    display: block !important;
   }
 
   .music-view .zen-playlist .playlist-item {

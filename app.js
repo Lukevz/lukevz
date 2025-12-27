@@ -2882,20 +2882,31 @@ async function fetchPlaylistWithCache(playlistId) {
   }
 
   // Fetch from API
-  const response = await fetch(`/api/youtube/playlist/${playlistId}`);
+  const response = await fetch(`/api/youtube/playlist?id=${playlistId}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch playlist: ${response.status}`);
   }
 
   const data = await response.json();
 
+  // Transform YouTube API response to track format
+  const tracks = (data.items || []).map(item => ({
+    title: item.snippet.title,
+    artist: item.snippet.videoOwnerChannelTitle || 'Unknown Artist',
+    videoId: item.contentDetails.videoId,
+    url: `https://www.youtube.com/watch?v=${item.contentDetails.videoId}`,
+    thumbnail: item.snippet.thumbnails?.medium?.url || `https://img.youtube.com/vi/${item.contentDetails.videoId}/mqdefault.jpg`,
+    needsMetadata: false,
+    isChannel: false
+  }));
+
   // Cache the result
   musicState.playlistCache[playlistId] = {
-    tracks: data.tracks,
+    tracks,
     fetchedAt: now
   };
 
-  return data.tracks;
+  return tracks;
 }
 
 /**
