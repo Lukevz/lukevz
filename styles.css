@@ -2868,9 +2868,10 @@ ul {
     padding-left: 0;
     padding-right: 0;
     padding-top: calc(52px + env(safe-area-inset-top));
-    overflow-y: auto;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+    height: 100vh;
   }
 
   .music-view .zen-layout {
@@ -2880,6 +2881,7 @@ ul {
     gap: 0;
     padding: 0;
     max-width: none;
+    min-height: 0;
   }
 
   /* Sidebar contains folders and playlist - reorder children */
@@ -2900,6 +2902,7 @@ ul {
     padding: var(--space-md);
     background: var(--bg-primary);
     border-bottom: 1px solid var(--border);
+    width: 100vw;
   }
 
   .music-view .zen-folder-item {
@@ -2928,6 +2931,7 @@ ul {
     padding-bottom: var(--space-md);
     background: var(--bg-primary);
     border-bottom: 1px solid var(--border);
+    width: 100vw;
   }
 
   /* Playlist - scrollable at bottom */
@@ -2938,6 +2942,8 @@ ul {
     -webkit-overflow-scrolling: touch;
     padding-bottom: env(safe-area-inset-bottom);
     display: block !important;
+    min-height: 250px;
+    width: 100vw;
   }
 
   .music-view .zen-playlist .playlist-item {

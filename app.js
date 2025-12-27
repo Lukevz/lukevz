@@ -2942,7 +2942,8 @@ async function loadMusic() {
         playlistTracks.push(...tracksWithFolder);
         console.log(`Loaded ${tracks.length} tracks from playlist ${ref.playlistId}`);
       } catch (err) {
-        console.warn(`Failed to load playlist ${ref.playlistId}:`, err);
+        console.log(`Skipping playlist ${ref.playlistId} (API unavailable)`);
+        // Gracefully skip playlists when API is not configured
       }
     }
 
