@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const postsDir = join(__dirname, 'posts');
 const thoughtTrainDir = join(__dirname, 'thought-train');
+const soundsDir = join(__dirname, 'sounds');
 
 // Get all markdown files from posts
 const files = readdirSync(postsDir)
@@ -97,4 +98,35 @@ export default ${JSON.stringify(labs, null, 2)};
 
   console.log(`✓ Generated labs.js with ${labsFiles.length} labs:`);
   labs.forEach(p => console.log(`  - ${p.file} (${p.created})`));
+}
+
+// Get all audio files from sounds directory (if folder exists)
+if (existsSync(soundsDir)) {
+  // Common audio formats
+  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm'];
+  const soundsFiles = readdirSync(soundsDir)
+    .filter(file => audioExtensions.some(ext => file.toLowerCase().endsWith(ext)))
+    .sort();
+
+  const sounds = soundsFiles.map(file => {
+    const filePath = join(soundsDir, file);
+    const stats = statSync(filePath);
+    const created = stats.birthtime.toISOString().split('T')[0];
+    return { file, created };
+  });
+
+  // Generate sounds.js content
+  const soundsContent = `/**
+ * Sounds Manifest (auto-generated)
+ * Lists all audio files in the sounds/ directory
+ * Run 'node build.js' to regenerate after adding new sounds
+ */
+
+export default ${JSON.stringify(sounds, null, 2)};
+`;
+
+  writeFileSync(join(__dirname, 'sounds.js'), soundsContent);
+
+  console.log(`✓ Generated sounds.js with ${soundsFiles.length} sounds:`);
+  sounds.forEach(s => console.log(`  - ${s.file} (${s.created})`));
 }

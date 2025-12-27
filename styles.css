@@ -2415,7 +2415,6 @@ ul {
   flex: 1;
   overflow-y: auto;
   border-top: 1px solid var(--border);
-  max-height: 400px;
 }
 
 .zen-playlist:empty {
@@ -2820,6 +2819,11 @@ ul {
   width: 24px;
   height: 24px;
   color: var(--text-muted);
+}
+
+/* Hide thumbnail for local audio tracks */
+.playlist-item.no-thumb .playlist-thumb {
+  display: none;
 }
 
 /* Hide player controls when folder only has channels */
@@ -3386,6 +3390,10 @@ ul {
   width: 18px;
   height: 18px;
   color: var(--zen-lcd-muted);
+}
+
+.music-view .playlist-item.no-thumb .playlist-thumb {
+  display: none;
 }
 
 /* Folder Grid - Device Menu */
@@ -5182,3 +5190,4 @@ ul {
     filter: none;
   }
 }
+

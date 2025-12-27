@@ -302,7 +302,7 @@ const musicFolderIcons = {
   Ambience: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><path d="M7.75,2c-.689,0-1.25,.561-1.25,1.25s.561,1.25,1.25,1.25,1.25-.561,1.25-1.25-.561-1.25-1.25-1.25Z" fill="currentColor"></path><path d="M10.194,6.846l-4.273,5.812c-.486,.66-.014,1.592,.806,1.592H15.273c.82,0,1.291-.932,.806-1.592l-4.273-5.812c-.4-.543-1.212-.543-1.611,0Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><path d="M7.731,10.195l-2.128-2.879c-.3-.406-.906-.406-1.206,0l-2.763,3.738c-.366,.495-.012,1.196,.603,1.196h3.984" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>',
   Music: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><path d="M9.615,2.382l3.5-.477c.6-.082,1.135,.385,1.135,.991v1.731c0,.5-.369,.923-.865,.991l-4.635,.632V3.373c0-.5,.369-.923,.865-.991Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><line x1="8.75" y1="6.25" x2="8.75" y2="13.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line><circle cx="6" cy="13.5" r="2.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></circle><path d="M4.493,5.742l-.946-.315-.316-.947c-.102-.306-.609-.306-.711,0l-.316,.947-.946,.315c-.153,.051-.257,.194-.257,.356s.104,.305,.257,.356l.946,.315,.316,.947c.051,.153,.194,.256,.355,.256s.305-.104,.355-.256l.316-.947,.946-.315c.153-.051,.257-.194,.257-.356s-.104-.305-.257-.356Z" fill="currentColor"></path><path d="M16.658,10.99l-1.263-.421-.421-1.263c-.137-.408-.812-.408-.949,0l-.421,1.263-1.263,.421c-.204,.068-.342,.259-.342,.474s.138,.406,.342,.474l1.263,.421,.421,1.263c.068,.204,.26,.342,.475,.342s.406-.138,.475-.342l.421-1.263,1.263-.421c.204-.068,.342-.259,.342-.474s-.138-.406-.342-.474Z" fill="currentColor"></path><circle cx="5.25" cy="2.25" r=".75" fill="currentColor"></circle></svg>',
   Podcasts: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="5.75" y="1.75" width="6.5" height="9.5" rx="3.25" ry="3.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></rect><path d="M15.25,8c0,3.452-2.798,6.25-6.25,6.25h0c-3.452,0-6.25-2.798-6.25-6.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><line x1="9" y1="14.25" x2="9" y2="16.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line></svg>',
-  Sounds: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="2" y="5" width="2" height="8" rx="1"/><rect x="6" y="3" width="2" height="12" rx="1"/><rect x="10" y="7" width="2" height="6" rx="1"/><rect x="14" y="9" width="2" height="2" rx="1"/></svg>'
+  Sounds: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="2" y="5" width="2" height="8" rx="1" fill="currentColor"/><rect x="6" y="3" width="2" height="12" rx="1" fill="currentColor"/><rect x="10" y="7" width="2" height="6" rx="1" fill="currentColor"/><rect x="14" y="9" width="2" height="2" rx="1" fill="currentColor"/></svg>'
 };
 
 const defaultMusicFolders = ['Ambience', 'Music', 'Podcasts', 'Sounds'];
@@ -2726,18 +2726,13 @@ const musicState = {
   activeFolder: 'Music',
   currentIndex: -1,
   isPlaying: false,
-  playingTrack: null, // Track the actual playing track (from allTracks) even when switching folders
-  player: null,
+  player: null, // YouTube player
   apiReady: false,
   pendingVideoId: null,
-  progressTimer: null,
-  shuffleEnabled: false,
-  repeatMode: 'none' // 'none' | 'all' | 'one'
+  playlistCache: {}, // { playlistId: { tracks, fetchedAt } }
+  cacheExpiry: 1000 * 60 * 60 // 1 hour
 };
 
-const defaultArtworkMarkup = document.getElementById('artworkContainer')
-  ? document.getElementById('artworkContainer').innerHTML
-  : '';
 
 /**
  * Life Stories State
@@ -2814,6 +2809,96 @@ async function discoverLifeStoriesImages() {
 }
 
 /**
+ * Load sounds from sounds.js manifest
+ */
+async function loadSounds() {
+  try {
+    console.log('Loading sounds from sounds.js...');
+    const soundsModule = await import('./sounds.js');
+    const sounds = soundsModule.default || [];
+    console.log(`Found ${sounds.length} sounds in manifest`);
+    
+    // Convert sounds to track format
+    const soundTracks = sounds.map(sound => {
+      const filename = sound.file;
+      // Remove file extension for display name
+      const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+      const audioUrl = `sounds/${filename}`;
+      
+      // Format date for display (e.g., "Jul 1, 2024")
+      let formattedDate = 'Unknown date';
+      if (sound.created) {
+        try {
+          const date = new Date(sound.created);
+          formattedDate = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+        } catch (e) {
+          formattedDate = sound.created;
+        }
+      }
+      
+      return {
+        title: nameWithoutExt,
+        artist: formattedDate,
+        url: audioUrl,
+        audioUrl: audioUrl,
+        isLocalAudio: true,
+        folder: 'Sounds',
+        isChannel: false,
+        thumbnail: null,
+        created: sound.created
+      };
+    });
+    
+    // Sort by most recently added (newest first)
+    soundTracks.sort((a, b) => {
+      if (!a.created && !b.created) return 0;
+      if (!a.created) return 1;
+      if (!b.created) return -1;
+      return new Date(b.created) - new Date(a.created);
+    });
+    
+    return soundTracks;
+  } catch (err) {
+    console.warn('Could not load sounds:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch playlist with caching
+ */
+async function fetchPlaylistWithCache(playlistId) {
+  const now = Date.now();
+  const cached = musicState.playlistCache[playlistId];
+
+  // Return cached data if fresh
+  if (cached && (now - cached.fetchedAt) < musicState.cacheExpiry) {
+    console.log(`Using cached playlist data for ${playlistId}`);
+    return cached.tracks;
+  }
+
+  // Fetch from API
+  const response = await fetch(`/api/youtube/playlist/${playlistId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch playlist: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  // Cache the result
+  musicState.playlistCache[playlistId] = {
+    tracks: data.tracks,
+    fetchedAt: now
+  };
+
+  return data.tracks;
+}
+
+/**
  * Load and parse music.md for tracks
  */
 async function loadMusic() {
@@ -2825,18 +2910,42 @@ async function loadMusic() {
     if (!response.ok) throw new Error('Failed to load music.md');
 
     const content = await response.text();
-    const { tracks, folders } = await parseMusicMd(content);
-    
-    // Split tracks into regular (fast) and channels (slow)
-    const regularTracks = tracks.filter(t => !t.isChannel);
-    const channelTracks = tracks.filter(t => t.isChannel);
-    
-    // Load regular track metadata quickly (just oEmbed, very fast)
-    await enrichRegularTrackMetadata(regularTracks);
-    
-    // Set all tracks and render immediately
-    musicState.allTracks = tracks;
-    musicState.folders = mergeFolders(folders);
+    const parsed = await parseMusicMd(content);
+
+    // Separate playlists from regular tracks
+    const playlistRefs = parsed.tracks.filter(t => t.type === 'playlist');
+    const regularTracks = parsed.tracks.filter(t => t.type !== 'playlist');
+
+    // Fetch and expand playlists
+    const playlistTracks = [];
+    for (const ref of playlistRefs) {
+      try {
+        const tracks = await fetchPlaylistWithCache(ref.playlistId);
+        // Add folder info to each track
+        const tracksWithFolder = tracks.map(track => ({
+          ...track,
+          folder: ref.folder,
+          isChannel: false,
+          needsMetadata: false
+        }));
+        playlistTracks.push(...tracksWithFolder);
+        console.log(`Loaded ${tracks.length} tracks from playlist ${ref.playlistId}`);
+      } catch (err) {
+        console.warn(`Failed to load playlist ${ref.playlistId}:`, err);
+      }
+    }
+
+    // Load sounds
+    const soundTracks = await loadSounds();
+    console.log(`Loaded ${soundTracks.length} sound tracks`);
+
+    // Combine all tracks (music + playlists + sounds)
+    musicState.allTracks = [...regularTracks, ...playlistTracks, ...soundTracks];
+    console.log(`Total tracks: ${musicState.allTracks.length} (${regularTracks.length} regular + ${playlistTracks.length} playlist + ${soundTracks.length} sounds)`);
+
+    // Merge folders from music.md with default folders (includes Sounds)
+    musicState.folders = mergeFolders(parsed.folders);
+
     if (!musicState.folders.includes(musicState.activeFolder)) {
       musicState.activeFolder = musicState.folders.find(folder => folder === 'Music')
         || musicState.folders[0]
@@ -2853,24 +2962,31 @@ async function loadMusic() {
       }
     }
 
-    applyFolderFilter(true);
+    // Fetch metadata for tracks that need it
+    const tracksNeedingMetadata = musicState.allTracks.filter(t => t.needsMetadata && t.videoId);
+    await Promise.all(tracksNeedingMetadata.map(async (track) => {
+      const meta = await fetchYouTubeMetadata(track.url);
+      if (meta) {
+        const parsed = extractMetadataFromTitle(meta.title);
+        track.title = parsed.title;
+        track.artist = parsed.artist || meta.author || 'Unknown';
+        track.needsMetadata = false;
+      }
+    }));
+
+    applyFolderFilter();
     renderMusicFolders();
     renderPlaylist();
     loadYouTubeIframeAPI();
-    
-    // Load channel metadata in background (non-blocking)
-    if (channelTracks.length > 0) {
-      enrichChannelMetadataInBackground(channelTracks);
-    }
 
   } catch (err) {
-    console.warn('Could not load music.md:', err);
+    console.warn('Could not load music:', err);
     musicState.allTracks = [];
     musicState.tracks = [];
     renderMusicFolders();
     playlist.innerHTML = `
       <div class="playlist-empty">
-        <p>Create <code>music.md</code> to add music</p>
+        <p>Add links to <code>music.md</code></p>
       </div>
     `;
   }
@@ -2903,14 +3019,24 @@ async function parseMusicMd(content) {
       continue;
     }
 
-    // Match markdown link format: [Title - Artist](url)
+    // Match markdown link format: [Title](url)
     const linkMatch = trimmed.match(/^-\s*\[([^\]]+)\]\(([^)]+)\)/);
     if (linkMatch) {
       const [, text, url] = linkMatch;
+      const playlistId = extractYouTubePlaylistId(url);
       const videoId = extractYouTubeId(url);
       const channelHandle = extractYouTubeChannel(url);
 
-      if (videoId) {
+      if (playlistId) {
+        // YouTube playlist
+        tracks.push({
+          type: 'playlist',
+          playlistId,
+          folder: currentFolder,
+          url
+        });
+      } else if (videoId) {
+        // YouTube video with title
         const hasArtist = text.includes(' - ');
         const [title, artist] = hasArtist
           ? text.split(' - ', 2)
@@ -2921,18 +3047,19 @@ async function parseMusicMd(content) {
           videoId,
           url,
           thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-          needsMetadata: !hasArtist,
+          needsMetadata: false,
           folder: currentFolder,
           isChannel: false
         });
       } else if (channelHandle) {
+        // YouTube channel
         tracks.push({
           title: text.trim(),
-          artist: 'YouTube Channel',
+          artist: 'Channel',
           channelHandle,
           url,
           thumbnail: null,
-          needsMetadata: true,
+          needsMetadata: false,
           folder: currentFolder,
           isChannel: true
         });
@@ -2940,16 +3067,26 @@ async function parseMusicMd(content) {
       continue;
     }
 
-    // Match plain URL format: - https://youtube.com/...
+    // Match plain URL format: - https://...
     const urlMatch = trimmed.match(/^-\s*(https?:\/\/[^\s]+)/);
     if (urlMatch) {
       const url = urlMatch[1];
+      const playlistId = extractYouTubePlaylistId(url);
       const videoId = extractYouTubeId(url);
       const channelHandle = extractYouTubeChannel(url);
 
-      if (videoId) {
+      if (playlistId) {
+        // YouTube playlist
         tracks.push({
-          title: 'YouTube Video',
+          type: 'playlist',
+          playlistId,
+          folder: currentFolder,
+          url
+        });
+      } else if (videoId) {
+        // YouTube video without title - needs metadata fetch
+        tracks.push({
+          title: 'Loading...',
           artist: 'Unknown',
           videoId,
           url,
@@ -2959,13 +3096,14 @@ async function parseMusicMd(content) {
           isChannel: false
         });
       } else if (channelHandle) {
+        // YouTube channel
         tracks.push({
           title: channelHandle,
-          artist: 'YouTube Channel',
+          artist: 'Channel',
           channelHandle,
           url,
           thumbnail: null,
-          needsMetadata: true,
+          needsMetadata: false,
           folder: currentFolder,
           isChannel: true
         });
@@ -3004,170 +3142,15 @@ function extractYouTubeChannel(url) {
 }
 
 /**
- * Fetch and hydrate metadata for regular (non-channel) tracks - fast
+ * Extract YouTube playlist ID from URL
  */
-async function enrichRegularTrackMetadata(tracks) {
-  const pending = tracks.filter(track => track.needsMetadata);
-  if (pending.length === 0) return;
-
-  await Promise.all(pending.map(async (track) => {
-    const meta = await fetchYouTubeMetadata(track.url);
-    if (!meta) return;
-
-    const parsed = extractMetadataFromTitle(meta.title || track.title);
-    track.title = parsed.title;
-    track.artist = track.artist === 'Unknown' && meta.author
-      ? meta.author
-      : parsed.artist || meta.author || track.artist;
-    track.thumbnail = `https://img.youtube.com/vi/${track.videoId}/mqdefault.jpg`;
-    track.needsMetadata = false;
-  }));
+function extractYouTubePlaylistId(url) {
+  const match = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
 }
 
 /**
- * Fetch and hydrate metadata for channel tracks in background - slow, non-blocking
- */
-async function enrichChannelMetadataInBackground(channelTracks) {
-  const pending = channelTracks.filter(track => track.needsMetadata);
-  if (pending.length === 0) return;
-
-  // Process channels in parallel but update UI as each completes
-  pending.forEach(async (track) => {
-    // First try quick noembed (fast)
-    const quickMeta = await fetchChannelMetadataQuick(track.channelHandle);
-    if (quickMeta && quickMeta.thumbnail) {
-      track.title = quickMeta.title || track.title;
-      track.thumbnail = quickMeta.thumbnail;
-      track.artist = 'Podcast';
-      track.needsMetadata = false;
-      // Update UI immediately if this track is visible
-      const isVisible = musicState.tracks.some(t => 
-        t.isChannel && t.channelHandle === track.channelHandle
-      );
-      if (isVisible) {
-        renderPlaylist();
-      }
-      return;
-    }
-
-    // If no quick thumbnail, try slow method in background
-    const channelMeta = await fetchChannelMetadata(track.channelHandle);
-    if (channelMeta) {
-      track.title = channelMeta.title || track.title;
-      track.thumbnail = channelMeta.thumbnail;
-      track.artist = 'Podcast';
-    }
-    track.needsMetadata = false;
-    // Update UI when thumbnail arrives
-    const isVisible = musicState.tracks.some(t => 
-      t.isChannel && t.channelHandle === track.channelHandle
-    );
-    if (isVisible) {
-      renderPlaylist();
-    }
-  });
-}
-
-/**
- * Quick channel metadata fetch - only tries noembed (fast)
- */
-async function fetchChannelMetadataQuick(handle) {
-  try {
-    const channelUrl = `https://www.youtube.com/@${handle}`;
-    const noembedUrl = `https://noembed.com/embed?url=${encodeURIComponent(channelUrl)}`;
-    const res = await fetch(noembedUrl);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (!data.error && data.thumbnail_url) {
-        return {
-          title: data.author_name || data.title || handle,
-          thumbnail: data.thumbnail_url
-        };
-      }
-    }
-  } catch (err) {
-    // Silent fail for quick method
-  }
-  return null;
-}
-
-/**
- * Fetch channel metadata using noembed service (more permissive than YouTube oEmbed)
- */
-async function fetchChannelMetadata(handle) {
-  try {
-    const channelUrl = `https://www.youtube.com/@${handle}`;
-
-    // Try noembed.com which often returns better data (fast)
-    const noembedUrl = `https://noembed.com/embed?url=${encodeURIComponent(channelUrl)}`;
-    const res = await fetch(noembedUrl);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (!data.error) {
-        const title = data.author_name || data.title || handle;
-        // If noembed provided a thumbnail, use it
-        if (data.thumbnail_url) {
-          return {
-            title: title,
-            thumbnail: data.thumbnail_url
-          };
-        }
-        // Otherwise, continue to fetch latest video thumbnail
-      }
-    }
-
-    // Try to get latest video thumbnail as channel artwork (with timeout)
-    // Use CORS proxy to fetch the channel's videos page
-    const videosUrl = `${channelUrl}/videos`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(videosUrl)}`;
-    
-    try {
-      // Fetch with 5 second timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const videosRes = await fetch(proxyUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (videosRes.ok) {
-        const proxyData = await videosRes.json();
-        const videosHtml = proxyData.contents || '';
-        
-        if (videosHtml) {
-          // Try fast regex patterns only (skip slow JSON parsing)
-          // Pattern 1: "videoId":"..." (most common, fastest)
-          let videoIdMatch = videosHtml.match(/"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/);
-          // Pattern 2: watch?v=... (in URLs)
-          if (!videoIdMatch) {
-            videoIdMatch = videosHtml.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
-          }
-          
-          if (videoIdMatch && videoIdMatch[1]) {
-            const videoId = videoIdMatch[1];
-            return {
-              title: handle,
-              thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
-            };
-          }
-        }
-      }
-    } catch (videosErr) {
-      // Timeout or fetch failed (CORS proxy may be unavailable)
-      // Silently continue to fallback - these errors are expected
-    }
-
-    // All methods failed, return fallback
-    return { title: handle, thumbnail: null };
-  } catch (err) {
-    console.warn('Could not fetch channel metadata:', err);
-    return { title: handle, thumbnail: null };
-  }
-}
-
-/**
- * Retrieve lightweight oEmbed metadata from YouTube
+ * Fetch YouTube metadata using oEmbed API
  */
 async function fetchYouTubeMetadata(url) {
   try {
@@ -3212,98 +3195,18 @@ function mergeFolders(foundFolders = []) {
   return ordered;
 }
 
-function applyFolderFilter(resetPlayer = false) {
+function applyFolderFilter() {
   musicState.tracks = musicState.allTracks.filter(track => track.folder === musicState.activeFolder);
-  if (resetPlayer) resetPlayerForFolder();
 }
 
 function switchFolder(folder) {
   if (!folder || musicState.activeFolder === folder) return;
-  
-  // Save the current track before filtering (if any)
-  let currentTrack = null;
-  if (musicState.currentIndex >= 0 && musicState.tracks.length > 0) {
-    currentTrack = musicState.tracks[musicState.currentIndex];
-  }
-  
+
   musicState.activeFolder = folder;
-  applyFolderFilter(false);
-  
-  // If we had a current track, check if it's in the new folder
-  // If yes, find its new index. If no, reset currentIndex but keep player playing
-  if (currentTrack && currentTrack.folder === folder) {
-    // Find the track's new index in the filtered list
-    const newIndex = musicState.tracks.findIndex(t => 
-      t.url === currentTrack.url || 
-      (t.videoId === currentTrack.videoId && t.title === currentTrack.title && t.artist === currentTrack.artist)
-    );
-    musicState.currentIndex = newIndex >= 0 ? newIndex : -1;
-  } else {
-    // Current track is not in the new folder, reset index but keep playing
-    musicState.currentIndex = -1;
-  }
-  
+  applyFolderFilter();
+
   renderMusicFolders();
   renderPlaylist();
-  
-  // Update mini player if music window is closed and there's a playing track
-  if (!state.windows.openWindows.has('music') && (musicState.isPlaying || musicState.playingTrack)) {
-    updateMiniPlayer();
-    showMiniPlayer();
-  }
-}
-
-function resetPlayerForFolder() {
-  musicState.currentIndex = -1;
-  musicState.isPlaying = false;
-  musicState.playingTrack = null;
-  stopProgressTimer();
-
-  const titleEl = document.getElementById('playerTitle');
-  const artistEl = document.getElementById('playerArtist');
-  const currentEl = document.getElementById('currentTime');
-  const durationEl = document.getElementById('duration');
-  const fill = document.getElementById('progressFill');
-  const musicContainer = document.querySelector('.music-container');
-
-  // Check if folder has any playable tracks (non-channel)
-  const playableTracks = musicState.tracks.filter(t => !t.isChannel);
-  const hasPlayableTracks = playableTracks.length > 0;
-  const hasChannelsOnly = musicState.tracks.length > 0 && !hasPlayableTracks;
-
-  // Hide player controls if folder only has channels
-  if (musicContainer) {
-    musicContainer.classList.toggle('channels-only', hasChannelsOnly);
-  }
-
-  if (titleEl) titleEl.textContent = hasPlayableTracks
-    ? 'Nothing playing'
-    : hasChannelsOnly
-      ? 'Browse podcasts below'
-      : `No ${musicState.activeFolder} tracks yet`;
-  if (artistEl) artistEl.textContent = hasChannelsOnly ? '' : 'Add tracks to music.md';
-  if (currentEl) currentEl.textContent = '0:00';
-  if (durationEl) durationEl.textContent = '0:00';
-  if (fill) fill.style.width = '0%';
-
-  if (musicState.player && musicState.apiReady && window.YT) {
-    if (typeof musicState.player.stopVideo === 'function') {
-      musicState.player.stopVideo();
-    }
-    if (typeof musicState.player.destroy === 'function') {
-      musicState.player.destroy();
-    }
-  }
-  musicState.player = null;
-  musicState.pendingVideoId = null;
-
-  const artworkContainer = document.getElementById('artworkContainer');
-  if (artworkContainer && defaultArtworkMarkup) {
-    artworkContainer.classList.remove('is-video');
-    artworkContainer.innerHTML = defaultArtworkMarkup;
-  }
-
-  updatePlayButton();
 }
 
 function renderMusicFolders() {
@@ -3331,7 +3234,7 @@ function renderMusicFolders() {
 }
 
 /**
- * Render the playlist
+ * Render the playlist with playable tracks
  */
 function renderPlaylist() {
   const playlist = document.getElementById('musicPlaylist');
@@ -3348,16 +3251,12 @@ function renderPlaylist() {
   }
 
   playlist.innerHTML = musicState.tracks.map((track, index) => {
-    const isActive = !track.isChannel && index === musicState.currentIndex;
-    const thumbSrc = track.thumbnail || '';
-    const thumbHtml = thumbSrc
-      ? `<img src="${thumbSrc}" alt="${track.title}" loading="lazy">`
-      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+    const isActive = index === musicState.currentIndex;
 
     if (track.isChannel) {
+      // Channels open in new tab
       return `
-        <a class="playlist-item playlist-channel" href="${track.url}" target="_blank" rel="noopener noreferrer" data-index="${index}">
-          <div class="playlist-thumb">${thumbHtml}</div>
+        <a class="playlist-item playlist-channel" href="${track.url}" target="_blank" rel="noopener noreferrer">
           <div class="playlist-info">
             <div class="playlist-title">${track.title}</div>
             <div class="playlist-artist">${track.artist}</div>
@@ -3371,6 +3270,11 @@ function renderPlaylist() {
       `;
     }
 
+    // Regular video - clickable to play
+    const thumbHtml = track.thumbnail
+      ? `<img src="${track.thumbnail}" alt="${track.title}" loading="lazy">`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+
     return `
       <div class="playlist-item${isActive ? ' active playing' : ''}" data-index="${index}">
         <div class="playlist-thumb">${thumbHtml}</div>
@@ -3382,7 +3286,7 @@ function renderPlaylist() {
     `;
   }).join('');
 
-  // Add click handlers for playable tracks only
+  // Add click handlers for playable tracks
   playlist.querySelectorAll('.playlist-item:not(.playlist-channel)').forEach(item => {
     item.addEventListener('click', () => {
       const index = parseInt(item.dataset.index, 10);
@@ -3399,68 +3303,25 @@ function playTrack(index) {
 
   const track = musicState.tracks[index];
   musicState.currentIndex = index;
-  stopProgressTimer();
+  musicState.isPlaying = true;
 
   // Update UI
   document.getElementById('playerTitle').textContent = track.title;
   document.getElementById('playerArtist').textContent = track.artist;
-  const fill = document.getElementById('progressFill');
-  const currentEl = document.getElementById('currentTime');
-  const durationEl = document.getElementById('duration');
-  if (fill) fill.style.width = '0%';
-  if (currentEl) currentEl.textContent = '0:00';
-  if (durationEl) durationEl.textContent = '0:00';
-
-  // Update artwork
-  const artworkContainer = document.getElementById('artworkContainer');
-  if (artworkContainer) {
-    artworkContainer.classList.remove('is-video');
-    artworkContainer.innerHTML = `<img src="${track.thumbnail}" alt="${track.title}">`;
-  }
 
   // Update playlist active state
   document.querySelectorAll('.playlist-item').forEach((item, i) => {
     item.classList.toggle('active', i === index);
-    item.classList.toggle('playing', i === index && musicState.isPlaying);
+    item.classList.toggle('playing', i === index);
   });
 
-  // Store the actual playing track from allTracks
-  musicState.playingTrack = musicState.allTracks.find(t => 
-    t.url === track.url || 
-    (t.videoId === track.videoId && t.title === track.title && t.artist === track.artist)
-  ) || track;
-
-  musicState.isPlaying = true;
-  ensureYouTubePlayer(track.videoId);
-  updatePlayButton();
-  updateMiniPlayer();
-}
-
-/**
- * Toggle play/pause
- */
-function togglePlay() {
-  if (musicState.tracks.length === 0) return;
-
-  if (musicState.currentIndex === -1) {
-    playTrack(0);
-    return;
-  }
-
-  if (musicState.player && musicState.apiReady && window.YT) {
-    const state = musicState.player.getPlayerState();
-    if (state === YT.PlayerState.PLAYING) {
-      musicState.player.pauseVideo();
-    } else {
-      musicState.player.playVideo();
-    }
-  } else {
-    playTrack(musicState.currentIndex);
+  if (track.videoId) {
+    ensureYouTubePlayer(track.videoId);
   }
 }
 
 /**
- * Inject YouTube Iframe API script once
+ * Load YouTube Iframe API
  */
 function loadYouTubeIframeAPI() {
   if (document.getElementById('youtube-iframe-api')) return;
@@ -3495,9 +3356,7 @@ function createYouTubePlayer(videoId) {
   if (musicState.player) {
     musicState.player.loadVideoById(videoId);
     musicState.player.playVideo();
-    startProgressTimer();
     musicState.isPlaying = true;
-    updatePlayButton();
     musicState.pendingVideoId = null;
     return;
   }
@@ -3522,33 +3381,41 @@ function createYouTubePlayer(videoId) {
       onReady: (event) => {
         event.target.playVideo();
         musicState.isPlaying = true;
-        updatePlayButton();
-        startProgressTimer();
-        updateDuration();
-        updateMiniPlayer();
       },
       onStateChange: (event) => {
         if (event.data === YT.PlayerState.PLAYING) {
           musicState.isPlaying = true;
-          updatePlayButton();
-          startProgressTimer();
-          updateMiniPlayer();
         } else if (event.data === YT.PlayerState.PAUSED) {
           musicState.isPlaying = false;
-          updatePlayButton();
-          stopProgressTimer();
-          updateMiniPlayer();
         } else if (event.data === YT.PlayerState.ENDED) {
           musicState.isPlaying = false;
-          updatePlayButton();
-          stopProgressTimer();
-          updateMiniPlayer();
           playNext();
         }
       }
     }
   });
   musicState.pendingVideoId = null;
+}
+
+/**
+ * Play next track
+ */
+function playNext() {
+  if (musicState.tracks.length === 0) return;
+  const nextIndex = (musicState.currentIndex + 1) % musicState.tracks.length;
+  // Skip channels
+  if (musicState.tracks[nextIndex].isChannel) {
+    const videoTracks = musicState.tracks.filter(t => !t.isChannel);
+    if (videoTracks.length > 0) {
+      const currentInVideos = videoTracks.findIndex(t => t === musicState.tracks[musicState.currentIndex]);
+      const nextVideoIndex = (currentInVideos + 1) % videoTracks.length;
+      const nextTrack = videoTracks[nextVideoIndex];
+      const actualIndex = musicState.tracks.indexOf(nextTrack);
+      playTrack(actualIndex);
+    }
+  } else {
+    playTrack(nextIndex);
+  }
 }
 
 // YouTube API global callback
@@ -3560,226 +3427,9 @@ window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
 };
 
 /**
- * Play next track
- */
-function playNext() {
-  if (musicState.tracks.length === 0) return;
-
-  // Handle repeat one
-  if (musicState.repeatMode === 'one') {
-    playTrack(musicState.currentIndex);
-    return;
-  }
-
-  let nextIndex;
-
-  if (musicState.shuffleEnabled) {
-    // Random track (not the current one)
-    const availableIndices = musicState.tracks.map((_, i) => i).filter(i => i !== musicState.currentIndex);
-    if (availableIndices.length === 0) {
-      nextIndex = 0;
-    } else {
-      nextIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
-    }
-  } else {
-    nextIndex = musicState.currentIndex + 1;
-
-    // Handle end of playlist
-    if (nextIndex >= musicState.tracks.length) {
-      if (musicState.repeatMode === 'all') {
-        nextIndex = 0;
-      } else {
-        return; // Stop at end
-      }
-    }
-  }
-
-  playTrack(nextIndex);
-}
-
-/**
- * Play previous track
- */
-function playPrev() {
-  if (musicState.tracks.length === 0) return;
-
-  if (musicState.shuffleEnabled) {
-    // Random track when shuffle is on
-    const availableIndices = musicState.tracks.map((_, i) => i).filter(i => i !== musicState.currentIndex);
-    const prevIndex = availableIndices.length > 0
-      ? availableIndices[Math.floor(Math.random() * availableIndices.length)]
-      : 0;
-    playTrack(prevIndex);
-  } else {
-    const prevIndex = musicState.currentIndex <= 0
-      ? musicState.tracks.length - 1
-      : musicState.currentIndex - 1;
-    playTrack(prevIndex);
-  }
-}
-
-/**
- * Update play button icon
- */
-function updatePlayButton() {
-  const playBtn = document.getElementById('playBtn');
-  if (!playBtn) return;
-
-  const iconPlay = playBtn.querySelector('.icon-play');
-  const iconPause = playBtn.querySelector('.icon-pause');
-
-  if (musicState.isPlaying) {
-    iconPlay.classList.add('hidden');
-    iconPause.classList.remove('hidden');
-  } else {
-    iconPlay.classList.remove('hidden');
-    iconPause.classList.add('hidden');
-  }
-
-  document.querySelectorAll('.playlist-item').forEach((item, index) => {
-    item.classList.toggle('playing', musicState.isPlaying && index === musicState.currentIndex);
-  });
-
-  updateMiniPlayer();
-}
-
-/**
- * Update progress bar based on YouTube player time
- */
-function updateProgress() {
-  if (!musicState.player || !musicState.apiReady || !window.YT) return;
-
-  const duration = musicState.player.getDuration();
-  const current = musicState.player.getCurrentTime();
-  if (!duration || Number.isNaN(duration)) return;
-
-  const percent = (current / duration) * 100;
-  const fill = document.getElementById('progressFill');
-  const currentEl = document.getElementById('currentTime');
-  const durationEl = document.getElementById('duration');
-  if (fill) fill.style.width = `${percent}%`;
-  if (currentEl) currentEl.textContent = formatTime(current);
-  if (durationEl) durationEl.textContent = formatTime(duration);
-}
-
-/**
- * Update duration display (called when metadata loads)
- */
-function updateDuration() {
-  if (!musicState.player || !musicState.apiReady || !window.YT) return;
-  const duration = musicState.player.getDuration();
-  if (!duration || Number.isNaN(duration)) return;
-  const durationEl = document.getElementById('duration');
-  if (durationEl) durationEl.textContent = formatTime(duration);
-}
-
-function formatTime(seconds) {
-  const total = Math.max(0, Math.floor(seconds));
-  const mins = Math.floor(total / 60);
-  const secs = String(total % 60).padStart(2, '0');
-  return `${mins}:${secs}`;
-}
-
-function startProgressTimer() {
-  stopProgressTimer();
-  musicState.progressTimer = setInterval(updateProgress, 500);
-}
-
-function stopProgressTimer() {
-  if (musicState.progressTimer) {
-    clearInterval(musicState.progressTimer);
-    musicState.progressTimer = null;
-  }
-}
-
-/**
- * Setup music player controls
- */
-function setupMusicPlayer() {
-  const playBtn = document.getElementById('playBtn');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const progressBar = document.getElementById('progressBar');
-  const miniPlayerPlayBtn = document.getElementById('miniPlayerPlayBtn');
-
-  if (playBtn) playBtn.addEventListener('click', togglePlay);
-  if (prevBtn) prevBtn.addEventListener('click', playPrev);
-  if (nextBtn) nextBtn.addEventListener('click', playNext);
-
-  // Connect mini player play/pause button
-  if (miniPlayerPlayBtn) {
-    miniPlayerPlayBtn.addEventListener('click', togglePlay);
-  }
-
-  // Progress bar seeking (placeholder)
-  if (progressBar) {
-    progressBar.addEventListener('click', (e) => {
-      if (!musicState.player || !musicState.apiReady || !window.YT) return;
-      const rect = progressBar.getBoundingClientRect();
-      const percent = (e.clientX - rect.left) / rect.width;
-      const duration = musicState.player.getDuration();
-      if (!duration || Number.isNaN(duration)) return;
-      musicState.player.seekTo(duration * percent, true);
-    });
-  }
-
-  // Setup Zen device buttons
-  setupZenControls();
-}
-
-/**
- * Setup Zen device button controls
- */
-function setupZenControls() {
-  // Up/Down for track navigation
-  const upBtn = document.getElementById('zenBtnUp');
-  const downBtn = document.getElementById('zenBtnDown');
-  if (upBtn) upBtn.addEventListener('click', playPrev);
-  if (downBtn) downBtn.addEventListener('click', playNext);
-
-  // Left/Right buttons (already handled by prevBtn/nextBtn IDs)
-  const leftBtn = document.getElementById('zenBtnLeft');
-  const rightBtn = document.getElementById('zenBtnRight');
-  if (leftBtn) leftBtn.addEventListener('click', playPrev);
-  if (rightBtn) rightBtn.addEventListener('click', playNext);
-
-  // Shuffle toggle
-  const shuffleBtn = document.getElementById('zenBtnShuffle');
-  if (shuffleBtn) {
-    shuffleBtn.addEventListener('click', () => {
-      musicState.shuffleEnabled = !musicState.shuffleEnabled;
-      shuffleBtn.classList.toggle('active', musicState.shuffleEnabled);
-    });
-  }
-
-  // Repeat toggle
-  const repeatBtn = document.getElementById('zenBtnRepeat');
-  if (repeatBtn) {
-    repeatBtn.addEventListener('click', () => {
-      const modes = ['none', 'all', 'one'];
-      const currentIndex = modes.indexOf(musicState.repeatMode);
-      musicState.repeatMode = modes[(currentIndex + 1) % modes.length];
-
-      // Update button visual state
-      repeatBtn.classList.toggle('active', musicState.repeatMode !== 'none');
-      repeatBtn.setAttribute('aria-label', `Repeat: ${musicState.repeatMode}`);
-    });
-  }
-
-  // Back/Menu buttons (could show folder list - for now just no-op)
-  const backBtn = document.getElementById('zenBtnBack');
-  const menuBtn = document.getElementById('zenBtnMenu');
-  if (backBtn) backBtn.addEventListener('click', () => console.log('Back button clicked'));
-  if (menuBtn) menuBtn.addEventListener('click', () => console.log('Menu button clicked'));
-}
-
-/**
- * Mini Player Functions
+ * Mini Player Functions - Disabled (no playback functionality)
  */
 
-/**
- * Show mini player and populate with current track data
- */
 function showMiniPlayer() {
   const miniPlayer = document.getElementById('miniPlayer');
   if (!miniPlayer) return;
@@ -4492,7 +4142,6 @@ async function init() {
   setupVersionChangelog();
   setupWindowManagement(); // Initialize window dragging and management
   setupViewModeToggle(); // Setup view mode toggle for notes
-  setupMusicPlayer();
   initMenuBar();
   await loadPosts();
   await loadGoals();

@@ -64,12 +64,11 @@ Simply open `index.html` in a browser, or use any static file server. No build s
 - Celestial bodies (moons/planets) orbit at different speeds
 - Frame-limited to 30 FPS for performance
 
-**Music Player (app.js:1349-2087)**
-- YouTube iframe API integration
-- Folder tabs for categorizing music (Ambience, Music, Podcasts)
-- Parses `music.md` for track lists
-- Supports both video links and channel links
-- Auto-fetches metadata from YouTube oEmbed API
+**Music Player (app.js:2819+)**
+- Simple link list organized by folders
+- Links open in new tabs (no embedded playback)
+- Folder tabs for categorizing links (Ambience, Music, Podcasts)
+- Data loaded from `music.md` file
 
 ### Data Format
 
@@ -98,12 +97,14 @@ Tags can be placed anywhere in content using `#tagname` or `#parent/child` for n
 **music.md format:**
 ```markdown
 ## Music
-- [Title - Artist](https://youtube.com/watch?v=...)
+- [Title](https://youtube.com/watch?v=...)
 - https://youtube.com/watch?v=...
 
 ## Podcasts
 - [Channel Name](https://youtube.com/@handle)
 ```
+
+Links can be in markdown format `[Title](url)` or just bare URLs. Folders are defined by `##` headings.
 
 **goals.md format:**
 ```markdown
