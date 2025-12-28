@@ -1,7 +1,9 @@
 /**
  * Thought Trains Manifest (auto-generated)
  * Using object format with created dates from filesystem
+ * Run 'node build/build.js' to regenerate after adding new thought trains
  */
+
 export default [
   {
     "file": "black-holes-to-skydiving.md",

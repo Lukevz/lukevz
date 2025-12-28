@@ -16,20 +16,19 @@ This is a personal digital garden / portfolio website that simulates the Bear no
 
 **Start development server:**
 ```bash
-node dev.js
+node build/dev.js
 ```
 This starts a local server at http://localhost:3000, watches the `/posts`, `/sounds`, `/labs`, and `/thought-train` folders for changes, and auto-regenerates their corresponding manifest files when content is added/modified.
 
 **CRITICAL - Dev Server API Endpoints:**
-The dev server (`dev.js`) provides API proxy endpoints for the music player:
+The dev server (`build/dev.js`) provides API proxy endpoints for the music player:
 - `/api/youtube/playlist?id=PLAYLIST_ID` - Fetches YouTube playlist tracks (query parameter format)
-- Handled by `handleAPIProxy()` function (dev.js:223-305)
 - Requires `music-config.js` with YouTube API key configuration
-- Returns playlist items in format expected by `fetchPlaylistWithCache()` in app.js
+- Returns playlist items in format expected by `fetchPlaylistWithCache()` in js/app.js
 
 **Build manifests:**
 ```bash
-node build.js
+node build/build.js
 ```
 Scans folders and generates manifest files:
 - `posts.js` - Markdown files from `/posts` folder
@@ -38,45 +37,67 @@ Scans folders and generates manifest files:
 - `thought-trains.js` - Thought trains from `/thought-train` folder
 
 **Running the site:**
-Simply open `index.html` in a browser, or use any static file server. No build step required for core functionality. However, for the music player to fetch YouTube playlists in development, you must use `node dev.js` which provides the API proxy.
+Simply open `index.html` in a browser, or use any static file server. No build step required for core functionality. However, for the music player to fetch YouTube playlists in development, you must use `node build/dev.js` which provides the API proxy.
 
 ## Architecture
 
 ### File Structure
-- `index.html` - Main entry point, contains all views (tasks, notes, music)
-- `app.js` - Core application logic: note parsing, window management, UI controls, music player
-- `background.js` - Black hole particle simulation on canvas
-- `styles.css` - All styles including window system, Bear UI, Zen player theme, and animations
-- `dev.js` - Development server with API proxy for YouTube playlist fetching and file watching
-- `build.js` - Builds all manifest files (posts, sounds, labs, thought-trains)
-- **Auto-generated manifests:**
-  - `posts.js` - Markdown files from `/posts` folder
-  - `sounds.js` - Audio files from `/sounds` folder
-  - `labs.js` - Lab projects from `/labs` folder
-  - `thought-trains.js` - Thought trains from `/thought-train` folder
-- **Content directories:**
-  - `posts/` - Markdown notes with Bear-style hashtag tagging
-  - `sounds/` - Local audio files (m4a, mp3, wav, ogg, aac, flac, webm, qta)
-  - `labs/` - Lab project markdown files
-  - `thought-train/` - Thought train markdown files
-- **Configuration:**
-  - `music.md` - YouTube videos, playlists, and channels
-  - `music-config.js` - YouTube API key configuration (gitignored, required for dev)
-  - `goals.md` - Task list with checkboxes
-- **API:**
-  - `api/youtube/playlist.js` - Vercel serverless function for YouTube playlist API (production)
+```
+/
+├── index.html              - Main entry point, contains all views
+├── styles.css              - All styles (window system, Bear UI, Zen player)
+├── background.js           - Black hole particle simulation
+├── cursor-trail.js         - Mouse cursor trail effect
+├── /js/                    - Modular JavaScript (ES6 modules)
+│   ├── app.js              - Main application orchestration
+│   ├── /config/            - Configuration modules
+│   │   ├── icons.js        - SVG icon definitions (tags, music folders, weather)
+│   │   ├── constants.js    - App constants (folders, hidden tags, keys)
+│   │   └── state.js        - Centralized state initialization
+│   ├── /utils/             - Utility functions
+│   │   ├── dom.js          - DOM utilities (formatDate, filenameToSlug)
+│   │   ├── storage.js      - LocalStorage helpers
+│   │   ├── yaml.js         - Shared YAML frontmatter parser
+│   │   └── markdown.js     - Markdown to HTML parser (12KB)
+│   ├── /parsers/           - Content parsers
+│   │   ├── post-parser.js  - Bear-style post parsing
+│   │   ├── train-parser.js - Thought train parsing
+│   │   └── lab-parser.js   - Lab project parsing
+│   └── /build/             - Build utilities
+│       └── manifest-builder.js - Shared manifest generation
+├── /build/                 - Build scripts
+│   ├── build.js            - Generate all manifests
+│   └── dev.js              - Dev server with file watching & API proxy
+├── /posts/                 - Markdown notes
+├── /thought-train/         - Thought train markdown files
+├── /labs/                  - Lab project markdown files
+├── /sounds/                - Local audio files
+└── /api/                   - Vercel serverless functions (production)
+```
+
+**Auto-generated manifests:**
+- `posts.js` - Markdown files from `/posts` folder
+- `sounds.js` - Audio files from `/sounds` folder
+- `labs.js` - Lab projects from `/labs` folder
+- `thought-trains.js` - Thought trains from `/thought-train` folder
+
+**Configuration files:**
+- `music.md` - YouTube videos, playlists, and channels
+- `music-config.js` - YouTube API key configuration (gitignored, required for dev)
+- `goals.md` - Task list with checkboxes
 
 ### Key Systems
 
-**Window Management (app.js:36-362)**
-- Multi-window system with dragging, resizing, and z-index stacking
-- Desktop: supports multiple open windows
-- Mobile: single-window mode (auto-closes others)
-- All windows use `.view` class with `.active` state
-- Resize handles on corners only (`.resize-handle`)
+**Modular Architecture:**
+The codebase uses ES6 modules for clean separation of concerns:
+- **Configuration** (`/js/config/`) - Icons, constants, and state initialization
+- **Utilities** (`/js/utils/`) - Shared helper functions (DOM, storage, YAML, markdown parsing)
+- **Parsers** (`/js/parsers/`) - Content parsing logic (posts, thought trains, labs)
+- **Build** (`/js/build/`) - Manifest generation utilities
+- **Main App** (`js/app.js`) - Application orchestration and UI logic
 
-**Bear-Style Note Browser (app.js:599-893)**
-- Uses `parsePost()` to extract frontmatter, hashtags, and content from markdown
+**Bear-Style Note Browser:**
+- Uses `parsePost()` from `js/parsers/post-parser.js` to extract frontmatter, hashtags, and content from markdown
 - Supports nested tags (e.g., `#business/career`)
 - Tag hierarchy rendered as collapsible tree
 - Posts manifest at `posts.js` includes creation dates from filesystem
