@@ -2968,7 +2968,7 @@ ul {
     padding: var(--space-md);
     background: var(--bg-primary);
     border-top: 1px solid var(--border);
-    width: 100%;
+    width: 100vw;
   }
 
   .music-view .zen-playlist .playlist-item {
