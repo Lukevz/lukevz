@@ -2316,8 +2316,8 @@ ul {
 /* Zen Layout - Side by Side */
 .zen-layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: var(--space-xl);
+  grid-template-columns: 320px 380px;
+  gap: 0;
   max-width: 1200px;
   margin: 0 auto;
   align-items: start;
@@ -2395,7 +2395,8 @@ ul {
 }
 
 .zen-folder-name {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   text-transform: capitalize;
   letter-spacing: 0.05em;
 }
@@ -2438,11 +2439,7 @@ ul {
   background: linear-gradient(145deg, #2a2a2c 0%, #1a1a1c 50%, #0d0d0e 100%);
   border-radius: 0;
   padding: 24px;
-  box-shadow:
-    0 2px 4px rgba(0,0,0,0.3),
-    0 8px 16px rgba(0,0,0,0.4),
-    0 16px 32px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.05);
+  box-shadow: none;
   position: relative;
 }
 
@@ -2568,7 +2565,7 @@ ul {
 }
 
 .zen-progress-bar {
-  height: 6px;
+  height: 10px;
   background: rgba(0,0,0,0.4);
   border: 1px solid rgba(0,0,0,0.3);
   border-radius: 0;
@@ -2580,10 +2577,10 @@ ul {
   height: 100%;
   background: repeating-linear-gradient(
     90deg,
-    var(--zen-accent) 0px,
-    var(--zen-accent) 3px,
-    var(--zen-accent-dim) 3px,
-    var(--zen-accent-dim) 6px
+    #9CA3AF 0px,
+    #9CA3AF 3px,
+    #6B7280 3px,
+    #6B7280 6px
   );
   width: 0%;
   transition: width 0.15s linear;
@@ -2868,10 +2865,13 @@ ul {
     padding-left: 0;
     padding-right: 0;
     padding-top: calc(52px + env(safe-area-inset-top));
+    padding-bottom: env(safe-area-inset-bottom);
     overflow: hidden;
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
   }
 
   .music-view .zen-layout {
@@ -2882,6 +2882,7 @@ ul {
     padding: 0;
     max-width: none;
     min-height: 0;
+    overflow: hidden;
   }
 
   /* Sidebar contains folders and playlist - reorder children */
@@ -2893,11 +2894,12 @@ ul {
     display: none;
   }
 
-  /* Folder tabs - 2x2 grid at top */
+  /* Folder tabs - single row with icons only */
   .music-view .zen-folder-list {
     order: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
     gap: var(--space-sm);
     padding: var(--space-md);
     background: var(--bg-primary);
@@ -2907,14 +2909,34 @@ ul {
 
   .music-view .zen-folder-item {
     min-height: var(--touch-target-min);
-    padding: var(--space-sm) var(--space-md);
+    flex: 1;
+    padding: var(--space-xs);
     border: 1px solid var(--border);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--bg-secondary);
-    width: 100%;
+  }
+
+  /* Hide folder name and count on mobile/tablet */
+  .music-view .zen-folder-item .zen-folder-name,
+  .music-view .zen-folder-item .zen-folder-count {
+    display: none;
+  }
+
+  /* Make icon larger since it's the only visible element */
+  .music-view .zen-folder-item .zen-folder-icon {
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .music-view .zen-folder-item .zen-folder-icon svg {
+    width: 24px;
+    height: 24px;
+    display: block;
   }
 
   .music-view .zen-folder-item.active {
@@ -2923,27 +2945,30 @@ ul {
     color: var(--text-on-accent);
   }
 
-  /* Player - below folders */
-  .music-view .zen-device-container {
+  /* Playlist - fill remaining space */
+  .music-view .zen-playlist,
+  .music-view .zen-playlist:empty {
     order: 2;
-    position: relative;
-    padding: var(--space-md);
-    padding-bottom: var(--space-md);
-    background: var(--bg-primary);
-    border-bottom: 1px solid var(--border);
-    width: 100vw;
-  }
-
-  /* Playlist - scrollable at bottom */
-  .music-view .zen-playlist {
-    order: 3;
-    flex: 1;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding: var(--space-md);
     display: block !important;
-    min-height: 250px;
-    width: 100vw;
+    width: 100%;
+    background: var(--bg-primary);
+  }
+
+  /* Player - fixed at bottom */
+  .music-view .zen-device-container {
+    order: 3;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    position: relative;
+    padding: var(--space-md);
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border);
+    width: 100%;
   }
 
   .music-view .zen-playlist .playlist-item {
@@ -3180,7 +3205,7 @@ ul {
 
 /* Progress Bar - Pixel Blocks */
 .music-view .progress-bar {
-  height: 8px;
+  height: 12px;
   background: linear-gradient(180deg,
     rgba(0,0,0,0.6) 0%,
     rgba(0,0,0,0.3) 100%
@@ -5197,4 +5222,5 @@ ul {
     filter: none;
   }
 }
+
 

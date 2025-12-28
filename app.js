@@ -305,7 +305,7 @@ const musicFolderIcons = {
   Sounds: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="2" y="5" width="2" height="8" rx="1" fill="currentColor"/><rect x="6" y="3" width="2" height="12" rx="1" fill="currentColor"/><rect x="10" y="7" width="2" height="6" rx="1" fill="currentColor"/><rect x="14" y="9" width="2" height="2" rx="1" fill="currentColor"/></svg>'
 };
 
-const defaultMusicFolders = ['Ambience', 'Music', 'Podcasts', 'Sounds'];
+const defaultMusicFolders = ['Music', 'Podcasts', 'Ambience', 'Sounds'];
 
 /**
  * Lightweight Markdown Parser
@@ -3283,13 +3283,15 @@ function renderPlaylist() {
     }
 
     // Regular video - clickable to play
-    const thumbHtml = track.thumbnail
+    // Hide thumbnails for Sounds folder tracks
+    const showThumb = track.folder !== 'Sounds';
+    const thumbHtml = showThumb && track.thumbnail
       ? `<img src="${track.thumbnail}" alt="${track.title}" loading="lazy">`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
 
     return `
       <div class="playlist-item${isActive ? ' active playing' : ''}" data-index="${index}">
-        <div class="playlist-thumb">${thumbHtml}</div>
+        ${showThumb ? `<div class="playlist-thumb">${thumbHtml}</div>` : ''}
         <div class="playlist-info">
           <div class="playlist-title">${track.title}</div>
           <div class="playlist-artist">${track.artist}</div>
@@ -3327,8 +3329,194 @@ function playTrack(index) {
     item.classList.toggle('playing', i === index);
   });
 
-  if (track.videoId) {
+  if (track.isLocalAudio && track.audioUrl) {
+    // Play local audio file
+    ensureAudioPlayer(track.audioUrl);
+  } else if (track.videoId) {
+    // Play YouTube video
     ensureYouTubePlayer(track.videoId);
+  }
+}
+
+/**
+ * Play local audio file
+ */
+function ensureAudioPlayer(audioUrl) {
+  const artworkContainer = document.getElementById('artworkContainer');
+  if (artworkContainer) {
+    artworkContainer.classList.remove('is-video');
+    // Show large Sounds icon with hidden audio player
+    artworkContainer.innerHTML = `
+      <div class="artwork-placeholder" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" style="width: 120px; height: 120px; opacity: 0.3;">
+          <rect x="2" y="5" width="2" height="8" rx="1" fill="currentColor"/>
+          <rect x="6" y="3" width="2" height="12" rx="1" fill="currentColor"/>
+          <rect x="10" y="7" width="2" height="6" rx="1" fill="currentColor"/>
+          <rect x="14" y="9" width="2" height="2" rx="1" fill="currentColor"/>
+        </svg>
+      </div>
+      <audio id="audioPlayer" src="${audioUrl}" autoplay style="display: none;"></audio>
+    `;
+
+    // Store audio element reference and update play/pause button state
+    const audioElement = artworkContainer.querySelector('#audioPlayer');
+    if (audioElement) {
+      musicState.audioPlayer = audioElement;
+
+      // Update button state when audio starts playing
+      audioElement.addEventListener('play', () => {
+        musicState.isPlaying = true;
+        updatePlayPauseButton();
+      });
+
+      audioElement.addEventListener('pause', () => {
+        musicState.isPlaying = false;
+        updatePlayPauseButton();
+      });
+
+      audioElement.addEventListener('ended', () => {
+        musicState.isPlaying = false;
+        updatePlayPauseButton();
+        // Auto-play next track
+        playNext();
+      });
+
+      // Update progress bar as audio plays
+      audioElement.addEventListener('timeupdate', () => {
+        updateProgressBar(audioElement.currentTime, audioElement.duration);
+      });
+
+      // Update progress when metadata loads
+      audioElement.addEventListener('loadedmetadata', () => {
+        updateProgressBar(0, audioElement.duration);
+      });
+    }
+  }
+
+  // Stop YouTube player if active
+  if (musicState.player) {
+    musicState.player.pauseVideo();
+  }
+}
+
+/**
+ * Update progress bar with current playback time
+ */
+function updateProgressBar(currentTime, duration) {
+  const progressFill = document.querySelector('.zen-progress-fill');
+  const currentTimeEl = document.getElementById('currentTime');
+  const totalTimeEl = document.getElementById('duration');
+
+  if (!progressFill || !currentTimeEl || !totalTimeEl) return;
+
+  // Handle invalid values
+  if (!duration || isNaN(duration) || !isFinite(duration)) {
+    progressFill.style.width = '0%';
+    currentTimeEl.textContent = '0:00';
+    totalTimeEl.textContent = '0:00';
+    return;
+  }
+
+  // Calculate and update progress
+  const progress = (currentTime / duration) * 100;
+  progressFill.style.width = `${Math.min(progress, 100)}%`;
+
+  // Format and update time displays
+  currentTimeEl.textContent = formatTime(currentTime || 0);
+  totalTimeEl.textContent = formatTime(duration);
+}
+
+/**
+ * Format seconds to MM:SS
+ */
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00';
+
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Update play/pause button icon based on playing state
+ */
+function updatePlayPauseButton() {
+  const playBtn = document.getElementById('playBtn');
+  if (!playBtn) return;
+
+  const iconPlay = playBtn.querySelector('.icon-play');
+  const iconPause = playBtn.querySelector('.icon-pause');
+
+  if (musicState.isPlaying) {
+    iconPlay?.classList.add('hidden');
+    iconPause?.classList.remove('hidden');
+  } else {
+    iconPlay?.classList.remove('hidden');
+    iconPause?.classList.add('hidden');
+  }
+}
+
+/**
+ * Toggle play/pause for current track
+ */
+function togglePlayPause() {
+  // Handle local audio player
+  if (musicState.audioPlayer) {
+    if (musicState.isPlaying) {
+      musicState.audioPlayer.pause();
+    } else {
+      musicState.audioPlayer.play();
+    }
+    return;
+  }
+
+  // Handle YouTube player
+  if (musicState.player) {
+    if (musicState.isPlaying) {
+      musicState.player.pauseVideo();
+      musicState.isPlaying = false;
+    } else {
+      musicState.player.playVideo();
+      musicState.isPlaying = true;
+    }
+    updatePlayPauseButton();
+  }
+}
+
+/**
+ * Setup music player controls
+ */
+function setupMusicControls() {
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.addEventListener('click', togglePlayPause);
+  }
+
+  // Previous/Next buttons
+  const prevBtn = document.getElementById('zenBtnLeft');
+  const nextBtn = document.getElementById('zenBtnRight');
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      const prevIndex = musicState.currentIndex - 1;
+      if (prevIndex >= 0) {
+        playTrack(prevIndex);
+      }
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', playNext);
+  }
+}
+
+/**
+ * Play next track in playlist
+ */
+function playNext() {
+  const nextIndex = musicState.currentIndex + 1;
+  if (nextIndex < musicState.tracks.length) {
+    playTrack(nextIndex);
   }
 }
 
@@ -3568,10 +3756,19 @@ async function initBackgroundImage() {
 
 /**
  * Show system alert after a delay
+ * Only shows once per session (won't show again until browser tab is closed)
  */
 function showSystemAlert() {
   const alert = document.getElementById('systemAlert');
   if (!alert) return;
+
+  // Check if alert has already been shown this session
+  if (sessionStorage.getItem('welcomeAlertShown') === 'true') {
+    return;
+  }
+
+  // Mark as shown for this session
+  sessionStorage.setItem('welcomeAlertShown', 'true');
 
   // Show alert after 2 seconds
   setTimeout(() => {
@@ -4158,6 +4355,7 @@ async function init() {
   await loadPosts();
   await loadGoals();
   await loadMusic();
+  setupMusicControls(); // Setup music player controls
   await loadThoughtTrains();
   setupThoughtTrainInteractions();
   await loadLabs();

@@ -36,7 +36,8 @@ const mimeTypes = {
   '.ogg': 'audio/ogg',
   '.aac': 'audio/aac',
   '.flac': 'audio/flac',
-  '.webm': 'audio/webm'
+  '.webm': 'audio/webm',
+  '.qta': 'audio/quicktime'
 };
 
 // Build posts.js
@@ -120,7 +121,7 @@ function buildSounds() {
   if (!existsSync(soundsDir)) return;
 
   // Common audio formats
-  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm'];
+  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.qta'];
   const files = readdirSync(soundsDir)
     .filter(file => audioExtensions.some(ext => file.toLowerCase().endsWith(ext)))
     .sort();
@@ -181,7 +182,7 @@ if (existsSync(labsDir)) {
 // Watch for changes in sounds
 if (existsSync(soundsDir)) {
   console.log(`\x1b[90m◉ Watching /sounds for changes...\x1b[0m`);
-  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm'];
+  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.qta'];
   watch(soundsDir, { recursive: true }, (eventType, filename) => {
     if (filename && audioExtensions.some(ext => filename.toLowerCase().endsWith(ext))) {
       console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
@@ -218,8 +219,8 @@ async function loadMusicConfig() {
   return musicConfigPromise;
 }
 
-// Spotify API proxy endpoints
-async function handleSpotifyProxy(req, res) {
+// API proxy endpoints (Spotify + YouTube)
+async function handleAPIProxy(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
 
@@ -235,6 +236,72 @@ async function handleSpotifyProxy(req, res) {
     res.writeHead(200, corsHeaders);
     res.end();
     return true;
+  }
+
+  // YouTube playlist endpoint (query parameter format)
+  if (path === '/api/youtube/playlist' && req.method === 'GET') {
+    const playlistId = url.searchParams.get('id');
+
+    if (!playlistId) {
+      res.writeHead(400, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Query parameter "id" is required' }));
+      return true;
+    }
+
+    const config = await loadMusicConfig();
+    if (!config || !config.youtube || !config.youtube.apiKey) {
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'YouTube API key not configured' }));
+      return true;
+    }
+
+    try {
+      // Fetch all playlist items with pagination
+      let allItems = [];
+      let nextPageToken = null;
+      const maxResultsPerPage = 50;
+
+      do {
+        let playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?` +
+          `part=snippet,contentDetails&maxResults=${maxResultsPerPage}&playlistId=${playlistId}&key=${config.youtube.apiKey}`;
+
+        if (nextPageToken) {
+          playlistUrl += `&pageToken=${nextPageToken}`;
+        }
+
+        const response = await fetch(playlistUrl);
+        const data = await response.json();
+
+        if (!response.ok) {
+          res.writeHead(response.status, { ...corsHeaders, 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(data));
+          return true;
+        }
+
+        if (data.items) {
+          allItems = allItems.concat(data.items);
+        }
+
+        nextPageToken = data.nextPageToken;
+      } while (nextPageToken);
+
+      // Return in format expected by app.js
+      const result = {
+        items: allItems,
+        pageInfo: {
+          totalResults: allItems.length,
+          resultsPerPage: allItems.length
+        }
+      };
+
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+      return true;
+    } catch (error) {
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+      return true;
+    }
   }
 
   // Spotify token endpoint
@@ -526,7 +593,7 @@ async function handleSpotifyProxy(req, res) {
 // Simple static server
 const server = createServer(async (req, res) => {
   // Handle API proxy endpoints first
-  const handled = await handleSpotifyProxy(req, res);
+  const handled = await handleAPIProxy(req, res);
   if (handled) return;
 
   const decodedUrl = decodeURIComponent(req.url);

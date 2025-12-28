@@ -103,7 +103,7 @@ export default ${JSON.stringify(labs, null, 2)};
 // Get all audio files from sounds directory (if folder exists)
 if (existsSync(soundsDir)) {
   // Common audio formats
-  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm'];
+  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.qta'];
   const soundsFiles = readdirSync(soundsDir)
     .filter(file => audioExtensions.some(ext => file.toLowerCase().endsWith(ext)))
     .sort();
