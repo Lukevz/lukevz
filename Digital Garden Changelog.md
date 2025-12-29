@@ -1,4 +1,7 @@
 # Digital Garden Changelog
+V1.4.0 – Added Gallery and Planetary Guestbook
+- New gallery page of photo albums to browse trips, memories, and other captured moments
+
 V1.3.0 – Light mode, Zen mp3 player, and Labs Page
 - Added light theme for content
 - Styled mp3 player to look like my first mp3 player, the Zen Mosaic

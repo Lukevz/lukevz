@@ -1947,7 +1947,7 @@ function renderChangelog(versions) {
  */
 async function loadChangelog() {
   try {
-    const response = await fetch('Changelog.md');
+    const response = await fetch('Digital Garden Changelog.md');
     if (!response.ok) throw new Error('Failed to load changelog');
     
     const content = await response.text();
