@@ -12,7 +12,8 @@
 import { kv } from '@vercel/kv';
 
 const ITEMS_PER_PAGE = 100;
-const STARS_KEY = 'guestbook:stars';
+const STARS_SET_KEY = 'guestbook:stars:set'; // Sorted set for ordering
+const STAR_KEY_PREFIX = 'guestbook:star:'; // Individual star data
 
 export default async function handler(req, res) {
   // Set CORS headers for all responses
@@ -26,30 +27,57 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Check if KV is properly configured
+  if (!kv) {
+    console.error('Vercel KV is not configured');
+    res.status(500).json({
+      error: 'Storage not configured',
+      detail: 'Vercel KV database is not set up. Please configure it in the Vercel dashboard.'
+    });
+    return;
+  }
+
   // GET - Fetch stars with pagination
   if (req.method === 'GET') {
     try {
       const page = parseInt(req.query.page || '1');
 
-      // Fetch all stars from KV storage
-      const allStars = await kv.get(STARS_KEY) || [];
+      // Get total count and IDs from sorted set (sorted by timestamp, newest first)
+      const totalStars = await kv.zcard(STARS_SET_KEY) || 0;
 
-      // Sort by newest first
-      const sortedStars = allStars.sort((a, b) =>
-        new Date(b.createdAt) - new Date(a.createdAt)
-      );
+      if (totalStars === 0) {
+        res.status(200).json({
+          stars: [],
+          page: 1,
+          totalPages: 0,
+          totalStars: 0
+        });
+        return;
+      }
 
-      // Paginate
-      const totalPages = Math.ceil(sortedStars.length / ITEMS_PER_PAGE);
+      // Calculate pagination
+      const totalPages = Math.ceil(totalStars / ITEMS_PER_PAGE);
       const startIndex = (page - 1) * ITEMS_PER_PAGE;
-      const endIndex = startIndex + ITEMS_PER_PAGE;
-      const stars = sortedStars.slice(startIndex, endIndex);
+
+      // Fetch star IDs from sorted set (reverse order for newest first)
+      const starIds = await kv.zrange(STARS_SET_KEY, startIndex, startIndex + ITEMS_PER_PAGE - 1, {
+        rev: true
+      });
+
+      // Fetch individual star data
+      const stars = [];
+      for (const starId of starIds) {
+        const star = await kv.get(`${STAR_KEY_PREFIX}${starId}`);
+        if (star) {
+          stars.push(star);
+        }
+      }
 
       res.status(200).json({
         stars,
         page,
         totalPages,
-        totalStars: sortedStars.length
+        totalStars
       });
     } catch (error) {
       console.error('Error fetching stars:', error);
@@ -78,7 +106,7 @@ export default async function handler(req, res) {
         return;
       }
 
-      // Size limit check (2MB)
+      // Size limit check (2MB per star)
       const sizeInBytes = (imageData.length * 3) / 4;
       if (sizeInBytes > 2 * 1024 * 1024) {
         console.error('Image too large:', sizeInBytes);
@@ -86,9 +114,12 @@ export default async function handler(req, res) {
         return;
       }
 
-      // Create star object
+      // Create star ID and object
+      const timestamp = Date.now();
+      const starId = timestamp.toString();
+
       const star = {
-        id: Date.now().toString(),
+        id: starId,
         imageData,
         width: width || 800,
         height: height || 600,
@@ -96,19 +127,17 @@ export default async function handler(req, res) {
         userAgent: req.headers['user-agent'] || 'unknown'
       };
 
-      // Fetch existing stars and append
-      console.log('Fetching existing stars from KV...');
-      const allStars = await kv.get(STARS_KEY) || [];
-      console.log('Current stars count:', allStars.length);
+      console.log('Saving star to KV...', { id: starId, size: sizeInBytes });
 
-      allStars.push(star);
+      // Store star data individually
+      await kv.set(`${STAR_KEY_PREFIX}${starId}`, star);
 
-      // Save back to KV
-      console.log('Saving to KV...');
-      await kv.set(STARS_KEY, allStars);
-      console.log('Star saved successfully:', star.id);
+      // Add to sorted set (score = timestamp for chronological ordering)
+      await kv.zadd(STARS_SET_KEY, { score: timestamp, member: starId });
 
-      res.status(201).json({ success: true, id: star.id });
+      console.log('Star saved successfully:', starId);
+
+      res.status(201).json({ success: true, id: starId });
     } catch (error) {
       console.error('Error saving star:', error);
       console.error('Error details:', {
