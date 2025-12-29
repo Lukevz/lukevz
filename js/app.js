@@ -934,31 +934,14 @@ function initGuestbookCanvas() {
 }
 
 /**
- * Fill canvas with dark starfield background
+ * Clear canvas background (transparent)
  */
 function fillCanvasBackground(ctx, canvas) {
   const width = 800;
   const height = 600;
 
-  // Dark space gradient
-  const gradient = ctx.createRadialGradient(
-    width / 2, height / 2, 0,
-    width / 2, height / 2, width / 1.5
-  );
-  gradient.addColorStop(0, '#0d0d1a');
-  gradient.addColorStop(1, '#000000');
-
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-
-  // Add subtle background stars
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-  for (let i = 0; i < 50; i++) {
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    const size = Math.random() * 2;
-    ctx.fillRect(x, y, size, size);
-  }
+  // Clear to transparent
+  ctx.clearRect(0, 0, width, height);
 }
 
 /**

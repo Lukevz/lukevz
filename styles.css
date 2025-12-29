@@ -5646,45 +5646,43 @@ ul {
 /* Header with Mode Toggle */
 .guestbook-header {
   display: flex;
-  gap: 8px;
-  padding: 16px 32px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  justify-content: center;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--border);
 }
 
 .guestbook-mode-btn {
-  flex: 0 1 auto;
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.2s ease;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 0px;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  border: none;
+  background: transparent;
+  cursor: var(--cursor-pointer);
   font-family: inherit;
-  border-radius: 4px;
   white-space: nowrap;
 }
 
 .guestbook-mode-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
 .guestbook-mode-btn:hover {
-  background: var(--hover-bg);
-  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .guestbook-mode-btn.active {
-  background: var(--accent);
-  color: var(--bg-primary);
-  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--bg-active);
 }
 
 /* Drawing Panel */
@@ -5849,7 +5847,7 @@ ul {
 
 .guestbook-star-card {
   aspect-ratio: 4 / 3;
-  background: var(--bg-secondary);
+  background: transparent;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   overflow: hidden;
@@ -5865,17 +5863,6 @@ ul {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #0a0a0a;
-  background-image:
-    radial-gradient(2px 2px at 20% 30%, white, transparent),
-    radial-gradient(2px 2px at 60% 70%, white, transparent),
-    radial-gradient(1px 1px at 50% 50%, white, transparent),
-    radial-gradient(1px 1px at 80% 10%, white, transparent),
-    radial-gradient(2px 2px at 90% 60%, white, transparent),
-    radial-gradient(1px 1px at 33% 80%, white, transparent),
-    radial-gradient(1px 1px at 15% 90%, white, transparent);
-  background-size: 200% 200%;
-  background-position: 0% 0%;
 }
 
 .guestbook-pagination {
@@ -5885,7 +5872,6 @@ ul {
   gap: 24px;
   padding: 24px 32px;
   border-top: 1px solid var(--border-color);
-  background: var(--bg-primary);
 }
 
 .pagination-btn {
@@ -5908,7 +5894,6 @@ ul {
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: var(--hover-bg);
   border-color: var(--accent);
 }
 
@@ -5925,17 +5910,7 @@ ul {
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .guestbook-header {
-    padding: 16px;
-    gap: 6px;
-  }
-
-  .guestbook-mode-btn {
-    padding: 10px 12px;
-    font-size: 0.875rem;
-  }
-
-  .guestbook-mode-btn span {
-    display: none;
+    padding: var(--space-sm);
   }
 
   .guestbook-draw-panel {
