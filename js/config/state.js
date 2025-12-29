@@ -22,7 +22,20 @@ export const state = {
   trainTags: new Map(),         // Tag → count mapping
   currentTrainTag: 'all',       // Active tag filter
   isTrainExpanded: false,       // Track if detail view is open
-  labs: []                      // Array of parsed lab objects
+  labs: [],                     // Array of parsed lab objects
+  gallery: {
+    albums: [],                 // All albums
+    activeAlbum: null,          // Currently expanded album
+    lightboxIndex: -1           // Current photo in lightbox (-1 = closed)
+  },
+  guestbook: {
+    stars: [],                  // Current page stars
+    currentPage: 1,             // Current page (1-indexed)
+    totalPages: 1,              // Total pages
+    itemsPerPage: 100,          // Stars per page
+    drawingCanvas: null,        // Canvas element reference
+    viewMode: 'draw'            // 'draw' | 'gallery'
+  }
 };
 
 // Music player state

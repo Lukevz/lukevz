@@ -7,7 +7,7 @@
 import { writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest } from '../js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -16,6 +16,7 @@ const postsDir = join(rootDir, 'posts');
 const thoughtTrainDir = join(rootDir, 'thought-train');
 const labsDir = join(rootDir, 'labs');
 const soundsDir = join(rootDir, 'sounds');
+const galleryDir = join(rootDir, 'gallery');
 
 // Build posts manifest
 const posts = buildPostsManifest(postsDir);
@@ -70,4 +71,19 @@ export default ${JSON.stringify(sounds, null, 2)};
 `;
   writeFileSync(join(rootDir, 'sounds.js'), soundsContent);
   console.log(`✓ Generated sounds.js with ${sounds.length} sounds`);
+}
+
+// Build gallery manifest (if directory exists)
+if (existsSync(galleryDir)) {
+  const gallery = buildGalleryManifest(galleryDir);
+  const galleryContent = `/**
+ * Gallery Manifest (auto-generated)
+ * Lists all photo albums in the gallery/ directory
+ * Run 'node build/build.js' to regenerate after adding new albums
+ */
+
+export default ${JSON.stringify(gallery, null, 2)};
+`;
+  writeFileSync(join(rootDir, 'gallery.js'), galleryContent);
+  console.log(`✓ Generated gallery.js with ${gallery.length} albums`);
 }

@@ -80,3 +80,55 @@ export function buildSoundsManifest(soundsDir) {
     return { file, created };
   });
 }
+
+/**
+ * Build gallery manifest from album folders
+ * @param {string} galleryDir - Path to gallery directory
+ * @returns {Array} Array of {folder, images, created} objects
+ */
+export function buildGalleryManifest(galleryDir) {
+  // Common image formats
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic'];
+
+  // Get all subdirectories (each is an album)
+  const folders = readdirSync(galleryDir, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name)
+    .sort();
+
+  return folders.map(folder => {
+    const folderPath = join(galleryDir, folder);
+
+    // Get all image files in this album folder
+    const imageFiles = readdirSync(folderPath)
+      .filter(file => imageExtensions.some(ext => file.toLowerCase().endsWith(ext)));
+
+    // Sort images: KEY prefix first, then alphabetically
+    const sortedImages = imageFiles.sort((a, b) => {
+      const aIsKey = a.toUpperCase().startsWith('KEY');
+      const bIsKey = b.toUpperCase().startsWith('KEY');
+
+      if (aIsKey && !bIsKey) return -1;
+      if (!aIsKey && bIsKey) return 1;
+      return a.localeCompare(b);
+    });
+
+    const images = sortedImages.map(file => `gallery/${folder}/${file}`);
+
+    // Get oldest file creation date as album date
+    let oldestDate = new Date();
+    readdirSync(folderPath).forEach(file => {
+      const filePath = join(folderPath, file);
+      const stats = statSync(filePath);
+      if (stats.birthtime < oldestDate) {
+        oldestDate = stats.birthtime;
+      }
+    });
+
+    return {
+      folder,
+      images,
+      created: oldestDate.toISOString().split('T')[0]
+    };
+  });
+}

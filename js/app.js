@@ -13,6 +13,7 @@ import { parseMarkdown } from './utils/markdown.js';
 import { parsePost } from './parsers/post-parser.js';
 import { parseThoughtTrain } from './parsers/train-parser.js';
 import { parseLab } from './parsers/lab-parser.js';
+import { parseAlbum } from './parsers/gallery-parser.js';
 
 // Import notes feature modules
 import { buildTagNav } from './features/notes/tag-nav.js';
@@ -288,7 +289,23 @@ function setupEventListeners() {
     const tagBtn = e.target.closest('.tag-item');
     if (tagBtn) {
       e.preventDefault();
-      state.currentTag = tagBtn.dataset.tag;
+      const tagPath = tagBtn.dataset.tag;
+      state.currentTag = tagPath;
+
+      // If this is a parent tag with children, auto-expand it
+      const tagRow = tagBtn.closest('.tag-item-row');
+      if (tagRow) {
+        const toggleBtn = tagRow.querySelector('.tag-toggle');
+        if (toggleBtn && !state.expandedTags.has(tagPath)) {
+          state.expandedTags.add(tagPath);
+          toggleBtn.classList.add('expanded');
+          const childList = toggleBtn.closest('.tag-tree-item').querySelector('.tag-children');
+          if (childList) {
+            childList.classList.remove('collapsed');
+          }
+        }
+      }
+
       renderPosts(state, elements.postsList, state.currentTag);
 
       // Update active states
@@ -668,6 +685,540 @@ function openLabsModal(filename) {
  */
 function closeLabsModal() {
   document.getElementById('labsModal').setAttribute('aria-hidden', 'true');
+}
+
+// ==========================================
+// Gallery Functions
+// ==========================================
+
+/**
+ * Load gallery albums
+ */
+async function loadGallery() {
+  try {
+    const { default: manifest } = await import('../gallery.js');
+
+    state.gallery.albums = manifest
+      .map(parseAlbum)
+      .sort((a, b) => new Date(b.created) - new Date(a.created));
+
+    renderGalleryGrid();
+  } catch (err) {
+    console.warn('Gallery manifest not found:', err);
+    state.gallery.albums = [];
+  }
+}
+
+/**
+ * Render gallery grid (polaroid stack cards)
+ */
+function renderGalleryGrid() {
+  const container = document.getElementById('galleryGrid');
+  if (!container) return;
+
+  if (state.gallery.albums.length === 0) {
+    container.innerHTML = '<div class="gallery-empty">No albums yet</div>';
+    return;
+  }
+
+  // Render album stacks (each shows up to 3 images stacked like polaroids)
+  // First image (KEY) should be on top with the caption
+  container.innerHTML = state.gallery.albums.map(album => {
+    const previewImages = album.images.slice(0, 3); // Top 3 images for stack
+    // Reverse so first image (KEY) is rendered last (on top)
+    const stackImages = [...previewImages].reverse();
+
+    return `
+      <div class="gallery-album-card" data-album-id="${album.id}">
+        <div class="polaroid-stack">
+          ${stackImages.map((img, i) => `
+            <div class="polaroid" style="--stack-index: ${i}">
+              <div class="polaroid-photo">
+                <img src="${img}" alt="${album.title}" loading="lazy">
+              </div>
+              ${i === stackImages.length - 1 ? `
+                <div class="polaroid-caption">
+                  <div class="polaroid-title">${album.title}</div>
+                  ${album.date ? `<div class="polaroid-date">${album.date}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Expand album (transition to grid view)
+ */
+function expandAlbum(albumId) {
+  const album = state.gallery.albums.find(a => a.id === albumId);
+  if (!album) return;
+
+  state.gallery.activeAlbum = album;
+
+  const container = document.getElementById('galleryExpanded');
+  const title = document.getElementById('galleryExpandedTitle');
+  const subtitle = document.getElementById('galleryExpandedSubtitle');
+  const grid = document.getElementById('galleryExpandedGrid');
+
+  title.textContent = album.title;
+  subtitle.textContent = album.date;
+
+  // Render photo grid with random slight rotations
+  grid.innerHTML = album.images.map((img, i) => {
+    const rotation = (Math.random() - 0.5) * 6; // -3 to +3 degrees
+    return `
+      <div class="gallery-photo-card"
+           data-index="${i}"
+           style="transform: rotate(${rotation}deg)">
+        <div class="polaroid">
+          <div class="polaroid-photo">
+            <img src="${img}" alt="${album.title} photo ${i + 1}" loading="lazy">
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Show expanded view with transition
+  document.getElementById('galleryView').classList.add('album-expanded');
+  container.setAttribute('aria-hidden', 'false');
+}
+
+/**
+ * Collapse album (back to stack view)
+ */
+function collapseAlbum() {
+  state.gallery.activeAlbum = null;
+
+  document.getElementById('galleryView').classList.remove('album-expanded');
+  document.getElementById('galleryExpanded').setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Open lightbox
+ */
+function openLightbox(index) {
+  if (!state.gallery.activeAlbum) return;
+
+  state.gallery.lightboxIndex = index;
+  const img = state.gallery.activeAlbum.images[index];
+
+  const lightbox = document.getElementById('galleryLightbox');
+  const lightboxImg = document.getElementById('galleryLightboxImg');
+
+  lightboxImg.src = img;
+  lightbox.setAttribute('aria-hidden', 'false');
+}
+
+/**
+ * Close lightbox
+ */
+function closeLightbox() {
+  state.gallery.lightboxIndex = -1;
+  document.getElementById('galleryLightbox').setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Navigate lightbox (prev/next)
+ */
+function navigateLightbox(direction) {
+  if (!state.gallery.activeAlbum) return;
+
+  const newIndex = state.gallery.lightboxIndex + direction;
+  const maxIndex = state.gallery.activeAlbum.images.length - 1;
+
+  if (newIndex >= 0 && newIndex <= maxIndex) {
+    openLightbox(newIndex);
+  }
+}
+
+/**
+ * Setup gallery interactions
+ */
+function setupGalleryInteractions() {
+  // Album card clicks
+  const grid = document.getElementById('galleryGrid');
+  grid?.addEventListener('click', (e) => {
+    const card = e.target.closest('.gallery-album-card');
+    if (card) {
+      expandAlbum(card.dataset.albumId);
+    }
+  });
+
+  // Photo clicks (open lightbox)
+  const expandedGrid = document.getElementById('galleryExpandedGrid');
+  expandedGrid?.addEventListener('click', (e) => {
+    const photoCard = e.target.closest('.gallery-photo-card');
+    if (photoCard) {
+      openLightbox(parseInt(photoCard.dataset.index));
+    }
+  });
+
+  // Back button
+  document.getElementById('galleryBackBtn')?.addEventListener('click', collapseAlbum);
+
+  // Lightbox controls
+  document.getElementById('galleryLightboxClose')?.addEventListener('click', closeLightbox);
+  document.getElementById('galleryLightboxPrev')?.addEventListener('click', () => navigateLightbox(-1));
+  document.getElementById('galleryLightboxNext')?.addEventListener('click', () => navigateLightbox(1));
+
+  // Lightbox overlay click to close
+  document.getElementById('galleryLightbox')?.querySelector('.gallery-lightbox-overlay')?.addEventListener('click', closeLightbox);
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const lightbox = document.getElementById('galleryLightbox');
+    if (lightbox?.getAttribute('aria-hidden') === 'false') {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') navigateLightbox(-1);
+      if (e.key === 'ArrowRight') navigateLightbox(1);
+    }
+  });
+}
+
+// ==========================================
+// Guestbook Functions
+// ==========================================
+
+/**
+ * Canvas drawing state
+ */
+const guestbookDrawing = {
+  isDrawing: false,
+  lastX: 0,
+  lastY: 0,
+  currentColor: '#ffffff',
+  lineWidth: 3
+};
+
+/**
+ * Initialize guestbook canvas
+ */
+function initGuestbookCanvas() {
+  const canvas = document.getElementById('guestbookCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+
+  // Set canvas size (retina support)
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 800 * dpr;
+  canvas.height = 600 * dpr;
+  ctx.scale(dpr, dpr);
+
+  // Dark space background with stars
+  fillCanvasBackground(ctx, canvas);
+
+  state.guestbook.drawingCanvas = canvas;
+
+  // Mouse events
+  canvas.addEventListener('mousedown', startDrawing);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDrawing);
+  canvas.addEventListener('mouseout', stopDrawing);
+
+  // Touch events for mobile
+  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+  canvas.addEventListener('touchend', stopDrawing);
+}
+
+/**
+ * Fill canvas with dark starfield background
+ */
+function fillCanvasBackground(ctx, canvas) {
+  const width = 800;
+  const height = 600;
+
+  // Dark space gradient
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, 0,
+    width / 2, height / 2, width / 1.5
+  );
+  gradient.addColorStop(0, '#0d0d1a');
+  gradient.addColorStop(1, '#000000');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Add subtle background stars
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  for (let i = 0; i < 50; i++) {
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const size = Math.random() * 2;
+    ctx.fillRect(x, y, size, size);
+  }
+}
+
+/**
+ * Drawing functions
+ */
+function startDrawing(e) {
+  guestbookDrawing.isDrawing = true;
+  const canvas = state.guestbook.drawingCanvas;
+  const rect = canvas.getBoundingClientRect();
+  guestbookDrawing.lastX = e.clientX - rect.left;
+  guestbookDrawing.lastY = e.clientY - rect.top;
+}
+
+function draw(e) {
+  if (!guestbookDrawing.isDrawing) return;
+
+  const canvas = state.guestbook.drawingCanvas;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  ctx.beginPath();
+  ctx.moveTo(guestbookDrawing.lastX, guestbookDrawing.lastY);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = guestbookDrawing.currentColor;
+  ctx.lineWidth = guestbookDrawing.lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  guestbookDrawing.lastX = x;
+  guestbookDrawing.lastY = y;
+}
+
+function stopDrawing() {
+  guestbookDrawing.isDrawing = false;
+}
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const canvas = state.guestbook.drawingCanvas;
+  const rect = canvas.getBoundingClientRect();
+
+  guestbookDrawing.isDrawing = true;
+  guestbookDrawing.lastX = touch.clientX - rect.left;
+  guestbookDrawing.lastY = touch.clientY - rect.top;
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (!guestbookDrawing.isDrawing) return;
+
+  const touch = e.touches[0];
+  const canvas = state.guestbook.drawingCanvas;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+
+  ctx.beginPath();
+  ctx.moveTo(guestbookDrawing.lastX, guestbookDrawing.lastY);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = guestbookDrawing.currentColor;
+  ctx.lineWidth = guestbookDrawing.lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  guestbookDrawing.lastX = x;
+  guestbookDrawing.lastY = y;
+}
+
+/**
+ * Clear canvas
+ */
+function clearGuestbookCanvas() {
+  const canvas = state.guestbook.drawingCanvas;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  fillCanvasBackground(ctx, canvas);
+}
+
+/**
+ * Save drawing to API
+ */
+async function saveGuestbookDrawing() {
+  const canvas = state.guestbook.drawingCanvas;
+  if (!canvas) return;
+
+  const saveBtn = document.getElementById('saveDrawing');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span>Saving...</span>';
+  }
+
+  try {
+    // Convert canvas to base64 PNG
+    const imageData = canvas.toDataURL('image/png');
+
+    // Save to API
+    const response = await fetch('/api/guestbook/stars', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        imageData,
+        width: canvas.width,
+        height: canvas.height
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save star');
+    }
+
+    // Success! Clear canvas and switch to gallery view
+    clearGuestbookCanvas();
+    switchGuestbookMode('gallery');
+
+    // Reload gallery to show new star
+    await loadGuestbookStars(1);
+
+  } catch (err) {
+    console.error('Error saving star:', err);
+    alert('Failed to save your star. Please try again.');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg><span>Save to Gallery</span>';
+    }
+  }
+}
+
+/**
+ * Load stars from API
+ */
+async function loadGuestbookStars(page = 1) {
+  try {
+    const response = await fetch(`/api/guestbook/stars?page=${page}`);
+    if (!response.ok) throw new Error('Failed to load stars');
+
+    const data = await response.json();
+
+    state.guestbook.stars = data.stars || [];
+    state.guestbook.currentPage = data.page || 1;
+    state.guestbook.totalPages = data.totalPages || 1;
+
+    renderGuestbookGallery();
+
+  } catch (err) {
+    console.error('Error loading stars:', err);
+    state.guestbook.stars = [];
+    renderGuestbookGallery();
+  }
+}
+
+/**
+ * Render gallery grid
+ */
+function renderGuestbookGallery() {
+  const grid = document.getElementById('guestbookGalleryGrid');
+  if (!grid) return;
+
+  if (state.guestbook.stars.length === 0) {
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 64px;">No stars yet. Be the first to draw one!</div>';
+    return;
+  }
+
+  grid.innerHTML = state.guestbook.stars.map(star => `
+    <div class="guestbook-star-card">
+      <img src="${star.imageData}" alt="Star drawing from ${new Date(star.createdAt).toLocaleDateString()}" loading="lazy">
+    </div>
+  `).join('');
+
+  // Update pagination
+  updateGuestbookPagination();
+}
+
+/**
+ * Update pagination controls
+ */
+function updateGuestbookPagination() {
+  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+
+  if (pageInfo) {
+    pageInfo.textContent = `Page ${state.guestbook.currentPage} of ${state.guestbook.totalPages}`;
+  }
+
+  if (prevBtn) {
+    prevBtn.disabled = state.guestbook.currentPage === 1;
+  }
+
+  if (nextBtn) {
+    nextBtn.disabled = state.guestbook.currentPage >= state.guestbook.totalPages;
+  }
+}
+
+/**
+ * Switch between draw and gallery modes
+ */
+function switchGuestbookMode(mode) {
+  state.guestbook.viewMode = mode;
+
+  const drawPanel = document.getElementById('guestbookDrawPanel');
+  const galleryPanel = document.getElementById('guestbookGalleryPanel');
+
+  document.querySelectorAll('.guestbook-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  if (mode === 'draw') {
+    drawPanel?.classList.remove('hidden');
+    galleryPanel?.classList.add('hidden');
+  } else {
+    drawPanel?.classList.add('hidden');
+    galleryPanel?.classList.remove('hidden');
+    loadGuestbookStars(state.guestbook.currentPage);
+  }
+}
+
+/**
+ * Setup guestbook interactions
+ */
+function setupGuestbookInteractions() {
+  // Mode toggle buttons
+  document.querySelectorAll('.guestbook-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchGuestbookMode(btn.dataset.mode);
+    });
+  });
+
+  // Color palette
+  document.querySelectorAll('.palette-color').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.palette-color').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      guestbookDrawing.currentColor = btn.dataset.color;
+    });
+  });
+
+  // Clear button
+  document.getElementById('clearCanvas')?.addEventListener('click', clearGuestbookCanvas);
+
+  // Save button
+  document.getElementById('saveDrawing')?.addEventListener('click', saveGuestbookDrawing);
+
+  // Pagination
+  document.getElementById('prevPage')?.addEventListener('click', () => {
+    if (state.guestbook.currentPage > 1) {
+      loadGuestbookStars(state.guestbook.currentPage - 1);
+    }
+  });
+
+  document.getElementById('nextPage')?.addEventListener('click', () => {
+    if (state.guestbook.currentPage < state.guestbook.totalPages) {
+      loadGuestbookStars(state.guestbook.currentPage + 1);
+    }
+  });
 }
 
 /**
@@ -1084,7 +1635,7 @@ function getViewFromUrl() {
   const viewName = hash.substring(1);
 
   // Validate it's a real view
-  const validViews = ['tasks', 'notes', 'music', 'labs'];
+  const validViews = ['tasks', 'notes', 'music', 'labs', 'gallery'];
   return validViews.includes(viewName) ? viewName : null;
 }
 
@@ -1165,6 +1716,14 @@ function performViewSwitch(viewName, updateUrl = true) {
     } else {
       renderThoughtTrainCards();
     }
+  }
+
+  // Initialize guestbook when switching to it
+  if (viewName === 'guestbook') {
+    if (!state.guestbook.drawingCanvas) {
+      initGuestbookCanvas();
+    }
+    switchGuestbookMode(state.guestbook.viewMode || 'draw');
   }
 
   state.currentView = viewName;
@@ -3313,6 +3872,9 @@ async function init() {
   setupThoughtTrainInteractions();
   await loadLabs();
   setupLabsInteractions();
+  await loadGallery();
+  setupGalleryInteractions();
+  setupGuestbookInteractions();
 
   // Restore last-open view after refresh
   const lastOpenWindowId = getLastOpenWindowId();

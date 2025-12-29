@@ -11,7 +11,7 @@ import { createServer } from 'http';
 import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { URL } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest } from '../js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -19,6 +19,7 @@ const postsDir = join(rootDir, 'posts');
 const thoughtTrainDir = join(rootDir, 'thought-train');
 const labsDir = join(rootDir, 'labs');
 const soundsDir = join(rootDir, 'sounds');
+const galleryDir = join(rootDir, 'gallery');
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -105,11 +106,29 @@ export default ${JSON.stringify(sounds, null, 2)};
   console.log(`\x1b[32m✓\x1b[0m Rebuilt sounds.js (${sounds.length} sounds)`);
 }
 
+// Build gallery.js
+function buildGallery() {
+  if (!existsSync(galleryDir)) return;
+
+  const gallery = buildGalleryManifest(galleryDir);
+  const content = `/**
+ * Gallery Manifest (auto-generated)
+ * Lists all photo albums in the gallery/ directory
+ * Run 'node build/build.js' to regenerate after adding new albums
+ */
+
+export default ${JSON.stringify(gallery, null, 2)};
+`;
+  writeFileSync(join(rootDir, 'gallery.js'), content);
+  console.log(`\x1b[32m✓\x1b[0m Rebuilt gallery.js (${gallery.length} albums)`);
+}
+
 // Initial build
 buildPosts();
 buildThoughtTrains();
 buildLabs();
 buildSounds();
+buildGallery();
 
 // Watch for changes in posts
 console.log(`\x1b[90m◉ Watching /posts for changes...\x1b[0m`);
@@ -152,6 +171,18 @@ if (existsSync(soundsDir)) {
   });
 }
 
+// Watch for changes in gallery
+if (existsSync(galleryDir)) {
+  console.log(`\x1b[90m◉ Watching /gallery for changes...\x1b[0m`);
+  watch(galleryDir, { recursive: true }, (eventType, filename) => {
+    // Rebuild on any change: images, folder renames, deletions, etc.
+    if (filename) {
+      console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
+      buildGallery();
+    }
+  });
+}
+
 // Load music config for API proxy (lazy load)
 let musicConfig = null;
 let musicConfigPromise = null;
@@ -178,6 +209,9 @@ async function loadMusicConfig() {
 
   return musicConfigPromise;
 }
+
+// In-memory storage for guestbook (development only)
+const guestbookStars = [];
 
 // API proxy endpoints (Spotify + YouTube)
 async function handleAPIProxy(req, res) {
@@ -545,6 +579,74 @@ async function handleAPIProxy(req, res) {
       res.end(JSON.stringify({ error: error.message }));
       return true;
     }
+  }
+
+  // GET /api/guestbook/stars?page=1
+  if (path === '/api/guestbook/stars' && req.method === 'GET') {
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const itemsPerPage = 100;
+
+    // Sort by newest first
+    const sortedStars = [...guestbookStars].sort((a, b) =>
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    const totalPages = Math.ceil(sortedStars.length / itemsPerPage);
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const stars = sortedStars.slice(startIndex, endIndex);
+
+    res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      stars,
+      page,
+      totalPages,
+      totalStars: sortedStars.length
+    }));
+    return true;
+  }
+
+  // POST /api/guestbook/stars
+  if (path === '/api/guestbook/stars' && req.method === 'POST') {
+    let body = '';
+
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+
+        // Validate
+        if (!data.imageData || !data.imageData.startsWith('data:image/png;base64,')) {
+          res.writeHead(400, { ...corsHeaders, 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid image data' }));
+          return;
+        }
+
+        // Create star object
+        const star = {
+          id: Date.now().toString(),
+          imageData: data.imageData,
+          width: data.width || 800,
+          height: data.height || 600,
+          createdAt: new Date().toISOString(),
+          userAgent: req.headers['user-agent'] || 'unknown'
+        };
+
+        guestbookStars.push(star);
+        console.log(`\x1b[32m✓\x1b[0m Star saved (total: ${guestbookStars.length})`);
+
+        res.writeHead(201, { ...corsHeaders, 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, id: star.id }));
+      } catch (error) {
+        res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
+
+    return true;
   }
 
   return false;
