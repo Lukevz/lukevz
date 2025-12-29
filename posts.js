@@ -6,10 +6,6 @@
 
 export default [
   {
-    "file": "After watching the hulk, my dream about work.md",
-    "created": "2025-04-19"
-  },
-  {
     "file": "B. Building A Second Brain.md",
     "created": "2025-01-19"
   },
