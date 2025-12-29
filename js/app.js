@@ -8,7 +8,7 @@ import { tagIcons, musicFolderIcons, weatherIcons } from './config/icons.js';
 import { defaultMusicFolders, hiddenTags, LAST_OPEN_WINDOW_STORAGE_KEY, PLAYLIST_CACHE_DURATION } from './config/constants.js';
 import { state, musicState, lifeStoriesState } from './config/state.js';
 import { formatDate, filenameToSlug, findPostBySlugInArray } from './utils/dom.js';
-import { getLastOpenWindowId, setLastOpenWindowId } from './utils/storage.js';
+import { setLastOpenWindowId } from './utils/storage.js';
 import { parseMarkdown } from './utils/markdown.js';
 import { parsePost } from './parsers/post-parser.js';
 import { parseThoughtTrain } from './parsers/train-parser.js';
@@ -3882,10 +3882,10 @@ async function init() {
   setupGalleryInteractions();
   setupGuestbookInteractions();
 
-  // Restore last-open view after refresh
-  const lastOpenWindowId = getLastOpenWindowId();
-  if (lastOpenWindowId) {
-    await openWindow(lastOpenWindowId);
+  // Restore view from URL (if present)
+  const viewFromUrl = getViewFromUrl();
+  if (viewFromUrl) {
+    await openWindow(viewFromUrl);
   }
 
   // Initialize mini player state

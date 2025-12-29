@@ -50,10 +50,6 @@ export default [
     "created": "2025-04-23"
   },
   {
-    "file": "Closing the Gap Between Brain and Body.md",
-    "created": "2025-04-06"
-  },
-  {
     "file": "Distinguishing Journal Entries from Proper Notes A Systematic Approach to Thought Organization.md",
     "created": "2025-02-12"
   },
@@ -140,10 +136,6 @@ export default [
   {
     "file": "Trust is the Antidote to Fear.md",
     "created": "2025-04-06"
-  },
-  {
-    "file": "What’s the minimum you need to do to keep making progress up hill. Eventually you will hit the top and slide down in neutral but do the minimum to not be in reverse.md",
-    "created": "2025-04-16"
   },
   {
     "file": "When you’re building something avoid being in the world so you don’t get ideas and focus on the thing you are working on - Cal Newport.md",
