@@ -1,4 +1,6 @@
 {
+  "buildCommand": "node build/build.js",
+  "outputDirectory": ".",
   "functions": {
     "api/**/*.js": {
       "memory": 1024,
