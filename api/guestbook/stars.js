@@ -15,15 +15,14 @@ const ITEMS_PER_PAGE = 100;
 const STARS_KEY = 'guestbook:stars';
 
 export default async function handler(req, res) {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
-  };
+  // Set CORS headers for all responses
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   // Handle OPTIONS preflight
   if (req.method === 'OPTIONS') {
-    res.status(200).setHeader('Access-Control-Allow-Origin', '*').end();
+    res.status(200).end();
     return;
   }
 
@@ -54,7 +53,15 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       console.error('Error fetching stars:', error);
-      res.status(500).json({ error: 'Failed to fetch stars' });
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      res.status(500).json({
+        error: 'Failed to fetch stars',
+        detail: error.message
+      });
     }
     return;
   }
@@ -66,6 +73,7 @@ export default async function handler(req, res) {
 
       // Validate
       if (!imageData || !imageData.startsWith('data:image/png;base64,')) {
+        console.error('Invalid image data format');
         res.status(400).json({ error: 'Invalid image data' });
         return;
       }
@@ -73,6 +81,7 @@ export default async function handler(req, res) {
       // Size limit check (2MB)
       const sizeInBytes = (imageData.length * 3) / 4;
       if (sizeInBytes > 2 * 1024 * 1024) {
+        console.error('Image too large:', sizeInBytes);
         res.status(400).json({ error: 'Image too large (max 2MB)' });
         return;
       }
@@ -88,16 +97,29 @@ export default async function handler(req, res) {
       };
 
       // Fetch existing stars and append
+      console.log('Fetching existing stars from KV...');
       const allStars = await kv.get(STARS_KEY) || [];
+      console.log('Current stars count:', allStars.length);
+
       allStars.push(star);
 
       // Save back to KV
+      console.log('Saving to KV...');
       await kv.set(STARS_KEY, allStars);
+      console.log('Star saved successfully:', star.id);
 
       res.status(201).json({ success: true, id: star.id });
     } catch (error) {
       console.error('Error saving star:', error);
-      res.status(500).json({ error: 'Failed to save star' });
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      res.status(500).json({
+        error: 'Failed to save star',
+        detail: error.message
+      });
     }
     return;
   }

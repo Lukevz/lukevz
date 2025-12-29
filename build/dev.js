@@ -641,9 +641,16 @@ async function handleAPIProxy(req, res) {
         res.writeHead(201, { ...corsHeaders, 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, id: star.id }));
       } catch (error) {
+        console.error('Error saving star:', error);
         res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: error.message }));
       }
+    });
+
+    req.on('error', (error) => {
+      console.error('Request error:', error);
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Request failed' }));
     });
 
     return true;
