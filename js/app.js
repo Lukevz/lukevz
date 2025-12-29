@@ -904,10 +904,16 @@ function initGuestbookCanvas() {
 
   const ctx = canvas.getContext('2d');
 
-  // Set canvas size (retina support)
+  // Set canvas display size (CSS pixels)
+  canvas.style.width = '800px';
+  canvas.style.height = '600px';
+
+  // Set actual canvas size (device pixels for retina support)
   const dpr = window.devicePixelRatio || 1;
   canvas.width = 800 * dpr;
   canvas.height = 600 * dpr;
+
+  // Scale context to match DPR
   ctx.scale(dpr, dpr);
 
   // Dark space background with stars
@@ -962,8 +968,13 @@ function startDrawing(e) {
   guestbookDrawing.isDrawing = true;
   const canvas = state.guestbook.drawingCanvas;
   const rect = canvas.getBoundingClientRect();
-  guestbookDrawing.lastX = e.clientX - rect.left;
-  guestbookDrawing.lastY = e.clientY - rect.top;
+
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
+  guestbookDrawing.lastX = (e.clientX - rect.left) * scaleX;
+  guestbookDrawing.lastY = (e.clientY - rect.top) * scaleY;
 }
 
 function draw(e) {
@@ -973,8 +984,12 @@ function draw(e) {
   const ctx = canvas.getContext('2d');
   const rect = canvas.getBoundingClientRect();
 
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
 
   ctx.beginPath();
   ctx.moveTo(guestbookDrawing.lastX, guestbookDrawing.lastY);
@@ -999,9 +1014,13 @@ function handleTouchStart(e) {
   const canvas = state.guestbook.drawingCanvas;
   const rect = canvas.getBoundingClientRect();
 
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
   guestbookDrawing.isDrawing = true;
-  guestbookDrawing.lastX = touch.clientX - rect.left;
-  guestbookDrawing.lastY = touch.clientY - rect.top;
+  guestbookDrawing.lastX = (touch.clientX - rect.left) * scaleX;
+  guestbookDrawing.lastY = (touch.clientY - rect.top) * scaleY;
 }
 
 function handleTouchMove(e) {
@@ -1013,8 +1032,12 @@ function handleTouchMove(e) {
   const ctx = canvas.getContext('2d');
   const rect = canvas.getBoundingClientRect();
 
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
+  const x = (touch.clientX - rect.left) * scaleX;
+  const y = (touch.clientY - rect.top) * scaleY;
 
   ctx.beginPath();
   ctx.moveTo(guestbookDrawing.lastX, guestbookDrawing.lastY);
