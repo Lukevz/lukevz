@@ -763,27 +763,12 @@ function expandAlbum(albumId) {
   const container = document.getElementById('galleryExpanded');
   const title = document.getElementById('galleryExpandedTitle');
   const subtitle = document.getElementById('galleryExpandedSubtitle');
-  const grid = document.getElementById('galleryExpandedGrid');
 
   title.textContent = album.title;
   subtitle.textContent = album.date;
 
-  // Render photo grid with random slight rotations
-  // Use thumbnails for faster loading in grid view
-  grid.innerHTML = album.thumbs.map((thumb, i) => {
-    const rotation = (Math.random() - 0.5) * 6; // -3 to +3 degrees
-    return `
-      <div class="gallery-photo-card"
-           data-index="${i}"
-           style="transform: rotate(${rotation}deg)">
-        <div class="polaroid">
-          <div class="polaroid-photo">
-            <img src="${thumb}" alt="${album.title} photo ${i + 1}" loading="lazy">
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  // Render the photo grid
+  renderExpandedAlbum();
 
   // Show expanded view with transition
   document.getElementById('galleryView').classList.add('album-expanded');
@@ -839,6 +824,174 @@ function navigateLightbox(direction) {
 }
 
 /**
+ * Extract EXIF data from an image
+ */
+async function extractExifData(imagePath) {
+  // Check cache first
+  if (state.gallery.exifCache.has(imagePath)) {
+    return state.gallery.exifCache.get(imagePath);
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    // Don't set crossOrigin for local files to avoid CORS issues
+    // img.crossOrigin = 'Anonymous';
+
+    img.onload = function() {
+      // Use EXIF.js library (loaded globally)
+      if (typeof EXIF !== 'undefined') {
+        EXIF.getData(img, function() {
+          const make = EXIF.getTag(this, 'Make');
+          const model = EXIF.getTag(this, 'Model');
+          const iso = EXIF.getTag(this, 'ISOSpeedRatings');
+          const aperture = EXIF.getTag(this, 'FNumber');
+          const shutterSpeed = EXIF.getTag(this, 'ExposureTime');
+          const focalLength = EXIF.getTag(this, 'FocalLength');
+
+          const exifData = {
+            make: make || null,
+            model: model || null,
+            iso: iso || null,
+            aperture: aperture || null,
+            shutterSpeed: shutterSpeed || null,
+            focalLength: focalLength || null
+          };
+
+          // Cache the result
+          state.gallery.exifCache.set(imagePath, exifData);
+          resolve(exifData);
+        });
+      } else {
+        console.warn('EXIF library not loaded');
+        resolve(null);
+      }
+    };
+
+    img.onerror = (e) => {
+      console.error('Failed to load image for EXIF:', imagePath, e);
+      resolve(null);
+    };
+
+    img.src = imagePath;
+  });
+}
+
+/**
+ * Format EXIF data for display
+ */
+function formatExifData(exif) {
+  if (!exif) return '';
+
+  const lines = [];
+
+  // Line 1: Camera make/model
+  if (exif.make && exif.model) {
+    lines.push(`${exif.make} ${exif.model}`);
+  } else if (exif.model) {
+    lines.push(exif.model);
+  }
+
+  // Line 2: Settings (ISO, aperture, shutter, focal length)
+  const settings = [];
+
+  if (exif.focalLength) {
+    settings.push(`${exif.focalLength}mm`);
+  }
+
+  if (exif.aperture) {
+    settings.push(`f/${exif.aperture}`);
+  }
+
+  if (exif.shutterSpeed) {
+    if (exif.shutterSpeed < 1) {
+      settings.push(`1/${Math.round(1 / exif.shutterSpeed)}s`);
+    } else {
+      settings.push(`${exif.shutterSpeed}s`);
+    }
+  }
+
+  if (exif.iso) {
+    settings.push(`ISO ${exif.iso}`);
+  }
+
+  if (settings.length > 0) {
+    lines.push(settings.join(' • '));
+  }
+
+  return lines.join('<br>');
+}
+
+/**
+ * Toggle nerd mode (EXIF display)
+ */
+function toggleNerdMode() {
+  state.gallery.nerdMode = !state.gallery.nerdMode;
+  console.log('Nerd mode toggled:', state.gallery.nerdMode);
+
+  // Update toggle button state
+  const toggleBtn = document.getElementById('galleryNerdModeToggle');
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('active', state.gallery.nerdMode);
+  }
+
+  // Save to localStorage
+  localStorage.setItem('galleryNerdMode', JSON.stringify(state.gallery.nerdMode));
+
+  // Re-render the current album if one is active
+  if (state.gallery.activeAlbum) {
+    console.log('Re-rendering album with nerd mode:', state.gallery.nerdMode);
+    renderExpandedAlbum();
+  }
+}
+
+/**
+ * Render the expanded album grid with EXIF support
+ */
+async function renderExpandedAlbum() {
+  const album = state.gallery.activeAlbum;
+  if (!album) return;
+
+  const grid = document.getElementById('galleryExpandedGrid');
+  console.log('Rendering album, nerd mode:', state.gallery.nerdMode);
+
+  // Render photo grid with random slight rotations
+  // Use thumbnails for faster loading in grid view
+  const photoCards = await Promise.all(album.thumbs.map(async (thumb, i) => {
+    const rotation = (Math.random() - 0.5) * 6; // -3 to +3 degrees
+    const fullImage = album.images[i];
+
+    // Extract EXIF if nerd mode is enabled
+    let exifHtml = '';
+    if (state.gallery.nerdMode) {
+      console.log('Extracting EXIF for:', fullImage);
+      const exifData = await extractExifData(fullImage);
+      console.log('EXIF data:', exifData);
+      const formattedExif = formatExifData(exifData);
+      console.log('Formatted EXIF:', formattedExif);
+      if (formattedExif) {
+        exifHtml = `<div class="polaroid-exif">${formattedExif}</div>`;
+      }
+    }
+
+    return `
+      <div class="gallery-photo-card"
+           data-index="${i}"
+           style="transform: rotate(${rotation}deg)">
+        <div class="polaroid">
+          <div class="polaroid-photo">
+            <img src="${thumb}" alt="${album.title} photo ${i + 1}" loading="lazy">
+          </div>
+          ${exifHtml}
+        </div>
+      </div>
+    `;
+  }));
+
+  grid.innerHTML = photoCards.join('');
+  console.log('Album rendered');
+}
+
+/**
  * Setup gallery interactions
  */
 function setupGalleryInteractions() {
@@ -862,6 +1015,9 @@ function setupGalleryInteractions() {
 
   // Back button
   document.getElementById('galleryBackBtn')?.addEventListener('click', collapseAlbum);
+
+  // Nerd mode toggle
+  document.getElementById('galleryNerdModeToggle')?.addEventListener('click', toggleNerdMode);
 
   // Lightbox controls
   document.getElementById('galleryLightboxClose')?.addEventListener('click', closeLightbox);
@@ -3993,6 +4149,17 @@ async function init() {
   setupLabsInteractions();
   await loadGallery();
   setupGalleryInteractions();
+
+  // Restore nerd mode state from localStorage
+  const savedNerdMode = localStorage.getItem('galleryNerdMode');
+  if (savedNerdMode !== null) {
+    state.gallery.nerdMode = JSON.parse(savedNerdMode);
+    const toggleBtn = document.getElementById('galleryNerdModeToggle');
+    if (toggleBtn && state.gallery.nerdMode) {
+      toggleBtn.classList.add('active');
+    }
+  }
+
   setupGuestbookInteractions();
 
   // Restore view from URL (if present)

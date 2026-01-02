@@ -26,7 +26,9 @@ export const state = {
   gallery: {
     albums: [],                 // All albums
     activeAlbum: null,          // Currently expanded album
-    lightboxIndex: -1           // Current photo in lightbox (-1 = closed)
+    lightboxIndex: -1,          // Current photo in lightbox (-1 = closed)
+    nerdMode: false,            // EXIF data display toggle
+    exifCache: new Map()        // Cache EXIF data by image path
   },
   guestbook: {
     stars: [],                  // Current page stars

@@ -551,7 +551,7 @@
 .nav-icon-btn.active {
   color: var(--accent);
   background: var(--bg-active);
-  gap: var(--space-xs);
+  gap: 0; /* Remove gap since we're hiding the label */
 }
 
 /* External link indicator */
@@ -583,21 +583,7 @@
 }
 
 .nav-label {
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  white-space: nowrap;
-  font-family: 'Doto', var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  transition: max-width 0.2s ease, opacity 0.2s ease;
-}
-
-.nav-icon-btn.active .nav-label {
-  max-width: 120px;
-  opacity: 1;
+  display: none; /* Hide labels completely - only show icons */
 }
 
 .menu-weather {
@@ -2023,6 +2009,19 @@ ul {
 /* Mac OS 9 Window Chrome */
 /* ==================== */
 
+/* Animated gradient border */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotateGradient {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
 .os9-window {
   display: flex;
   flex-direction: column;
@@ -2031,11 +2030,25 @@ ul {
   max-width: 1200px; /* Default, overridden per-app below */
   margin: 0 auto; /* Center horizontally, no top margin - windows rise from header */
   background: var(--bg-primary);
-  border-radius: 0; /* No rounded corners - windows rise from bottom */
+  border-radius: 8px 8px 0 0; /* Rounded top corners */
   overflow: hidden;
-  border: 1px solid var(--border);
+  position: relative;
+
+  /* Animated gradient border using pseudo-element */
+  border: 1px solid transparent;
   border-bottom: none; /* Remove bottom border to extend off page */
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background:
+    linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+    conic-gradient(
+      from var(--gradient-angle) at 50% 50%,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.6),
+      rgba(255, 255, 255, 0.9),
+      rgba(255, 255, 255, 0.6),
+      rgba(255, 255, 255, 0.1)
+    ) border-box;
+
+  animation: rotateGradient 8s linear infinite;
 }
 
 /* Per-app max-widths based on content needs */
@@ -2055,7 +2068,7 @@ ul {
     #1c1c1e 100%
   );
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  height: 24px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2087,10 +2100,9 @@ ul {
 
 .os9-title {
   font-family: 'Chicago', 'Doto', var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.875rem; /* Increased from 0.75rem */
+  font-weight: 900; /* Increased from 700 to make it bolder */
   color: var(--text-secondary);
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -5541,6 +5553,18 @@ ul {
   line-height: 1.2;
 }
 
+.polaroid-exif {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-secondary, #666);
+  line-height: 1.4;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
 /* Empty State */
 .gallery-empty {
   grid-column: 1 / -1;
@@ -5581,6 +5605,39 @@ ul {
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+.gallery-nerd-mode-toggle {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.gallery-nerd-mode-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.gallery-nerd-mode-toggle.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+.gallery-nerd-mode-toggle svg {
+  width: 16px;
+  height: 16px;
 }
 
 .gallery-back-btn {
@@ -5648,7 +5705,7 @@ ul {
 .gallery-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 10003;
   background: rgba(0, 0, 0, 0.95);
   display: flex;
   align-items: center;
@@ -5872,6 +5929,56 @@ ul {
   /* Checkmark color in completed tasks */
   .task-status-indicator.completed::after {
     border-color: #ffffff;
+  }
+
+  /* Window titlebar - Light Mode */
+  .os9-titlebar {
+    background: linear-gradient(180deg,
+      #f8f8f8 0%,
+      #e8e8e8 50%,
+      #d8d8d8 100%
+    );
+  }
+
+  .os9-titlebar::after {
+    background: linear-gradient(180deg,
+      #f8f8f8 0%,
+      #e8e8e8 50%,
+      #d8d8d8 100%
+    );
+  }
+
+  .os9-title {
+    color: var(--text-primary);
+  }
+
+  /* Animated gradient border - Light Mode (dark gray/black glow) */
+  .os9-window {
+    background:
+      linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+      conic-gradient(
+        from var(--gradient-angle) at 50% 50%,
+        rgba(0, 0, 0, 0.08),
+        rgba(40, 40, 40, 0.4),
+        rgba(60, 60, 60, 0.7),
+        rgba(40, 40, 40, 0.4),
+        rgba(0, 0, 0, 0.08)
+      ) border-box;
+  }
+
+  /* Guestbook buttons - Light Mode */
+  .guestbook-btn {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+  }
+
+  .guestbook-btn:hover {
+    background: var(--bg-hover);
+  }
+
+  .guestbook-btn-primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
   }
 
   /* Mac OS 9 Scrollbar styling - Light Mode */

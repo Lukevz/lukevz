@@ -1,4 +1,8 @@
 # Digital Garden Changelog
+V1.4.3 – Added Nerd Mode to Gallery Albums
+- See EXIF data for each photo in the gallery
+- Moving gradient border to window
+
 V1.4.2 – Performance
 - Low res thumbnail generation for Gallery for better loading
 - Support for multiple years in Tasks app
