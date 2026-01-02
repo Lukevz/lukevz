@@ -221,37 +221,52 @@
 
   <!-- Tasks View -->
   <div class="view tasks-view" id="tasksView">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Tasks</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <!-- Year Tabs Header (dynamically populated) -->
+        <div class="tasks-header">
+          <!-- Year tabs will be generated dynamically -->
+        </div>
 
-    <!-- Year Tabs Header (dynamically populated) -->
-    <div class="tasks-header">
-      <!-- Year tabs will be generated dynamically -->
-    </div>
-
-    <div class="tasks-container" id="tasksContainer">
-      <!-- Populated from year-specific goals.md files -->
+        <div class="tasks-container" id="tasksContainer">
+          <!-- Populated from year-specific goals.md files -->
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Notes View (existing Bear-like interface) -->
   <div class="view notes-view" id="notesView">
-    <div class="view-mode-toggle" id="viewModeToggle">
-      <button class="view-mode-btn active" data-mode="three-column" aria-label="Show all columns" title="Show Tags, Notes and Editor">
-        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M2 2h6v20H2V2zm8 0h6v20h-6V2zm8 0h6v20h-6V2z" fill="currentColor"/>
-        </svg>
-      </button>
-      <button class="view-mode-btn" data-mode="two-column" aria-label="Show notes and editor" title="Show Notes and Editor">
-        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M2 2h9v20H2V2zm11 0h11v20H13V2z" fill="currentColor"/>
-        </svg>
-      </button>
-      <button class="view-mode-btn" data-mode="one-column" aria-label="Show editor only" title="Show Editor Only">
-        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M2 2h20v20H2V2z" fill="currentColor"/>
-        </svg>
-      </button>
-    </div>
-    <div class="app">
+    <div class="os9-window">
+      <div class="os9-titlebar os9-titlebar-with-toolbar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Notes</span>
+        </div>
+        <div class="view-mode-toggle" id="viewModeToggle">
+          <button class="view-mode-btn active" data-mode="three-column" aria-label="Show all columns" title="Show Tags, Notes and Editor">
+            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M2 2h6v20H2V2zm8 0h6v20h-6V2zm8 0h6v20h-6V2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="view-mode-btn" data-mode="two-column" aria-label="Show notes and editor" title="Show Notes and Editor">
+            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M2 2h9v20H2V2zm11 0h11v20H13V2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="view-mode-btn" data-mode="one-column" aria-label="Show editor only" title="Show Editor Only">
+            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M2 2h20v20H2V2z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="app">
     <!-- Sidebar: Tag Navigation -->
     <nav class="sidebar" aria-label="Tag navigation">
       <ul class="tag-list" role="list" id="tagList">
@@ -309,11 +324,20 @@
       </svg>
     </button>
   </div>
+      </div><!-- End os9-window-body -->
+    </div><!-- End os9-window -->
   </div><!-- End Notes View -->
 
   <!-- Music View -->
   <div class="view music-view" id="musicView">
-    <div class="zen-layout">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Music</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="zen-layout">
       <!-- Left: Folder Navigation Sidebar -->
       <div class="zen-sidebar" id="zenSidebar">
         <div class="zen-sidebar-header">
@@ -419,11 +443,20 @@
         </div>
       </div>
     </div>
+      </div><!-- End os9-window-body -->
+    </div><!-- End os9-window -->
   </div>
 
   <!-- Life Stories View -->
   <div class="view life-stories-view" id="lifeStoriesView">
-    <div class="life-stories-container">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Life Stories</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="life-stories-container">
       <div class="elevator-sidebar">
         <div class="elevator-controls">
           <button class="elevator-btn elevator-up" id="elevatorUp" aria-label="Go up one floor">
@@ -449,11 +482,20 @@
         <canvas id="buildingCanvas" width="640" height="400"></canvas>
       </div>
     </div>
+      </div><!-- End os9-window-body -->
+    </div><!-- End os9-window -->
   </div>
 
   <!-- Thought Trains View -->
   <div class="view thought-train-view" id="thoughtTrainView">
-    <div class="thought-train-container">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Thought Trains</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="thought-train-container">
       <div class="train-timeline-wrapper">
         <header class="train-timeline-header">
           <p class="train-eyebrow">Rabbit Holes & Random Fascinations</p>
@@ -473,15 +515,26 @@
         </div>
       </div>
     </div>
+      </div><!-- End os9-window-body -->
+    </div><!-- End os9-window -->
   </div>
 
   <!-- Labs View -->
   <div class="view labs-view" id="labsView">
-    <div class="labs-container">
-      <div class="labs-grid" id="labsGrid">
-        <!-- Populated by JS -->
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Labs</span>
+        </div>
       </div>
-    </div>
+      <div class="os9-window-body">
+        <div class="labs-container">
+          <div class="labs-grid" id="labsGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div><!-- End os9-window-body -->
+    </div><!-- End os9-window -->
   </div>
 
   <!-- Labs Modal -->
@@ -504,7 +557,14 @@
 
   <!-- Gallery View -->
   <div class="view gallery-view" id="galleryView">
-    <div class="gallery-container">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Gallery</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="gallery-container">
       <!-- Main grid of album stacks -->
       <div class="gallery-grid" id="galleryGrid">
         <!-- Populated by JS -->
@@ -528,6 +588,8 @@
         </div>
       </div>
     </div>
+      </div><!-- End os9-window-body -->
+    </div><!-- End os9-window -->
   </div>
 
   <!-- Gallery Lightbox -->
@@ -555,10 +617,17 @@
 
   <!-- Guestbook View -->
   <div class="view guestbook-view" id="guestbookView">
-    <div class="guestbook-container">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Guestbook</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="guestbook-container">
 
-      <!-- Mode Toggle Header -->
-      <div class="guestbook-header">
+          <!-- Mode Toggle Header -->
+          <div class="guestbook-header">
         <button class="guestbook-mode-btn active" data-mode="draw">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
@@ -638,6 +707,9 @@
       </div>
 
     </div>
+        </div><!-- End guestbook-container -->
+      </div><!-- End os9-window-body -->
+    </div><!-- End os9-window -->
   </div>
 
   <!-- Info Button & Credits Popup -->

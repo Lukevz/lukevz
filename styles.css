@@ -441,7 +441,7 @@
   left: 0;
   right: 0;
   width: 100%;
-  height: 52px; /* Match toolbar height */
+  height: 40px; /* Reduced from 52px */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -532,7 +532,8 @@
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: var(--space-sm);
+  padding: 6px var(--space-sm);
+  height: 32px;
   border-radius: 0px;
   color: var(--text-primary);
   transition: color var(--transition-fast), background var(--transition-fast), gap var(--transition-fast);
@@ -570,8 +571,8 @@
 
 .nav-icon-btn svg,
 .nav-icon-btn img {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   filter: brightness(0) invert(1);
 }
@@ -1872,22 +1873,60 @@ ul {
   }
 }
 
-/* Scrollbar styling */
+/* Mac OS 9 Scrollbar styling - Dark Mode (default) */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 16px;
+  height: 16px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #3a3a3a;
+  border: 1px solid #555;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
+  background: linear-gradient(90deg, #505050 0%, #3a3a3a 50%, #505050 100%);
+  border: 1px solid #555;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-light);
+  background: linear-gradient(90deg, #5a5a5a 0%, #454545 50%, #5a5a5a 100%);
+}
+
+::-webkit-scrollbar-button {
+  background: linear-gradient(180deg, #505050 0%, #3a3a3a 100%);
+  border: 1px solid #555;
+  height: 16px;
+  width: 16px;
+  display: block;
+}
+
+::-webkit-scrollbar-button:hover {
+  background: linear-gradient(180deg, #5a5a5a 0%, #454545 100%);
+}
+
+::-webkit-scrollbar-button:vertical:decrement {
+  border-bottom: 1px solid #666;
+}
+
+::-webkit-scrollbar-button:vertical:increment {
+  border-top: 1px solid #666;
+}
+
+::-webkit-scrollbar-button:horizontal:decrement {
+  border-right: 1px solid #666;
+}
+
+::-webkit-scrollbar-button:horizontal:increment {
+  border-left: 1px solid #666;
+}
+
+/* Firefox scrollbar - Dark Mode */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #3a3a3a #2a2a2a;
 }
 
 /* Empty state */
@@ -1947,12 +1986,12 @@ ul {
 .view {
   display: none;
   position: fixed;
-  top: 0;
+  top: 40px; /* Start after menubar (40px height when app is active) */
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 100;
-  padding-top: 72px; /* Push content below sticky header */
+  padding: 20px var(--space-lg) 0 var(--space-lg); /* 20px top spacing, horizontal padding, no bottom */
   background: var(--bg-fill); /* Stays dark to show space background */
   overflow: hidden;
   pointer-events: none;
@@ -1962,6 +2001,12 @@ ul {
   display: flex;
   flex-direction: column;
   pointer-events: auto;
+}
+
+/* All view children (e.g., .tasks-view, .gallery-view) should fill available space */
+.view.active > * {
+  flex: 1;
+  min-height: 0; /* Allow flex children to shrink below content size */
 }
 
 /* Content container with max-width */
@@ -1974,12 +2019,150 @@ ul {
   overflow-y: auto;
 }
 
+/* ==================== */
+/* Mac OS 9 Window Chrome */
+/* ==================== */
+
+.os9-window {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: 1200px; /* Default, overridden per-app below */
+  margin: 0 auto; /* Center horizontally, no top margin - windows rise from header */
+  background: var(--bg-primary);
+  border-radius: 0; /* No rounded corners - windows rise from bottom */
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-bottom: none; /* Remove bottom border to extend off page */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Per-app max-widths based on content needs */
+.tasks-view .os9-window { max-width: 700px; }
+.notes-view .os9-window { max-width: 1200px; }
+.music-view .os9-window { max-width: 700px; }
+.life-stories-view .os9-window { max-width: 900px; }
+.thought-train-view .os9-window { max-width: 800px; }
+.labs-view .os9-window { max-width: 1000px; }
+.gallery-view .os9-window { max-width: 1400px; }
+.guestbook-view .os9-window { max-width: 900px; }
+
+.os9-titlebar {
+  background: linear-gradient(180deg,
+    #3a3a3c 0%,
+    #2c2c2e 50%,
+    #1c1c1e 100%
+  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  /* Horizontal stripes pattern - dark mode */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.03) 1px,
+      rgba(255, 255, 255, 0.03) 2px
+    ),
+    linear-gradient(180deg,
+      #3a3a3c 0%,
+      #2c2c2e 50%,
+      #1c1c1e 100%
+    );
+}
+
+.os9-titlebar-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.os9-title {
+  font-family: 'Chicago', 'Doto', var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Titlebar with integrated toolbar (for Notes view) */
+.os9-titlebar-with-toolbar {
+  height: 24px;
+  flex-direction: row;
+  padding: 0;
+}
+
+.os9-titlebar-with-toolbar .os9-titlebar-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  justify-content: center;
+  pointer-events: none; /* Allow clicks to pass through to buttons */
+}
+
+.os9-titlebar-with-toolbar .view-mode-toggle {
+  background: transparent;
+  border: none;
+  padding: 0 var(--space-sm);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.os9-window-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-primary);
+  min-height: 0;
+}
+
+/* Mobile adjustments for OS9 chrome */
+@media (max-width: 768px) {
+  .os9-window {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    max-width: 100%;
+  }
+
+  .os9-titlebar {
+    height: 20px;
+  }
+
+  .os9-title {
+    font-size: 0.6875rem;
+  }
+}
+
 /* Tasks View - Elegant Table Layout */
 .tasks-view {
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Inherits padding from .view */
+}
+
+.tasks-view .os9-window-body {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Tasks Year Tabs Header */
@@ -1990,7 +2173,6 @@ ul {
   padding: var(--space-sm);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  max-width: 700px;
   width: 100%;
 }
 
@@ -2074,11 +2256,10 @@ ul {
 }
 
 .tasks-view .tasks-container {
-  max-width: 700px;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
   padding: var(--space-xl);
-  padding-top: 64px;
+  padding-top: var(--space-xl);
   background: var(--bg-primary);
   flex: 1;
   overflow-y: auto;
@@ -2086,22 +2267,19 @@ ul {
 
 /* Notes View - Full-screen with 3-pane layout */
 .notes-view {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* Don't use position absolute - inherit from .view container */
   display: flex;
   flex-direction: column;
+  flex: 1;
   overflow: hidden;
 }
 
 .notes-view .view-mode-toggle {
-  max-width: 1170px;
   width: 100%;
-  margin: 0 auto;
-  background: var(--bg-primary);
+  margin: 0;
+  background: transparent;
   flex-shrink: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .notes-view .app {
@@ -2139,12 +2317,12 @@ ul {
 
 .view-mode-btn:hover {
   color: var(--text-primary);
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .view-mode-btn.active {
   color: var(--text-primary);
-  background: var(--bg-active);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .view-mode-btn svg {
@@ -2360,10 +2538,9 @@ ul {
 
   /* Full-screen views adjust for mobile header */
   .view {
-    padding-top: 64px; /* Smaller header on mobile */
-    padding-top: calc(64px + env(safe-area-inset-top)); /* Add safe area to all views */
-    /* Respect safe area on iOS Safari */
-    padding-bottom: env(safe-area-inset-bottom);
+    top: 64px; /* Start after header on mobile */
+    top: calc(64px + env(safe-area-inset-top)); /* Add safe area */
+    /* padding inherited from base .view - 20px top, var(--space-lg) horizontal */
   }
 
   .menu-nav {
@@ -2431,11 +2608,14 @@ ul {
 /* ==================== */
 
 .music-view {
-  min-height: calc(100vh - var(--space-lg));
-  /* Keep `.view`'s top padding so content clears the sticky header */
-  padding-left: var(--space-md);
-  padding-right: var(--space-md);
-  padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom));
+  padding-left: 0; /* Music window goes edge to edge */
+  padding-right: 0;
+}
+
+.music-view .os9-window-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Zen Layout - Side by Side */
@@ -2446,6 +2626,7 @@ ul {
   max-width: 1200px;
   margin: 0 auto;
   align-items: start;
+  height: 100%;
 }
 
 /* Sidebar Container */
@@ -2989,8 +3170,6 @@ ul {
   .music-view {
     padding-left: 0;
     padding-right: 0;
-    padding-top: calc(52px + env(safe-area-inset-top));
-    padding-bottom: env(safe-area-inset-bottom);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -4210,15 +4389,20 @@ ul {
 /* ==================== */
 
 .life-stories-view {
-  /* Inherits full-screen positioning from .view */
+  /* Inherits padding from .view */
+  overflow: hidden;
+}
+
+.life-stories-view .os9-window-body {
+  padding: 0;
   overflow: hidden;
 }
 
 .life-stories-view .life-stories-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding-top: 32px;
-  height: calc(100% - 32px);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
 .life-stories-container {
@@ -4409,14 +4593,19 @@ ul {
    ======================================== */
 
 .thought-train-view {
-  /* Inherits full-screen positioning from .view */
+  /* Inherits padding from .view */
+}
+
+.thought-train-view .os9-window-body {
+  padding: var(--space-lg);
+  overflow: hidden;
 }
 
 .thought-train-view .thought-train-container {
-  max-width: 1000px;
-  margin: 0 auto;
   width: 100%;
-  padding-top: 32px;
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
 .thought-train-container {
@@ -4918,15 +5107,20 @@ ul {
    ======================================== */
 
 .labs-view {
-  padding: var(--space-xl);
+  /* Inherits padding from .view */
+  overflow-y: auto;
+}
+
+.labs-view .os9-window-body {
+  padding: var(--space-lg);
   overflow-y: auto;
 }
 
 .labs-container {
-  max-width: 1170px;
-  margin: 0 auto;
   width: 100%;
-  padding-top: 32px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 /* Masonry Grid */
@@ -5214,44 +5408,42 @@ ul {
 /* ==================== */
 
 .gallery-view {
-  width: 100%;
-  height: 100%;
+  /* Inherits padding from .view */
   overflow: hidden;
-  background: var(--bg-fill);
-  position: relative;
+}
+
+.gallery-view .os9-window-body {
+  padding: 0;
+  overflow: hidden;
 }
 
 .gallery-container {
   width: 100%;
-  height: 100%;
+  flex: 1; /* Fill os9-window-body which is a flex container */
+  min-height: 0; /* Allow shrinking */
   overflow-y: auto;
-  padding: 32px;
+  padding: var(--space-lg);
   position: relative;
 }
 
-/* Gallery Grid (Masonry Layout) */
+/* Gallery Grid */
 .gallery-grid {
-  column-count: 3;
-  column-gap: 40px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
   width: 100%;
 }
 
 .gallery-album-card {
-  break-inside: avoid;
-  margin-bottom: 40px;
   cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.gallery-album-card:hover {
-  transform: translateY(-4px);
 }
 
 /* Polaroid Stack */
 .polaroid-stack {
   position: relative;
-  width: 100%;
-  padding-top: 120%; /* Tighter aspect ratio for polaroid stack */
+  width: 92%;
+  margin: 0 auto; /* Center within grid cell */
+  padding-top: 110%; /* Maintain aspect ratio */
 }
 
 .polaroid {
@@ -5264,6 +5456,18 @@ ul {
   border-radius: 2px;
   width: 100%;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Dark mode: lighter polaroid frames for better contrast */
+@media (prefers-color-scheme: dark) {
+  .polaroid {
+    background: #2a2a2c;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  .gallery-album-card:hover .polaroid {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
 }
 
 .polaroid[style*="--stack-index: 0"] {
@@ -5285,6 +5489,19 @@ ul {
   box-shadow: 0 8px 24px rgba(0,0,0,0.2);
 }
 
+/* Hover: fan out the stack */
+.gallery-album-card:hover .polaroid[style*="--stack-index: 0"] {
+  transform: translate(-20px, -16px) rotate(-6deg);
+}
+
+.gallery-album-card:hover .polaroid[style*="--stack-index: 1"] {
+  transform: translate(16px, -12px) rotate(4deg);
+}
+
+.gallery-album-card:hover .polaroid[style*="--stack-index: 2"] {
+  transform: translate(0px, 4px) rotate(0deg) scale(1.02);
+}
+
 .polaroid-photo {
   width: 100%;
   aspect-ratio: 1;
@@ -5300,9 +5517,7 @@ ul {
   transition: transform 0.2s ease;
 }
 
-.gallery-album-card:hover .polaroid-photo img {
-  transform: scale(1.05);
-}
+/* Image scale on hover removed to prevent layout glitching */
 
 .polaroid-caption {
   position: absolute;
@@ -5659,6 +5874,52 @@ ul {
     border-color: #ffffff;
   }
 
+  /* Mac OS 9 Scrollbar styling - Light Mode */
+  ::-webkit-scrollbar-track {
+    background: #d4d4d4;
+    border: 1px solid #888;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%);
+    border: 1px solid #888;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #e8e8e8 0%, #d0d0d0 50%, #e8e8e8 100%);
+  }
+
+  ::-webkit-scrollbar-button {
+    background: linear-gradient(180deg, #f0f0f0 0%, #d0d0d0 100%);
+    border: 1px solid #888;
+  }
+
+  ::-webkit-scrollbar-button:hover {
+    background: linear-gradient(180deg, #e8e8e8 0%, #c0c0c0 100%);
+  }
+
+  ::-webkit-scrollbar-button:vertical:decrement {
+    border-bottom: 1px solid #999;
+  }
+
+  ::-webkit-scrollbar-button:vertical:increment {
+    border-top: 1px solid #999;
+  }
+
+  ::-webkit-scrollbar-button:horizontal:decrement {
+    border-right: 1px solid #999;
+  }
+
+  ::-webkit-scrollbar-button:horizontal:increment {
+    border-left: 1px solid #999;
+  }
+
+  /* Firefox scrollbar - Light Mode */
+  * {
+    scrollbar-color: #d0d0d0 #d4d4d4;
+  }
+
   /* Keep header text LIGHT when no app is open (transparent header over dark space) */
   .top-menu-bar:not(.app-active) .menu-location,
   .top-menu-bar:not(.app-active) .menu-divider {
@@ -5720,11 +5981,12 @@ ul {
 /* ==================== */
 
 .guestbook-view {
-  width: 100%;
-  height: 100%;
+  /* Inherits padding from .view */
   overflow: hidden;
-  background: var(--bg-fill);
-  position: relative;
+}
+
+.guestbook-view .os9-window-body {
+  padding: 0;
 }
 
 .guestbook-container {
@@ -5733,9 +5995,8 @@ ul {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  max-width: 1000px;
   margin: 0 auto;
-  padding-top: 32px;
+  padding: 0;
 }
 
 /* Header with Mode Toggle */

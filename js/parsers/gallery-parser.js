@@ -5,8 +5,8 @@
 
 /**
  * Parse album data and extract title/date from folder name
- * @param {Object} albumData - Album data from manifest {folder, images, created}
- * @returns {Object} Parsed album with id, title, date, images, etc.
+ * @param {Object} albumData - Album data from manifest {folder, images, thumbs, created}
+ * @returns {Object} Parsed album with id, title, date, images, thumbs, etc.
  */
 export function parseAlbum(albumData) {
   // Extract title and date from folder name
@@ -34,6 +34,7 @@ export function parseAlbum(albumData) {
     title,
     date: dateMatch ? dateMatch[0] : '',
     images: albumData.images,
+    thumbs: albumData.thumbs || albumData.images, // Fallback to full images if no thumbs
     created: albumData.created,
     folderName: albumData.folder
   };

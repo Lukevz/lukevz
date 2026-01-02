@@ -1,4 +1,12 @@
 # Digital Garden Changelog
+V1.4.2 – Performance
+- Low res thumbnail generation for Gallery for better loading
+- Support for multiple years in Tasks app
+
+V1.4.1 – Various UI Enhancements
+- Added “unfurling” effect on Gallery stack hover
+- Added Max OS 9 window titles and scrollbar
+
 V1.4.0 – Added Gallery and Planetary Guestbook
 - New gallery page of photo albums to browse trips, memories, and other captured moments
 

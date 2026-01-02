@@ -3,8 +3,9 @@
  * Eliminates duplication between build.js and dev.js
  */
 
-import { readdirSync, statSync } from 'fs';
+import { readdirSync, statSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { execSync } from 'child_process';
 
 /**
  * Build posts manifest from markdown files
@@ -82,26 +83,55 @@ export function buildSoundsManifest(soundsDir) {
 }
 
 /**
+ * Generate a thumbnail for an image using macOS sips
+ * @param {string} srcPath - Source image path
+ * @param {string} thumbPath - Destination thumbnail path
+ * @param {number} maxWidth - Maximum thumbnail width (default 800)
+ */
+function generateThumbnail(srcPath, thumbPath, maxWidth = 800) {
+  try {
+    // Use sips to resize (macOS built-in, no dependencies)
+    execSync(`sips -Z ${maxWidth} "${srcPath}" --out "${thumbPath}" 2>/dev/null`, {
+      stdio: 'pipe'
+    });
+    return true;
+  } catch (e) {
+    console.warn(`  ⚠ Failed to generate thumbnail for ${srcPath}`);
+    return false;
+  }
+}
+
+/**
  * Build gallery manifest from album folders
  * @param {string} galleryDir - Path to gallery directory
- * @returns {Array} Array of {folder, images, created} objects
+ * @returns {Array} Array of {folder, images, thumbs, created} objects
  */
 export function buildGalleryManifest(galleryDir) {
   // Common image formats
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic'];
 
-  // Get all subdirectories (each is an album)
+  // Get all subdirectories (each is an album), excluding thumbs folders
   const folders = readdirSync(galleryDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
+    .filter(dirent => dirent.isDirectory() && dirent.name !== 'thumbs')
     .map(dirent => dirent.name)
     .sort();
 
   return folders.map(folder => {
     const folderPath = join(galleryDir, folder);
+    const thumbsPath = join(folderPath, 'thumbs');
 
-    // Get all image files in this album folder
+    // Create thumbs directory if it doesn't exist
+    if (!existsSync(thumbsPath)) {
+      mkdirSync(thumbsPath, { recursive: true });
+    }
+
+    // Get all image files in this album folder (not in thumbs subfolder)
     const imageFiles = readdirSync(folderPath)
-      .filter(file => imageExtensions.some(ext => file.toLowerCase().endsWith(ext)));
+      .filter(file => {
+        const filePath = join(folderPath, file);
+        const stats = statSync(filePath);
+        return stats.isFile() && imageExtensions.some(ext => file.toLowerCase().endsWith(ext));
+      });
 
     // Sort images: KEY prefix first, then alphabetically
     const sortedImages = imageFiles.sort((a, b) => {
@@ -113,11 +143,36 @@ export function buildGalleryManifest(galleryDir) {
       return a.localeCompare(b);
     });
 
-    const images = sortedImages.map(file => `gallery/${folder}/${file}`);
+    // Generate thumbnails for each image
+    const images = [];
+    const thumbs = [];
+
+    sortedImages.forEach(file => {
+      const srcPath = join(folderPath, file);
+      const thumbFile = file;
+      const thumbFilePath = join(thumbsPath, thumbFile);
+
+      images.push(`gallery/${folder}/${file}`);
+      thumbs.push(`gallery/${folder}/thumbs/${thumbFile}`);
+
+      // Generate thumbnail if it doesn't exist or source is newer
+      if (!existsSync(thumbFilePath)) {
+        console.log(`  → Generating thumbnail: ${folder}/thumbs/${file}`);
+        generateThumbnail(srcPath, thumbFilePath);
+      } else {
+        // Check if source is newer than thumbnail
+        const srcStats = statSync(srcPath);
+        const thumbStats = statSync(thumbFilePath);
+        if (srcStats.mtime > thumbStats.mtime) {
+          console.log(`  → Updating thumbnail: ${folder}/thumbs/${file}`);
+          generateThumbnail(srcPath, thumbFilePath);
+        }
+      }
+    });
 
     // Get oldest file creation date as album date
     let oldestDate = new Date();
-    readdirSync(folderPath).forEach(file => {
+    imageFiles.forEach(file => {
       const filePath = join(folderPath, file);
       const stats = statSync(filePath);
       if (stats.birthtime < oldestDate) {
@@ -128,6 +183,7 @@ export function buildGalleryManifest(galleryDir) {
     return {
       folder,
       images,
+      thumbs,
       created: oldestDate.toISOString().split('T')[0]
     };
   });

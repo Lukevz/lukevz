@@ -723,20 +723,21 @@ function renderGalleryGrid() {
 
   // Render album stacks (each shows up to 3 images stacked like polaroids)
   // First image (KEY) should be on top with the caption
+  // Use thumbnails for faster loading
   container.innerHTML = state.gallery.albums.map(album => {
-    const previewImages = album.images.slice(0, 3); // Top 3 images for stack
+    const previewThumbs = album.thumbs.slice(0, 3); // Top 3 thumbs for stack
     // Reverse so first image (KEY) is rendered last (on top)
-    const stackImages = [...previewImages].reverse();
+    const stackThumbs = [...previewThumbs].reverse();
 
     return `
       <div class="gallery-album-card" data-album-id="${album.id}">
         <div class="polaroid-stack">
-          ${stackImages.map((img, i) => `
+          ${stackThumbs.map((thumb, i) => `
             <div class="polaroid" style="--stack-index: ${i}">
               <div class="polaroid-photo">
-                <img src="${img}" alt="${album.title}" loading="lazy">
+                <img src="${thumb}" alt="${album.title}" loading="lazy">
               </div>
-              ${i === stackImages.length - 1 ? `
+              ${i === stackThumbs.length - 1 ? `
                 <div class="polaroid-caption">
                   <div class="polaroid-title">${album.title}</div>
                   ${album.date ? `<div class="polaroid-date">${album.date}</div>` : ''}
@@ -768,7 +769,8 @@ function expandAlbum(albumId) {
   subtitle.textContent = album.date;
 
   // Render photo grid with random slight rotations
-  grid.innerHTML = album.images.map((img, i) => {
+  // Use thumbnails for faster loading in grid view
+  grid.innerHTML = album.thumbs.map((thumb, i) => {
     const rotation = (Math.random() - 0.5) * 6; // -3 to +3 degrees
     return `
       <div class="gallery-photo-card"
@@ -776,7 +778,7 @@ function expandAlbum(albumId) {
            style="transform: rotate(${rotation}deg)">
         <div class="polaroid">
           <div class="polaroid-photo">
-            <img src="${img}" alt="${album.title} photo ${i + 1}" loading="lazy">
+            <img src="${thumb}" alt="${album.title} photo ${i + 1}" loading="lazy">
           </div>
         </div>
       </div>
@@ -2116,8 +2118,8 @@ async function renderYearTabs() {
 
   const years = await discoverYearTabs();
 
-  header.innerHTML = years.map((year) => {
-    const isActive = year === 2025 ? 'active' : '';
+  header.innerHTML = years.map((year, index) => {
+    const isActive = index === 0 ? 'active' : '';
     return `<button class="tasks-year-btn ${isActive}" data-year="${year}">
       <span>${year}</span>
     </button>`;
