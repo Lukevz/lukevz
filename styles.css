@@ -2959,7 +2959,7 @@ ul {
 
 /* Base Button Style */
 .zen-btn {
-  aspect-ratio: 1;
+  aspect-ratio: 1.2; /* Wider than tall for compact fit */
   border: none;
   border-radius: 3px;
   cursor: var(--cursor-pointer);
@@ -2970,7 +2970,7 @@ ul {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.08),
     0 2px 0 rgba(0,0,0,0.4);
-  min-height: 64px;
+  min-height: 48px;
 }
 
 .zen-btn:hover {
@@ -2990,36 +2990,36 @@ ul {
 .zen-btn svg {
   width: 20px;
   height: 20px;
-  color: var(--zen-lcd-dim);
+  color: #2a2a2a; /* Dark gray for readability on grayscale buttons */
 }
 
 .zen-btn:hover svg {
-  color: var(--zen-lcd-text);
+  color: #1a1a1a;
 }
 
-/* Individual Button Colors - Mosaic Pattern */
-.zen-btn-back { background: #3a3840; }
-.zen-btn-up { background: #4a4850; }
-.zen-btn-menu { background: #2a2830; }
-.zen-btn-left { background: #5a5860; }
+/* Individual Button Colors - Mosaic Pattern (neutral grayscale like real Zen Mosaic) */
+.zen-btn-back { background: #4a4a4a; }
+.zen-btn-up { background: #8a8a8a; }
+.zen-btn-menu { background: #3a3a3a; }
+.zen-btn-left { background: #6a6a6a; }
 .zen-btn-select {
-  background: linear-gradient(135deg, var(--zen-accent) 0%, var(--zen-accent-dim) 100%);
+  background: linear-gradient(135deg, #b0b0b0 0%, #909090 100%);
 }
-.zen-btn-select svg { color: var(--zen-lcd-text); }
-.zen-btn-right { background: #3a3840; }
-.zen-btn-shuffle { background: #2a2830; }
-.zen-btn-down { background: #4a4850; }
-.zen-btn-repeat { background: #5a5860; }
+.zen-btn-select svg { color: #2a2a2a; }
+.zen-btn-right { background: #5a5a5a; }
+.zen-btn-shuffle { background: #3a3a3a; }
+.zen-btn-down { background: #7a7a7a; }
+.zen-btn-repeat { background: #5a5a5a; }
 
 /* Active states for shuffle/repeat */
 .zen-btn-shuffle.active,
 .zen-btn-repeat.active {
-  background: var(--zen-accent);
+  background: #a0a0a0;
 }
 
 .zen-btn-shuffle.active svg,
 .zen-btn-repeat.active svg {
-  color: var(--zen-lcd-text);
+  color: #2a2a2a;
 }
 
 /* ZEN Branding */
@@ -3429,27 +3429,38 @@ ul {
 /* Creative Zen Mosaic Theme */
 /* ==================== */
 
-/* Zen Mosaic Color Palette */
+/* Zen Mosaic Color Palette - Neutral grayscale */
 .music-view {
-  --zen-body: #1a1a1c;
-  --zen-body-edge: #0d0d0e;
-  --zen-screen-bg: #2a2832;
-  --zen-screen-glow: rgba(96, 128, 176, 0.15);
-  --zen-lcd-text: #f0e6e8;
-  --zen-lcd-dim: #9d8a92;
-  --zen-lcd-muted: #6d5e68;
+  --zen-body: #1a1a1a;
+  --zen-body-edge: #0d0d0d;
+  --zen-screen-bg: #2a2a2a;
+  --zen-screen-glow: rgba(128, 128, 128, 0.15);
+  --zen-lcd-text: #e8e8e8;
+  --zen-lcd-dim: #909090;
+  --zen-lcd-muted: #606060;
   --zen-accent: var(--accent);
   --zen-accent-dim: color-mix(in srgb, var(--accent) 75%, black);
-  --zen-button: #3a3840;
-  --zen-button-hover: #4a4850;
-  --zen-button-active: #2a2830;
-  --zen-border: #52505a;
-  --zen-border-light: #6a6870;
+  --zen-button: #3a3a3a;
+  --zen-button-hover: #4a4a4a;
+  --zen-button-active: #2a2a2a;
+  --zen-border: #505050;
+  --zen-border-light: #686868;
   --zen-pixel-size: 4px;
 
   /* Retro digital font stack */
   --zen-font-display: 'Doto', var(--font-sans);
   --zen-font-body: var(--font-sans);
+}
+
+/* Welcome message in zero state */
+.zen-welcome-message {
+  font-family: var(--zen-font-display);
+  font-size: 0.75rem;
+  color: var(--zen-lcd-muted);
+  text-align: center;
+  line-height: 1.6;
+  padding: 1rem;
+  letter-spacing: 0.05em;
 }
 
 /* Music Player Container - Device Shell */
