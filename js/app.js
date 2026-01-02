@@ -700,7 +700,29 @@ async function loadGallery() {
 
     state.gallery.albums = manifest
       .map(parseAlbum)
-      .sort((a, b) => new Date(b.created) - new Date(a.created));
+      .sort((a, b) => {
+        // Parse dates from the date field (extracted from folder name)
+        // Format can be "December 2025", "October 2025", or just "2024"
+        const parseAlbumDate = (album) => {
+          if (!album.date) return new Date(0); // Albums without dates go to end
+
+          // Match "Month Year" or just "Year"
+          const monthYear = album.date.match(/^([A-Za-z]+)\s+(\d{4})$/);
+          const yearOnly = album.date.match(/^(\d{4})$/);
+
+          if (monthYear) {
+            // Parse "December 2025" format
+            return new Date(`${monthYear[1]} 1, ${monthYear[2]}`);
+          } else if (yearOnly) {
+            // Parse "2024" format - assume January
+            return new Date(`January 1, ${yearOnly[1]}`);
+          }
+
+          return new Date(0);
+        };
+
+        return parseAlbumDate(b) - parseAlbumDate(a); // Reverse chronological
+      });
 
     renderGalleryGrid();
   } catch (err) {
