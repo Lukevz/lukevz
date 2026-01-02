@@ -934,14 +934,15 @@ function initGuestbookCanvas() {
 }
 
 /**
- * Clear canvas background (transparent)
+ * Fill canvas background (black)
  */
 function fillCanvasBackground(ctx, canvas) {
   const width = 800;
   const height = 600;
 
-  // Clear to transparent
-  ctx.clearRect(0, 0, width, height);
+  // Fill with black background
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, width, height);
 }
 
 /**
@@ -2072,15 +2073,73 @@ function setupVersionChangelog() {
 }
 
 /**
- * Load and render goals from goals.md
+ * Check if a year's goals file exists
  */
-async function loadGoals() {
+async function checkYearExists(year) {
+  try {
+    const filename = `${year} Goals.md`;
+    const response = await fetch(filename, { method: 'HEAD' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Discover available year tabs by checking for files
+ */
+async function discoverYearTabs() {
+  const yearsToCheck = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+  const availableYears = [];
+
+  for (const year of yearsToCheck) {
+    const exists = await checkYearExists(year);
+    if (exists) {
+      availableYears.push(year);
+    }
+  }
+
+  // Always include 2026 for loading state
+  if (!availableYears.includes(2026)) {
+    availableYears.unshift(2026);
+  }
+
+  return availableYears;
+}
+
+/**
+ * Render year tabs dynamically
+ */
+async function renderYearTabs() {
+  const header = document.querySelector('.tasks-header');
+  if (!header) return;
+
+  const years = await discoverYearTabs();
+
+  header.innerHTML = years.map((year) => {
+    const isActive = year === 2025 ? 'active' : '';
+    return `<button class="tasks-year-btn ${isActive}" data-year="${year}">
+      <span>${year}</span>
+    </button>`;
+  }).join('');
+
+  // Re-initialize event listeners after rendering
+  initTasksYearTabs();
+
+  return years;
+}
+
+/**
+ * Load and render goals from year-specific markdown file
+ */
+async function loadGoals(year = '2025') {
   const container = document.getElementById('tasksContainer');
   if (!container) return;
 
   try {
-    const response = await fetch('goals.md');
-    if (!response.ok) throw new Error('Failed to load goals.md');
+    const filename = `${year} Goals.md`;
+    const response = await fetch(filename);
+    if (!response.ok) throw new Error(`Failed to load ${filename}`);
 
     const content = await response.text();
     const lines = content.split('\n');
@@ -2111,7 +2170,10 @@ async function loadGoals() {
       // H1 header = section title
       if (trimmed.startsWith('# ')) {
         flushList();
-        currentSection = trimmed.slice(2);
+        let sectionTitle = trimmed.slice(2);
+        // Override year-based headings to just show the section name
+        sectionTitle = sectionTitle.replace(/^\d{4}\s+/, ''); // Remove "2024 " prefix
+        currentSection = sectionTitle;
         rowNumber = 0; // Reset row number for each section
       }
       // Checkbox list item: - [x] or - [ ]
@@ -2149,9 +2211,56 @@ async function loadGoals() {
     flushList();
     container.innerHTML = html;
   } catch (err) {
-    console.warn('Could not load goals.md:', err);
-    container.innerHTML = '<p class="empty-state">Add goals to goals.md</p>';
+    console.warn(`Could not load ${year} Goals.md:`, err);
+    // Show loading bar for future years (2026+)
+    if (parseInt(year) >= 2026) {
+      container.innerHTML = `
+        <div class="tasks-loading-state">
+          <div class="loading-squares">
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+          </div>
+          <p class="loading-text">Planning ${year}...</p>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `<p class="empty-state">Add goals to ${year} Goals.md</p>`;
+    }
   }
+}
+
+/**
+ * Switch between task years
+ */
+function switchTasksYear(year) {
+  // Update active button state
+  document.querySelectorAll('.tasks-year-btn').forEach(btn => {
+    if (btn.dataset.year === year) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Load goals for the selected year
+  loadGoals(year);
+}
+
+/**
+ * Initialize tasks year tabs
+ */
+function initTasksYearTabs() {
+  document.querySelectorAll('.tasks-year-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchTasksYear(btn.dataset.year);
+    });
+  });
 }
 
 /**
@@ -3871,7 +3980,9 @@ async function init() {
   setupViewModeToggle(); // Setup view mode toggle for notes
   initMenuBar();
   await loadPosts();
-  await loadGoals();
+  await renderYearTabs(); // Discover and render year tabs dynamically
+  const currentYear = new Date().getFullYear();
+  await loadGoals(currentYear.toString());
   await loadMusic();
   setupMusicControls(); // Setup music player controls
   await loadThoughtTrains();

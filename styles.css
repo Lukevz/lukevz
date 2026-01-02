@@ -1977,6 +1977,100 @@ ul {
 /* Tasks View - Elegant Table Layout */
 .tasks-view {
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Tasks Year Tabs Header */
+.tasks-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  max-width: 700px;
+  width: 100%;
+}
+
+.tasks-year-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 0px;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  border: none;
+  background: transparent;
+  cursor: var(--cursor-pointer);
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.tasks-year-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.tasks-year-btn.active {
+  color: var(--text-primary);
+  background: var(--bg-active);
+}
+
+/* Loading squares animation for 2026 */
+.loading-squares {
+  display: flex;
+  gap: 3px;
+  margin-left: 8px;
+}
+
+.loading-square {
+  width: 6px;
+  height: 6px;
+  background: var(--text-secondary);
+  opacity: 0.3;
+  animation: fillSquare 2.4s ease-in-out infinite;
+}
+
+.loading-square:nth-child(1) { animation-delay: 0s; }
+.loading-square:nth-child(2) { animation-delay: 0.3s; }
+.loading-square:nth-child(3) { animation-delay: 0.6s; }
+.loading-square:nth-child(4) { animation-delay: 0.9s; }
+.loading-square:nth-child(5) { animation-delay: 1.2s; }
+.loading-square:nth-child(6) { animation-delay: 1.5s; }
+.loading-square:nth-child(7) { animation-delay: 1.8s; }
+.loading-square:nth-child(8) { animation-delay: 2.1s; }
+
+@keyframes fillSquare {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  12.5% {
+    opacity: 1;
+  }
+  25%, 100% {
+    opacity: 0.3;
+  }
+}
+
+/* Loading state for future years */
+.tasks-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 20px;
+}
+
+.tasks-loading-state .loading-text {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
 }
 
 .tasks-view .tasks-container {
@@ -1986,7 +2080,8 @@ ul {
   padding: var(--space-xl);
   padding-top: 64px;
   background: var(--bg-primary);
-  height: 100%;
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* Notes View - Full-screen with 3-pane layout */
@@ -5690,10 +5785,11 @@ ul {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px 32px 32px;
-  overflow-y: auto;
-  gap: 20px;
+  padding: 16px 32px;
+  overflow: hidden;
+  gap: 12px;
   background: var(--bg-primary);
+  min-height: 0;
 }
 
 .guestbook-draw-panel.hidden {
@@ -5701,26 +5797,36 @@ ul {
 }
 
 .guestbook-draw-content {
+  flex: 1;
   display: flex;
   gap: 32px;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
+  min-height: 0;
 }
 
 .guestbook-canvas-wrapper {
   position: relative;
   flex: 1;
   min-width: 0;
-  max-width: 600px;
+  min-height: 0;
+  max-width: 800px;
+  height: 100%;
+  max-height: calc(100vh - 200px);
   background: #0a0a0a;
   border: 2px solid var(--border-color);
   border-radius: 4px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #guestbookCanvas {
   max-width: 100%;
   max-height: 100%;
+  width: auto;
+  height: auto;
   display: block;
   cursor: crosshair;
   touch-action: none;
@@ -5808,9 +5914,10 @@ ul {
 .guestbook-attribution {
   text-align: center;
   color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  line-height: 1.4;
   padding: 0;
+  flex-shrink: 0;
 }
 
 .guestbook-attribution a {
@@ -5847,7 +5954,7 @@ ul {
 
 .guestbook-star-card {
   aspect-ratio: 4 / 3;
-  background: transparent;
+  background: #000;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   overflow: hidden;
