@@ -557,10 +557,10 @@
 /* External link indicator */
 .nav-icon-btn.external-link .external-icon {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 12px;
-  height: 12px;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
   opacity: 0.7;
   color: white;
 }
@@ -5178,18 +5178,18 @@ ul {
   padding: 0;
 }
 
-/* Masonry Grid */
+/* Regular Grid (switched from masonry to avoid hover glitches) */
 .labs-grid {
-  column-count: 3;
-  column-gap: var(--space-lg);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
 }
 
 /* Card Styles */
 .labs-card {
-  break-inside: avoid;
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  margin-bottom: var(--space-lg);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   cursor: pointer;
@@ -5427,7 +5427,7 @@ ul {
 /* Responsive */
 @media (max-width: 1024px) {
   .labs-grid {
-    column-count: 2;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -5437,7 +5437,7 @@ ul {
   }
 
   .labs-grid {
-    column-count: 1;
+    grid-template-columns: 1fr;
   }
 
   .labs-modal-content {

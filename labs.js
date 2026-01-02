@@ -5,6 +5,10 @@
 
 export default [
   {
+    "file": "GymBud.md",
+    "created": "2025-12-24"
+  },
+  {
     "file": "Life Stories.md",
     "created": "2025-12-24"
   },
