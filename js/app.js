@@ -21,6 +21,9 @@ import { renderPosts } from './features/notes/note-list.js';
 import { renderNote, closeNote } from './features/notes/note-viewer.js';
 import { getNoteFromUrl, updateNoteUrl } from './features/notes/url-router.js';
 
+// Import gallery feature modules
+import { getAlbumFromUrl, updateAlbumUrl } from './features/gallery/url-router.js';
+
 // DOM Elements
 const elements = {
   tagList: document.getElementById('tagList'),
@@ -421,6 +424,7 @@ function setupEventListeners() {
   window.addEventListener('popstate', () => {
     const viewFromUrl = getViewFromUrl();
     const noteFromUrl = getNoteFromUrl(state.posts);
+    const albumId = getAlbumFromUrl();
 
     if (noteFromUrl) {
       state.currentPost = noteFromUrl;
@@ -428,6 +432,28 @@ function setupEventListeners() {
       // Switch to notes view if not already there
       if (state.currentView !== 'notes') {
         performViewSwitch('notes', false);
+      }
+    } else if (albumId) {
+      // Handle gallery album deep links
+      // Switch to gallery view if not already there
+      if (state.currentView !== 'gallery') {
+        performViewSwitch('gallery', false);
+      }
+      // Expand the album (or collapse if going back to gallery grid)
+      const isCurrentlyExpanded = document.getElementById('galleryView')?.classList.contains('album-expanded');
+      if (isCurrentlyExpanded && !albumId) {
+        collapseAlbum();
+      } else if (albumId) {
+        expandAlbum(albumId);
+      }
+    } else if (viewFromUrl === 'gallery') {
+      // User navigated back to gallery grid (no album in URL)
+      if (state.currentView !== 'gallery') {
+        performViewSwitch('gallery', false);
+      }
+      // Collapse album if one is expanded
+      if (document.getElementById('galleryView')?.classList.contains('album-expanded')) {
+        collapseAlbum();
       }
     } else if (viewFromUrl) {
       // Switch to the view from URL without updating URL (we're responding to URL change)
@@ -795,6 +821,9 @@ function expandAlbum(albumId) {
   // Show expanded view with transition
   document.getElementById('galleryView').classList.add('album-expanded');
   container.setAttribute('aria-hidden', 'false');
+
+  // Update URL to enable deep linking
+  updateAlbumUrl(albumId);
 }
 
 /**
@@ -805,6 +834,9 @@ function collapseAlbum() {
 
   document.getElementById('galleryView').classList.remove('album-expanded');
   document.getElementById('galleryExpanded').setAttribute('aria-hidden', 'true');
+
+  // Clear album from URL
+  updateAlbumUrl(null);
 }
 
 /**
@@ -1799,6 +1831,12 @@ function updateViewUrl(viewName) {
     return;
   }
 
+  // Special handling for gallery view - preserve album hash if present
+  if (viewName === 'gallery' && window.location.hash.startsWith('#gallery/')) {
+    // Don't change URL if we're already showing a specific album
+    return;
+  }
+
   const newHash = `#${viewName}`;
 
   // Only update if different from current hash
@@ -1818,6 +1856,11 @@ function getViewFromUrl() {
   // Handle note URLs specially
   if (hash.startsWith('#note/')) {
     return 'notes';
+  }
+
+  // Handle gallery album URLs specially
+  if (hash.startsWith('#gallery/')) {
+    return 'gallery';
   }
 
   // Extract view name (remove # prefix)
@@ -1913,6 +1956,15 @@ function performViewSwitch(viewName, updateUrl = true) {
       initGuestbookCanvas();
     }
     switchGuestbookMode(state.guestbook.viewMode || 'draw');
+  }
+
+  // When switching to gallery view, check URL for album deep link
+  if (viewName === 'gallery' && state.gallery.albums.length > 0) {
+    const albumId = getAlbumFromUrl();
+    if (albumId) {
+      // If there's an album in the URL, expand it
+      expandAlbum(albumId);
+    }
   }
 
   state.currentView = viewName;

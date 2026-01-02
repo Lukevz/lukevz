@@ -571,8 +571,8 @@
 
 .nav-icon-btn svg,
 .nav-icon-btn img {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   filter: brightness(0) invert(1);
 }
@@ -2598,8 +2598,8 @@ ul {
 
   .nav-icon-btn svg,
   .nav-icon-btn img {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
   }
 
   /* Hide nav labels on mobile */
