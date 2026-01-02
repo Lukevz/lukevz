@@ -962,6 +962,7 @@ async function renderExpandedAlbum() {
 
     // Extract EXIF if nerd mode is enabled
     let exifHtml = '';
+    let hasExifClass = '';
     if (state.gallery.nerdMode) {
       console.log('Extracting EXIF for:', fullImage);
       const exifData = await extractExifData(fullImage);
@@ -970,6 +971,7 @@ async function renderExpandedAlbum() {
       console.log('Formatted EXIF:', formattedExif);
       if (formattedExif) {
         exifHtml = `<div class="polaroid-exif">${formattedExif}</div>`;
+        hasExifClass = 'has-exif';
       }
     }
 
@@ -977,7 +979,7 @@ async function renderExpandedAlbum() {
       <div class="gallery-photo-card"
            data-index="${i}"
            style="transform: rotate(${rotation}deg)">
-        <div class="polaroid">
+        <div class="polaroid ${hasExifClass}">
           <div class="polaroid-photo">
             <img src="${thumb}" alt="${album.title} photo ${i + 1}" loading="lazy">
           </div>

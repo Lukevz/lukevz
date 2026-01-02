@@ -1673,8 +1673,22 @@ ul {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .app {
+  /* Force 2-column layout at tablet: sidebar + post-list */
+  .notes-view .app {
     grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  /* Override view-mode classes at tablet - always show sidebar + post-list */
+  .notes-view.view-mode-three-column .app,
+  .notes-view.view-mode-two-column .app,
+  .notes-view.view-mode-one-column .app {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  /* Ensure sidebar and post-list are always visible at tablet */
+  .notes-view .sidebar,
+  .notes-view .post-list {
+    display: flex !important;
   }
 
   /* Ensure post-list fills available space and scrolls */
@@ -1690,31 +1704,38 @@ ul {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Keep view mode toggle accessible on tablet */
+  /* Hide view mode toggle on tablet - layout is fixed */
   .notes-view .view-mode-toggle {
-    position: fixed;
-    top: 60px; /* Account for top menu bar */
-    left: 0;
-    right: 0;
-    z-index: 1200; /* Above note overlay */
-  }
-
-  .note-view {
     display: none;
   }
 
-  .note-view.active {
-    display: block;
+  /* Note view is hidden by default, shown as overlay when active */
+  .notes-view .note-view {
+    display: none !important;
+  }
+
+  .notes-view .note-view.active {
+    display: flex !important;
+    flex-direction: column;
     position: fixed;
-    top: 108px; /* Account for top menu bar + view mode toggle */
+    top: 64px; /* Account for top menu bar */
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 50;
-    background: var(--bg-primary-solid); /* Solid background to prevent transparency */
+    z-index: 1050;
+    background: var(--bg-primary-solid);
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Sidebar overlay and sidebar z-index for tablet */
+  .sidebar.open {
+    z-index: 1100;
+  }
+
+  .sidebar-overlay.active {
+    z-index: 1099;
   }
 
   .note-content {
@@ -1782,6 +1803,7 @@ ul {
 
   .sidebar.open {
     transform: translateX(0);
+    z-index: 1100; /* Above note-view overlay (1050) */
   }
 
   .mobile-menu-toggle {
@@ -1799,12 +1821,15 @@ ul {
     padding: var(--space-md);
   }
 
-  /* Overlay when sidebar is open */
+  /* Overlay when sidebar is open - covers area to the right of sidebar */
   .sidebar-overlay {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: var(--sidebar-width); /* Start after sidebar */
+    right: 0;
+    bottom: 0;
     background: var(--overlay-bg);
-    z-index: 998; /* Below sidebar but above content */
+    z-index: 1099; /* Above note-view (1050), sidebar handles its own z-index */
     opacity: 0;
     visibility: hidden;
     transition: opacity var(--transition-normal), visibility var(--transition-normal);
@@ -2109,7 +2134,7 @@ ul {
 
 /* Titlebar with integrated toolbar (for Notes view) */
 .os9-titlebar-with-toolbar {
-  height: 24px;
+  height: 32px;
   flex-direction: row;
   padding: 0;
 }
@@ -2118,7 +2143,7 @@ ul {
   position: absolute;
   left: 0;
   right: 0;
-  height: 24px;
+  height: 32px;
   justify-content: center;
   pointer-events: none; /* Allow clicks to pass through to buttons */
 }
@@ -2340,6 +2365,13 @@ ul {
 .view-mode-btn svg {
   width: 16px;
   height: 16px;
+}
+
+/* Hide view mode toggle on mobile - must come after base definition */
+@media (max-width: 768px) {
+  .view-mode-toggle {
+    display: none !important;
+  }
 }
 
 /* Section container */
@@ -5695,6 +5727,12 @@ ul {
 .gallery-photo-card .polaroid {
   position: relative;
   width: 100%;
+  padding: 12px 12px 32px 12px; /* Smaller bottom padding when nerd mode is off */
+  transition: padding 0.2s ease;
+}
+
+.gallery-photo-card .polaroid.has-exif {
+  padding: 12px 12px 56px 12px; /* Larger bottom padding when EXIF is shown */
 }
 
 .gallery-photo-card .polaroid-photo {
@@ -5755,6 +5793,9 @@ ul {
   border-radius: 4px;
   transition: background 0.2s ease;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gallery-lightbox-close:hover {
@@ -5778,6 +5819,9 @@ ul {
   border-radius: 4px;
   transition: background 0.2s ease;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gallery-lightbox-nav:hover {
@@ -5800,7 +5844,8 @@ ul {
 /* Responsive Gallery */
 @media (max-width: 1024px) {
   .gallery-grid {
-    column-count: 2;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
   }
 
   .gallery-expanded-grid {
@@ -5816,7 +5861,8 @@ ul {
   }
 
   .gallery-grid {
-    column-count: 1;
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 
   .gallery-expanded-header {
