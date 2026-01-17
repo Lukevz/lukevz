@@ -2384,11 +2384,14 @@ async function loadGoals(year = '2025') {
 
     const flushList = () => {
       if (listItems.length > 0 && currentSection) {
-        html += `<section class="tasks-section">
+        const isHabitsSection = currentSection.toLowerCase() === 'habits';
+        const statusLabel = isHabitsSection ? 'Progress' : 'Status';
+
+        html += `<section class="tasks-section${isHabitsSection ? ' habits-section' : ''}">
           <div class="tasks-section-header">
             <span class="tasks-section-header-number">#</span>
             <h2 class="tasks-section-header-title">${currentSection}</h2>
-            <span class="tasks-section-header-status">Status</span>
+            <span class="tasks-section-header-status">${statusLabel}</span>
           </div>
           <ul class="tasks-list">
             ${listItems.join('')}
@@ -2401,10 +2404,10 @@ async function loadGoals(year = '2025') {
     for (const line of lines) {
       const trimmed = line.trim();
 
-      // H1 header = section title
-      if (trimmed.startsWith('# ')) {
+      // H2 header = section title (supports both # and ## for backwards compatibility)
+      if (trimmed.startsWith('## ') || (trimmed.startsWith('# ') && !trimmed.startsWith('## '))) {
         flushList();
-        let sectionTitle = trimmed.slice(2);
+        let sectionTitle = trimmed.startsWith('## ') ? trimmed.slice(3) : trimmed.slice(2);
         // Override year-based headings to just show the section name
         sectionTitle = sectionTitle.replace(/^\d{4}\s+/, ''); // Remove "2024 " prefix
         currentSection = sectionTitle;
@@ -2415,16 +2418,56 @@ async function loadGoals(year = '2025') {
         rowNumber++;
         const isChecked = trimmed.startsWith('- [x]');
         let text = trimmed.slice(6); // Remove "- [x] " or "- [ ] "
-        // Parse markdown links [text](url)
-        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-        const statusClass = isChecked ? 'completed' : 'pending';
-        listItems.push(`
-          <li class="task-item${isChecked ? ' completed' : ''}">
-            <span class="task-row-number">${rowNumber}</span>
-            <span class="task-text">${text}</span>
-            <span class="task-status-indicator ${statusClass}"></span>
-          </li>
-        `);
+
+        // Check if this is a habit item (has progress in parentheses)
+        const isHabit = currentSection && currentSection.toLowerCase() === 'habits';
+        const progressMatch = text.match(/^\((\d+(?:,\d+)*)\s*\/\s*(\d+(?:,\d+)*)\)\s*(.+)$/);
+
+        if (isHabit && progressMatch) {
+          // Parse habit with progress bar
+          const current = parseInt(progressMatch[1].replace(/,/g, ''));
+          const total = parseInt(progressMatch[2].replace(/,/g, ''));
+          const habitText = progressMatch[3];
+          const percentage = Math.min(100, Math.round((current / total) * 100));
+
+          // Format numbers with "k" suffix for thousands
+          const formatNumber = (num) => {
+            if (num >= 1000) {
+              return (num / 1000).toFixed(num >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k';
+            }
+            return num.toString();
+          };
+
+          const formattedCurrent = formatNumber(current);
+          const formattedTotal = formatNumber(total);
+
+          // Parse markdown links in habit text
+          const parsedText = habitText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+          listItems.push(`
+            <li class="task-item habit-item">
+              <span class="task-row-number">${rowNumber}</span>
+              <span class="task-text">${parsedText}</span>
+              <div class="habit-progress">
+                <div class="habit-progress-bar">
+                  <div class="habit-progress-fill" style="width: ${percentage}%"></div>
+                </div>
+                <span class="habit-progress-text">${formattedCurrent}/${formattedTotal}</span>
+              </div>
+            </li>
+          `);
+        } else {
+          // Regular task item
+          text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+          const statusClass = isChecked ? 'completed' : 'pending';
+          listItems.push(`
+            <li class="task-item${isChecked ? ' completed' : ''}">
+              <span class="task-row-number">${rowNumber}</span>
+              <span class="task-text">${text}</span>
+              <span class="task-status-indicator ${statusClass}"></span>
+            </li>
+          `);
+        }
       }
       // Regular list item: - text (active/in-progress items)
       else if (trimmed.startsWith('- ')) {
