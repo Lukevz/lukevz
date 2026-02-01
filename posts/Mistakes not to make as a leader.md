@@ -40,4 +40,4 @@ These core principles can be synthesized into overarching themes:
 - **Effective Communication**: Engaging in direct, immediate communication to resolve issues and ensure clarity.
 - **Presence and Future Focus**: Balancing living in the moment with planning for the future, and being adaptable to spontaneity.
 
-#writing #life/northstar #status/complete
+#output/writing #life/northstar 

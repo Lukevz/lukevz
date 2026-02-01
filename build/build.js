@@ -7,7 +7,7 @@
 import { writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -17,10 +17,14 @@ const thoughtTrainDir = join(rootDir, 'thought-train');
 const labsDir = join(rootDir, 'labs');
 const soundsDir = join(rootDir, 'sounds');
 const galleryDir = join(rootDir, 'gallery');
+const coversDir = join(rootDir, 'covers');
 
-// Build posts manifest
-const posts = buildPostsManifest(postsDir);
-const postsContent = `/**
+
+async function build() {
+
+  // Build posts manifest
+  const posts = buildPostsManifest(postsDir);
+  const postsContent = `/**
  * Posts Manifest (auto-generated)
  * Using object format with created dates from filesystem
  * Run 'node build/build.js' to regenerate after adding new posts
@@ -28,12 +32,12 @@ const postsContent = `/**
 
 export default ${JSON.stringify(posts, null, 2)};
 `;
-writeFileSync(join(rootDir, 'posts.js'), postsContent);
-console.log(`✓ Generated posts.js with ${posts.length} posts`);
+  writeFileSync(join(rootDir, 'posts.js'), postsContent);
+  console.log(`✓ Generated posts.js with ${posts.length} posts`);
 
-// Build thought trains manifest
-const thoughtTrains = buildThoughtTrainsManifest(thoughtTrainDir);
-const thoughtTrainContent = `/**
+  // Build thought trains manifest
+  const thoughtTrains = buildThoughtTrainsManifest(thoughtTrainDir);
+  const thoughtTrainContent = `/**
  * Thought Trains Manifest (auto-generated)
  * Using object format with created dates from filesystem
  * Run 'node build/build.js' to regenerate after adding new thought trains
@@ -41,27 +45,27 @@ const thoughtTrainContent = `/**
 
 export default ${JSON.stringify(thoughtTrains, null, 2)};
 `;
-writeFileSync(join(rootDir, 'thought-trains.js'), thoughtTrainContent);
-console.log(`✓ Generated thought-trains.js with ${thoughtTrains.length} thought trains`);
+  writeFileSync(join(rootDir, 'thought-trains.js'), thoughtTrainContent);
+  console.log(`✓ Generated thought-trains.js with ${thoughtTrains.length} thought trains`);
 
-// Build labs manifest (if directory exists)
-if (existsSync(labsDir)) {
-  const labs = buildLabsManifest(labsDir);
-  const labsContent = `/**
+  // Build labs manifest (if directory exists)
+  if (existsSync(labsDir)) {
+    const labs = buildLabsManifest(labsDir);
+    const labsContent = `/**
  * Labs Manifest (auto-generated)
  * Run 'node build/build.js' to regenerate after adding new labs
  */
 
 export default ${JSON.stringify(labs, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'labs.js'), labsContent);
-  console.log(`✓ Generated labs.js with ${labs.length} labs`);
-}
+    writeFileSync(join(rootDir, 'labs.js'), labsContent);
+    console.log(`✓ Generated labs.js with ${labs.length} labs`);
+  }
 
-// Build sounds manifest (if directory exists)
-if (existsSync(soundsDir)) {
-  const sounds = buildSoundsManifest(soundsDir);
-  const soundsContent = `/**
+  // Build sounds manifest (if directory exists)
+  if (existsSync(soundsDir)) {
+    const sounds = buildSoundsManifest(soundsDir);
+    const soundsContent = `/**
  * Sounds Manifest (auto-generated)
  * Lists all audio files in the sounds/ directory
  * Run 'node build/build.js' to regenerate after adding new sounds
@@ -69,14 +73,14 @@ if (existsSync(soundsDir)) {
 
 export default ${JSON.stringify(sounds, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'sounds.js'), soundsContent);
-  console.log(`✓ Generated sounds.js with ${sounds.length} sounds`);
-}
+    writeFileSync(join(rootDir, 'sounds.js'), soundsContent);
+    console.log(`✓ Generated sounds.js with ${sounds.length} sounds`);
+  }
 
-// Build gallery manifest (if directory exists)
-if (existsSync(galleryDir)) {
-  const gallery = buildGalleryManifest(galleryDir);
-  const galleryContent = `/**
+  // Build gallery manifest (if directory exists)
+  if (existsSync(galleryDir)) {
+    const gallery = buildGalleryManifest(galleryDir);
+    const galleryContent = `/**
  * Gallery Manifest (auto-generated)
  * Lists all photo albums in the gallery/ directory
  * Run 'node build/build.js' to regenerate after adding new albums
@@ -84,6 +88,22 @@ if (existsSync(galleryDir)) {
 
 export default ${JSON.stringify(gallery, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'gallery.js'), galleryContent);
-  console.log(`✓ Generated gallery.js with ${gallery.length} albums`);
+    writeFileSync(join(rootDir, 'gallery.js'), galleryContent);
+    console.log(`✓ Generated gallery.js with ${gallery.length} albums`);
+  }
+
+  // Build covers manifest (downloads missing covers from Open Library)
+  const covers = await buildCoversManifest(postsDir, coversDir);
+  const coversContent = `/**
+ * Book Covers Manifest (auto-generated)
+ * Maps book files to their cover images
+ * Run 'node build/build.js' to regenerate and download missing covers
+ */
+
+export default ${JSON.stringify(covers, null, 2)};
+`;
+  writeFileSync(join(rootDir, 'covers.js'), coversContent);
+  console.log(`✓ Generated covers.js with ${covers.length} books`);
 }
+
+build().catch(console.error);

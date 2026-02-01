@@ -1,5 +1,5 @@
 # The Rise of Digital Gardens & Personal Operating Systems
-#output/writing #status/complete
+#output/video
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/pmVShT32A70?si=X0cCbu0xqqWuCIQq" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
@@ -34,7 +34,7 @@ There’s definitely nothing wrong with using AI to help out good content great,
 
 Maggie Appleton illustrates this with a lovely, simple graph of how content publishing has evolved.
 
-![](The Rise of Digital Gardens & Personal Operating Systems/gardentime_rrsecv.png.webp)
+![](The%20Rise%20of%20Digital%20Gardens%20&%20Personal%20Operating%20Systems/gardentime_rrsecv.png.webp)
 
 > Over the last decade, we’ve moved away from casual live journal entries and formalised our writing into articles and essays. These are carefully crafted, edited, revised, and published with a timestamp. When it’s done, it’s done. We act like tiny magazines, sending our writing off to the printer.
 > 

@@ -3,7 +3,7 @@
  * Eliminates duplication between build.js and dev.js
  */
 
-import { readdirSync, statSync, existsSync, mkdirSync } from 'fs';
+import { readdirSync, statSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { execSync } from 'child_process';
 
@@ -187,4 +187,208 @@ export function buildGalleryManifest(galleryDir) {
       created: oldestDate.toISOString().split('T')[0]
     };
   });
+}
+
+// Known authors for popular books (fallback when not found in file)
+const KNOWN_AUTHORS = {
+  'Atomic Habits': 'James Clear',
+  'Creativity, Inc.': 'Ed Catmull',
+  'Steal Like An Artist': 'Austin Kleon',
+  'The Ride of a Lifetime': 'Robert Iger',
+  'The Speed of Trust': 'Stephen M.R. Covey',
+  'Building A Second Brain': 'Tiago Forte',
+  'Feel-Good Productivity': 'Ali Abdaal',
+  'Show Your Work': 'Austin Kleon',
+};
+
+/**
+ * Parse book metadata from markdown content
+ * Handles various formats:
+ *   # B. Title       # B. Title
+ *   Author           #tag
+ *   Rating: N        By Author
+ *                    Rating: N
+ * @param {string} markdown - Raw markdown content
+ * @param {string} filename - Book filename
+ * @returns {Object} {title, author, rating}
+ */
+function parseBookMetadata(markdown, filename) {
+  const lines = markdown.split('\n').map(line => line.trim());
+
+  // Extract title from H1, removing "B. " prefix
+  let title = '';
+  const h1Match = lines[0]?.match(/^#\s+(.+)/);
+  if (h1Match) {
+    title = h1Match[1].replace(/^b\.\s*/i, '').trim();
+  } else {
+    title = filename.replace(/\.md$/i, '').replace(/^b\.\s*/i, '').trim();
+  }
+
+  // Find author - check various patterns
+  let author = null;
+  for (let i = 1; i < Math.min(lines.length, 15); i++) {
+    const line = lines[i];
+    if (!line) continue;
+
+    // Skip markdown formatting and non-author content
+    if (line.startsWith('#')) continue;  // Hashtags or headers
+    if (line.startsWith('>')) continue;  // Blockquotes
+    if (line.startsWith('*')) continue;  // Italics/bold/lists
+    if (line.startsWith('-')) continue;  // Lists
+    if (line.startsWith('!')) continue;  // Images ![](...)
+    if (line.startsWith('[')) continue;  // Links
+    if (line.match(/^\d+\./)) continue;  // Numbered lists
+    if (line.match(/^rating:/i)) continue;  // Rating line
+    if (line.match(/^url:/i)) continue;  // URL line
+    if (line.match(/^created/i)) continue;  // Created time
+    if (line.match(/^".*"$/)) continue;  // Quoted text
+    if (line.match(/^---$/)) continue;  // Horizontal rule
+
+    // Check for "Author: Name" format
+    const authorMatch = line.match(/^author:\s*(.+)/i);
+    if (authorMatch) {
+      author = authorMatch[1].trim();
+      break;
+    }
+
+    // Check for "By Author" format
+    const byMatch = line.match(/^by\s+(.+)/i);
+    if (byMatch) {
+      author = byMatch[1].trim();
+      break;
+    }
+  }
+
+  // Fallback to known authors if not found
+  if (!author) {
+    author = KNOWN_AUTHORS[title] || 'Unknown Author';
+  }
+
+  // Find rating anywhere in first 15 lines
+  let rating = 0;
+  for (let i = 0; i < Math.min(lines.length, 15); i++) {
+    const ratingMatch = lines[i]?.match(/^rating:\s*(\d+)/i);
+    if (ratingMatch) {
+      rating = parseInt(ratingMatch[1], 10);
+      break;
+    }
+  }
+
+  return { title, author, rating };
+}
+
+/**
+ * Generate a safe filename from book title
+ * @param {string} title - Book title
+ * @returns {string} Safe filename
+ */
+function titleToFilename(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Download a book cover from Open Library API
+ * @param {string} title - Book title
+ * @param {string} author - Book author
+ * @param {string} destPath - Destination file path
+ * @returns {Promise<boolean>} Success status
+ */
+async function downloadCover(title, author, destPath) {
+  try {
+    // Search Open Library for the book
+    const searchUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&limit=5&language=eng`;
+
+    const response = await fetch(searchUrl);
+    if (!response.ok) {
+      console.warn(`    API error for "${title}": ${response.status}`);
+      return false;
+    }
+
+    const data = await response.json();
+    if (!data.docs || data.docs.length === 0) {
+      console.warn(`    No results for "${title}"`);
+      return false;
+    }
+
+    // Find the best match - prefer editions with cover_i and English language
+    let coverId = null;
+    for (const doc of data.docs) {
+      if (doc.cover_i) {
+        coverId = doc.cover_i;
+        break;
+      }
+    }
+
+    if (!coverId) {
+      console.warn(`    No cover image for "${title}"`);
+      return false;
+    }
+
+    // Get large cover from Open Library covers API
+    const coverUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+
+    // Download the image
+    const imageResponse = await fetch(coverUrl);
+    if (!imageResponse.ok) {
+      console.warn(`    Failed to download cover for "${title}"`);
+      return false;
+    }
+
+    const buffer = await imageResponse.arrayBuffer();
+    writeFileSync(destPath, Buffer.from(buffer));
+    return true;
+  } catch (err) {
+    console.warn(`    Error downloading cover for "${title}":`, err.message);
+    return false;
+  }
+}
+
+/**
+ * Build covers manifest and download missing covers
+ * @param {string} postsDir - Path to posts directory
+ * @param {string} coversDir - Path to covers directory
+ * @param {boolean} downloadCovers - Whether to download missing covers (default: true)
+ * @returns {Promise<Array>} Array of {file, cover, title, author, rating} objects
+ */
+export async function buildCoversManifest(postsDir, coversDir, downloadCovers = true) {
+  // Create covers directory if it doesn't exist
+  if (!existsSync(coversDir)) {
+    mkdirSync(coversDir, { recursive: true });
+  }
+
+  // Find all book files (b. prefix)
+  const bookFiles = readdirSync(postsDir)
+    .filter(file => file.toLowerCase().startsWith('b.') && file.endsWith('.md'))
+    .sort();
+
+  const manifest = [];
+
+  for (const file of bookFiles) {
+    const filePath = join(postsDir, file);
+    const markdown = readFileSync(filePath, 'utf-8');
+    const { title, author, rating } = parseBookMetadata(markdown, file);
+
+    const coverFilename = titleToFilename(title) + '.jpg';
+    const coverPath = join(coversDir, coverFilename);
+    const coverExists = existsSync(coverPath);
+
+    // Download cover if missing (uses Open Library - no API key needed)
+    if (!coverExists && downloadCovers) {
+      console.log(`  → Downloading cover: ${title}`);
+      await downloadCover(title, author, coverPath);
+    }
+
+    manifest.push({
+      file,
+      cover: existsSync(coverPath) ? `covers/${coverFilename}` : null,
+      title,
+      author,
+      rating
+    });
+  }
+
+  return manifest;
 }

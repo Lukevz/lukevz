@@ -1,4 +1,5 @@
 # The search for the best todo app
+#output/video
 
 
 ### Finding the Right To-Do App: A Review of Things 3
@@ -94,4 +95,4 @@ Remember, the best to-do app is one that clears your mind and allows you to focu
 
 
 
-#business/uxwithluke #status/complete
+#business/uxwithluke 

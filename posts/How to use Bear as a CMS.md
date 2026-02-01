@@ -47,4 +47,4 @@ While I've moved on from this approach, the shortcut could be repurposed for:
 
 At the end of the day, it was a valuable experiment that taught me a lot about automation and the balance between simplicity and functionality.
 
-#writing #status/complete
+#output/writing 

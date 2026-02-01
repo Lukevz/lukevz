@@ -13,6 +13,10 @@ export default [
     "created": "2025-12-24"
   },
   {
+    "file": "Project Shredder.md",
+    "created": "2026-01-18"
+  },
+  {
     "file": "Research Garden.md",
     "created": "2025-12-24"
   }

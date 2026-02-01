@@ -93,17 +93,10 @@
 	          </svg>
 	          <span class="nav-label">Gallery</span>
 	        </button>
-	        <a class="nav-icon-btn external-link" href="https://lukevanzyl.com" target="_blank" rel="noopener noreferrer" aria-label="Work">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M8 3h8v4h6v14H2V7h6V3zm2 4h4V5h-4v2zM4 9v10h16V9H4z" fill="currentColor"/>
-	          </svg>
-	          <svg class="external-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
-	            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-	            <polyline points="15 3 21 3 21 9"></polyline>
-	            <line x1="10" y1="14" x2="21" y2="3"></line>
-	          </svg>
-	          <span class="nav-label">Work</span>
-	        </a>
+	        <button class="nav-icon-btn" data-view="library" aria-label="Library">
+	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M3 3h8v2H3v12h8V5h2v12h8V5h-8V3h10v16H13v2h-2v-2H1V3h2zm16 7h-4v2h4v-2zm-4-3h4v2h-4V7zm2 6h-2v2h2v-2z" fill="currentColor"/> </svg>
+	          <span class="nav-label">Library</span>
+	        </button>
 	      </nav>
 	    </div>
     <div class="menu-right">
@@ -179,12 +172,10 @@
 	          </svg>
 	          <span>Guestbook</span>
 	        </button>
-	        <a class="mobile-menu-app-btn" href="https://lukevanzyl.com" target="_blank" rel="noopener noreferrer">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M8 3h8v4h6v14H2V7h6V3zm2 4h4V5h-4v2zM4 9v10h16V9H4z" fill="currentColor"/>
-	          </svg>
-	          <span>Work</span>
-	        </a>
+	        <button class="mobile-menu-app-btn" data-view="library">
+	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M3 3h8v2H3v12h8V5h2v12h8V5h-8V3h10v16H13v2h-2v-2H1V3h2zm16 7h-4v2h4v-2zm-4-3h4v2h-4V7zm2 6h-2v2h2v-2z" fill="currentColor"/> </svg>
+	          <span>Library</span>
+	        </button>
 	      </nav>
       <div class="mobile-menu-socials">
         <a href="https://x.com/lukevz" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="X (Twitter)">
@@ -617,6 +608,69 @@
     </div>
   </div>
 
+  <!-- Project Shredder View -->
+  <div class="view project-shredder-view" id="projectShredderView">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Project Shredder</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="project-shredder-container">
+          <!-- Drop zone overlay (covers entire viewport when dragging) -->
+          <div class="shredder-dropzone" id="shredderDropzone">
+            <div class="dropzone-content">
+              <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <p class="dropzone-text">Drop file to stow in capsule</p>
+            </div>
+          </div>
+
+          <!-- Instructions / Status Area -->
+          <div class="shredder-instructions">
+            <p class="shredder-message" id="shredderMessage">Drop a file or click to select</p>
+            <button class="shredder-file-btn" id="shredderFileBtn">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Select File
+            </button>
+            <input type="file" id="shredderFileInput" hidden>
+          </div>
+
+          <!-- Space Capsule (pinned to bottom initially) -->
+          <div class="space-capsule" id="spaceCapsule" aria-hidden="true">
+            <canvas id="capsuleCanvas" width="240" height="320"></canvas>
+            <div class="capsule-filename" id="capsuleFilename"></div>
+          </div>
+
+          <!-- Launch Button (appears after file is stowed) -->
+          <button class="launch-button hidden" id="launchButton">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L2 12h3v8h14v-8h3L12 2z"/>
+            </svg>
+            <span>LAUNCH</span>
+          </button>
+
+          <!-- Success Message (appears after capture) -->
+          <div class="success-message hidden" id="successMessage">
+            <div class="success-content">
+              <svg class="success-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              <p class="success-text">File successfully launched into the void!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Guestbook View -->
   <div class="view guestbook-view" id="guestbookView">
     <div class="os9-window">
@@ -712,6 +766,70 @@
         </div><!-- End guestbook-container -->
       </div><!-- End os9-window-body -->
     </div><!-- End os9-window -->
+  </div>
+
+  <!-- Library View -->
+  <div class="view library-view" id="libraryView">
+    <div class="os9-window">
+      <div class="os9-titlebar">
+        <div class="os9-titlebar-content">
+          <span class="os9-title">Library</span>
+        </div>
+      </div>
+      <div class="os9-window-body">
+        <div class="kindle-screen">
+          <!-- Kindle Content -->
+          <div class="kindle-content">
+            <div class="kindle-books-grid" id="libraryShelves"></div>
+          </div>
+
+          <!-- Kindle Bottom Nav -->
+          <div class="kindle-bottom-nav">
+            <button class="kindle-nav-btn active">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
+              </svg>
+              <span>Library</span>
+            </button>
+            <button class="kindle-nav-btn" id="suggestBookBtn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+              <span>Suggest</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Book Suggestion Modal -->
+  <div class="suggest-book-modal" id="suggestBookModal">
+    <div class="suggest-book-content">
+      <div class="suggest-book-header">
+        <h2>Suggest a Book</h2>
+        <button class="suggest-book-close" id="suggestBookClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+        </button>
+      </div>
+      <form id="suggestBookForm" class="suggest-book-form">
+        <div class="suggest-book-field">
+          <label for="suggestTitle">Title</label>
+          <input type="text" id="suggestTitle" name="title" required placeholder="Book title">
+        </div>
+        <div class="suggest-book-field">
+          <label for="suggestAuthor">Author</label>
+          <input type="text" id="suggestAuthor" name="author" required placeholder="Author name">
+        </div>
+        <div class="suggest-book-field">
+          <label for="suggestMessage">Message <span class="optional">(optional)</span></label>
+          <textarea id="suggestMessage" name="message" rows="3" placeholder="Why should I read this?"></textarea>
+        </div>
+        <button type="submit" class="suggest-book-submit">Send Suggestion</button>
+      </form>
+    </div>
   </div>
 
   <!-- Info Button & Credits Popup -->

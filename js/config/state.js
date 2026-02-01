@@ -37,6 +37,11 @@ export const state = {
     itemsPerPage: 100,          // Stars per page
     drawingCanvas: null,        // Canvas element reference
     viewMode: 'draw'            // 'draw' | 'gallery'
+  },
+  library: {
+    allBooks: [],               // Flat array of all books (auto-populated from b. prefixed posts)
+    expandedItem: null,         // Currently highlighted book (for deep linking)
+    apiCache: {}                // Google Books API cache {title|author: {cover, fetchedAt}}
   }
 };
 
@@ -68,4 +73,13 @@ export const lifeStoriesState = {
   targetScrollPosition: null, // For smooth scrolling to specific floors
   animationFrame: null, // For continuous animation loop
   scrollAccumulator: 0 // Accumulate scroll delta before snapping to floor
+};
+
+// Project Shredder state (space file shredder game)
+export const projectShredderState = {
+  initialized: false,
+  filename: null,              // Current file name
+  phase: 'idle',               // 'idle' | 'stowed' | 'launching' | 'flying' | 'captured'
+  message: 'Drop a file or click to select',
+  showLaunchButton: false
 };

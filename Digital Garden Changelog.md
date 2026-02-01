@@ -1,4 +1,8 @@
 # Digital Garden Changelog
+V1.5.0 – Added Library App
+- Browse my library in a Kindle style UI
+- Suggest a book for me to read!
+
 V1.4.3 – Added Nerd Mode to Gallery Albums
 - See EXIF data for each photo in the gallery
 - Moving gradient border to window

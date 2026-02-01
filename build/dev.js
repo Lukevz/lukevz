@@ -11,7 +11,7 @@ import { createServer } from 'http';
 import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { URL } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -20,6 +20,7 @@ const thoughtTrainDir = join(rootDir, 'thought-train');
 const labsDir = join(rootDir, 'labs');
 const soundsDir = join(rootDir, 'sounds');
 const galleryDir = join(rootDir, 'gallery');
+const coversDir = join(rootDir, 'covers');
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -123,12 +124,44 @@ export default ${JSON.stringify(gallery, null, 2)};
   console.log(`\x1b[32m✓\x1b[0m Rebuilt gallery.js (${gallery.length} albums)`);
 }
 
+// Build covers.js (async - downloads missing covers)
+let booksApiKey = null;
+async function loadBooksApiKey() {
+  if (booksApiKey !== null) return booksApiKey;
+  try {
+    const configPath = join(rootDir, 'books-config.js');
+    if (existsSync(configPath)) {
+      const configModule = await import(pathToFileURL(configPath).href);
+      booksApiKey = configModule.default?.googleBooks?.apiKey || null;
+    }
+  } catch {
+    booksApiKey = null;
+  }
+  return booksApiKey;
+}
+
+async function buildCovers() {
+  const apiKey = await loadBooksApiKey();
+  const covers = await buildCoversManifest(postsDir, coversDir, apiKey);
+  const content = `/**
+ * Book Covers Manifest (auto-generated)
+ * Maps book files to their cover images
+ * Run 'node build/build.js' to regenerate and download missing covers
+ */
+
+export default ${JSON.stringify(covers, null, 2)};
+`;
+  writeFileSync(join(rootDir, 'covers.js'), content);
+  console.log(`\x1b[32m✓\x1b[0m Rebuilt covers.js (${covers.length} books)`);
+}
+
 // Initial build
 buildPosts();
 buildThoughtTrains();
 buildLabs();
 buildSounds();
 buildGallery();
+buildCovers();
 
 // Watch for changes in posts
 console.log(`\x1b[90m◉ Watching /posts for changes...\x1b[0m`);
@@ -136,6 +169,10 @@ watch(postsDir, { recursive: true }, (eventType, filename) => {
   if (filename?.endsWith('.md')) {
     console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
     buildPosts();
+    // Rebuild covers if it's a book file
+    if (filename.toLowerCase().startsWith('b.')) {
+      buildCovers();
+    }
   }
 });
 
@@ -208,6 +245,33 @@ async function loadMusicConfig() {
   })();
 
   return musicConfigPromise;
+}
+
+// Load books config for API proxy (lazy load)
+let booksConfig = null;
+let booksConfigPromise = null;
+
+async function loadBooksConfig() {
+  if (booksConfig !== null) return booksConfig;
+  if (booksConfigPromise) return booksConfigPromise;
+
+  booksConfigPromise = (async () => {
+    try {
+      const configPath = join(rootDir, 'books-config.js');
+      if (existsSync(configPath)) {
+        const configUrl = pathToFileURL(configPath).href;
+        const configModule = await import(configUrl);
+        booksConfig = configModule.default;
+        return booksConfig;
+      }
+    } catch (err) {
+      console.log('\x1b[90m  Note: books-config.js not found or invalid:\x1b[0m', err.message);
+    }
+    booksConfig = false; // Mark as attempted
+    return null;
+  })();
+
+  return booksConfigPromise;
 }
 
 // In-memory storage for guestbook (development only)
@@ -570,6 +634,68 @@ async function handleAPIProxy(req, res) {
         tracks: tracks,
         totalCount: tracks.length
       };
+
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+      return true;
+    } catch (error) {
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+      return true;
+    }
+  }
+
+  // Google Books API endpoint
+  if (path === '/api/books/search' && req.method === 'GET') {
+    const title = url.searchParams.get('title');
+    const author = url.searchParams.get('author');
+
+    if (!title || !author) {
+      res.writeHead(400, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Query parameters "title" and "author" are required' }));
+      return true;
+    }
+
+    const config = await loadBooksConfig();
+    if (!config || !config.googleBooks || !config.googleBooks.apiKey) {
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Google Books API key not configured' }));
+      return true;
+    }
+
+    try {
+      const query = `intitle:${encodeURIComponent(title)}+inauthor:${encodeURIComponent(author)}`;
+      const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${query}&key=${config.googleBooks.apiKey}`;
+
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      if (!response.ok) {
+        res.writeHead(response.status, { ...corsHeaders, 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+        return true;
+      }
+
+      // Extract cover image from first result
+      const result = {
+        cover: null,
+        isbn: null
+      };
+
+      if (data.items && data.items.length > 0) {
+        const book = data.items[0];
+        if (book.volumeInfo.imageLinks) {
+          result.cover = book.volumeInfo.imageLinks.thumbnail || book.volumeInfo.imageLinks.smallThumbnail;
+          // Use HTTPS
+          if (result.cover) {
+            result.cover = result.cover.replace('http://', 'https://');
+          }
+        }
+        if (book.volumeInfo.industryIdentifiers) {
+          const isbn13 = book.volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_13');
+          if (isbn13) result.isbn = isbn13.identifier;
+        }
+      }
 
       res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));

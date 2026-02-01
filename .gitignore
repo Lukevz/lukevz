@@ -1,6 +1,8 @@
-# Spotify and YouTube API configuration
+# API configuration files
 # IMPORTANT: Keep your API keys private!
 music-config.js
+books-config.js
+movies-config.js
 
 # Node modules
 node_modules/

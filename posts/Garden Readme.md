@@ -1,9 +1,9 @@
 # Garden Readme
-#writing
+#output/writing
 
 This is a simulated environment of my actual notetaking app, [Bear](https://bear.app/). Here you can browse my actual notes in progress (at least the ones I chose to share) exactly the way that I craft them.
 
-My tagging system has changed a lot of the years. Part of the reason I settled on this app was how tag-focused it was, making it easy to quickly jot ideas down and still maintain structure. As of Nov 23, 2025, here's how I sort things.
+My tagging system has changed a lot of the years. Part of the reason I settled on this app was how tag-focused it was, making it easy to quickly jot ideas down and still maintain structure. As of Nov 23, 2025, here’s how I sort things.
 
 ```
 business
@@ -41,4 +41,4 @@ track
 writing
 ```
 
-This note – and other Digital Garden artifacts – is stored in "# writing."
+This note – and other Digital Garden artifacts – is stored in “# writing.”

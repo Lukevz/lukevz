@@ -6,6 +6,18 @@
 
 export default [
   {
+    "file": "2025 Year in Review.md",
+    "created": "2026-01-24"
+  },
+  {
+    "file": "7 habits  routines that regulate and bring me peace in 2026.md",
+    "created": "2026-01-19"
+  },
+  {
+    "file": "B. Atomic Habits.md",
+    "created": "2026-01-01"
+  },
+  {
     "file": "B. Building A Second Brain.md",
     "created": "2025-01-19"
   },
@@ -34,20 +46,8 @@ export default [
     "created": "2025-01-14"
   },
   {
-    "file": "Behavior Rebuilds What Talk Can’t.md",
-    "created": "2025-04-06"
-  },
-  {
     "file": "Biggest mistakes I see in UX.md",
     "created": "2025-11-15"
-  },
-  {
-    "file": "Character and Competence The Two Pillars.md",
-    "created": "2025-04-06"
-  },
-  {
-    "file": "Clarify, compromise, collaborate.md",
-    "created": "2025-04-23"
   },
   {
     "file": "Distinguishing Journal Entries from Proper Notes A Systematic Approach to Thought Organization.md",
@@ -70,16 +70,16 @@ export default [
     "created": "2025-05-24"
   },
   {
-    "file": "In the creative process, job titles and hierarchy are meaningless.md",
-    "created": "2025-04-06"
-  },
-  {
     "file": "It was her habit to build laughter out of inadequate materials..md",
     "created": "2025-03-15"
   },
   {
     "file": "It's not the critic who counts.md",
     "created": "2025-04-13"
+  },
+  {
+    "file": "January 2026 Reflection.md",
+    "created": "2026-01-31"
   },
   {
     "file": "Mistakes not to make as a leader.md",
@@ -90,28 +90,12 @@ export default [
     "created": "2025-11-17"
   },
   {
-    "file": "Originality is Curated, Not Invented.md",
-    "created": "2025-04-06"
-  },
-  {
     "file": "People only see the decisions I made not the choices I had.md",
     "created": "2025-03-16"
   },
   {
-    "file": "Protecting the Ugly Baby.md",
-    "created": "2025-04-06"
-  },
-  {
-    "file": "The Braintrust Candor Without Command.md",
-    "created": "2025-04-06"
-  },
-  {
-    "file": "The Five Waves of Trust.md",
-    "created": "2025-04-06"
-  },
-  {
     "file": "The Rise of Digital Gardens & Personal Operating Systems.md",
-    "created": "2025-12-10"
+    "created": "2025-11-26"
   },
   {
     "file": "The UX request checklist.md",
@@ -130,20 +114,8 @@ export default [
     "created": "2025-04-06"
   },
   {
-    "file": "Trust as a Cultural Operating System.md",
-    "created": "2025-04-06"
-  },
-  {
-    "file": "Trust is the Antidote to Fear.md",
-    "created": "2025-04-06"
-  },
-  {
     "file": "When you’re building something avoid being in the world so you don’t get ideas and focus on the thing you are working on - Cal Newport.md",
     "created": "2025-11-08"
-  },
-  {
-    "file": "making a good documentary or almost any pitch is about making it feel like a conversation. like interviews in a docuseries stitched together well and mixed in feels like everyone recorded the same day in the same room not all disjointed isolat.md",
-    "created": "2025-04-25"
   },
   {
     "file": "“HONESTY IS AN EXPENSIVGIFT, DON'T EXPECT IT FROM CHEAP PEOPLE.”.md",

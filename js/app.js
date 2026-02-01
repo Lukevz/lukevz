@@ -6,7 +6,7 @@
 // Import configuration and utilities
 import { tagIcons, musicFolderIcons, weatherIcons } from './config/icons.js';
 import { defaultMusicFolders, hiddenTags, LAST_OPEN_WINDOW_STORAGE_KEY, PLAYLIST_CACHE_DURATION } from './config/constants.js';
-import { state, musicState, lifeStoriesState } from './config/state.js';
+import { state, musicState, lifeStoriesState, projectShredderState } from './config/state.js';
 import { formatDate, filenameToSlug, findPostBySlugInArray } from './utils/dom.js';
 import { setLastOpenWindowId } from './utils/storage.js';
 import { parseMarkdown } from './utils/markdown.js';
@@ -63,6 +63,9 @@ function closeWindow(window) {
   const windowId = window.id.replace('View', '');
   window.classList.remove('active');
   state.windows.openWindows.delete(windowId);
+
+  // Clear current view since we're closing it
+  state.currentView = null;
 
   // Update nav icon button state
   const navBtn = document.querySelector(`.nav-icon-btn[data-view="${windowId}"]`);
@@ -165,6 +168,12 @@ async function openWindow(windowId) {
   // Initialize life stories when opened
   if (windowId === 'lifeStories') {
     initLifeStories();
+  }
+
+  // Initialize project shredder when opened
+  if (windowId === 'projectShredder') {
+    console.log('[switchView] Initializing Project Shredder');
+    initProjectShredder();
   }
 
   // Initialize thought train when opened
@@ -635,12 +644,15 @@ function renderLabsGrid() {
   const container = document.getElementById('labsGrid');
   if (!container) return;
 
-  if (state.labs.length === 0) {
+  // Filter out hidden labs
+  const visibleLabs = state.labs.filter(lab => lab.filename !== 'Project Shredder.md');
+
+  if (visibleLabs.length === 0) {
     container.innerHTML = '<div class="labs-empty">No labs yet</div>';
     return;
   }
 
-  container.innerHTML = state.labs.map(lab => `
+  container.innerHTML = visibleLabs.map(lab => `
     <div class="labs-card" data-lab="${lab.filename}" ${lab.url ? `data-url="${lab.url}"` : ''} ${lab.view ? `data-view="${lab.view}"` : ''}>
       <div class="labs-card-thumbnail">
         ${lab.thumbnail
@@ -1886,6 +1898,8 @@ function switchView(viewName) {
  * Perform the actual view switch
  */
 function performViewSwitch(viewName, updateUrl = true) {
+  console.log('[performViewSwitch] Switching to view:', viewName);
+
   // Update view visibility and window tracking
   document.querySelectorAll('.view').forEach(view => {
     view.classList.remove('active');
@@ -1939,6 +1953,12 @@ function performViewSwitch(viewName, updateUrl = true) {
   // Initialize life stories when switching to it
   if (viewName === 'lifeStories') {
     initLifeStories();
+  }
+
+  // Initialize project shredder when switching to it
+  if (viewName === 'projectShredder') {
+    console.log('[performViewSwitch] Initializing Project Shredder');
+    initProjectShredder();
   }
 
   // Initialize thought train when switching to it
@@ -4244,6 +4264,506 @@ function initLifeStories() {
 }
 
 /**
+ * Initialize Project Shredder
+ */
+function initProjectShredder() {
+  if (projectShredderState.initialized) {
+    console.log('[Project Shredder] Already initialized, skipping');
+    return; // Already initialized
+  }
+
+  console.log('[Project Shredder] Initializing...');
+
+  const container = document.querySelector('.project-shredder-container');
+  const dropzone = document.getElementById('shredderDropzone');
+  const fileBtn = document.getElementById('shredderFileBtn');
+  const fileInput = document.getElementById('shredderFileInput');
+  const message = document.getElementById('shredderMessage');
+  const capsule = document.getElementById('spaceCapsule');
+  const capsuleCanvas = document.getElementById('capsuleCanvas');
+  const capsuleFilename = document.getElementById('capsuleFilename');
+  const launchBtn = document.getElementById('launchButton');
+  const successMsg = document.getElementById('successMessage');
+
+  if (!container) {
+    console.error('[Project Shredder] Container not found!');
+    return;
+  }
+
+  console.log('[Project Shredder] All elements found:', {
+    container: !!container,
+    dropzone: !!dropzone,
+    fileBtn: !!fileBtn,
+    fileInput: !!fileInput,
+    capsuleCanvas: !!capsuleCanvas
+  });
+
+  const ctx = capsuleCanvas?.getContext('2d');
+
+  // File picker click handler
+  fileBtn?.addEventListener('click', () => {
+    console.log('[Project Shredder] File button clicked');
+    fileInput?.click();
+  });
+
+  // File input change handler
+  fileInput?.addEventListener('change', (e) => {
+    console.log('[Project Shredder] File input changed');
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log('[Project Shredder] File selected:', file.name);
+      stowFile(file.name);
+    }
+  });
+
+  // Drag-and-drop handlers on the container
+  const preventDefaults = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Add drag handlers to the container instead of body
+  if (container) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      container.addEventListener(eventName, preventDefaults, false);
+    });
+
+    container.addEventListener('dragenter', () => {
+      if (projectShredderState.phase === 'idle' && state.currentView === 'projectShredder') {
+        dropzone?.classList.add('active');
+      }
+    });
+
+    container.addEventListener('dragleave', (e) => {
+      // Only remove if leaving the container entirely
+      if (!container.contains(e.relatedTarget)) {
+        dropzone?.classList.remove('active');
+      }
+    });
+
+    container.addEventListener('drop', (e) => {
+      dropzone?.classList.remove('active');
+      if (state.currentView === 'projectShredder' && projectShredderState.phase === 'idle') {
+        const file = e.dataTransfer?.files?.[0];
+        if (file) {
+          stowFile(file.name);
+        }
+      }
+    });
+  }
+
+  // Launch button handler
+  launchBtn?.addEventListener('click', () => {
+    if (projectShredderState.phase === 'stowed') {
+      launchCapsule();
+    }
+  });
+
+  // Stow file in capsule
+  function stowFile(filename) {
+    console.log('[Project Shredder] Stowing file:', filename);
+    projectShredderState.filename = filename;
+    projectShredderState.phase = 'stowed';
+
+    // Draw capsule
+    drawCapsule(ctx, capsuleCanvas.width, capsuleCanvas.height);
+
+    // Update UI
+    capsuleFilename.textContent = filename;
+    capsule?.classList.add('visible');
+    message.textContent = 'File stowed. Ready for launch!';
+    launchBtn?.classList.remove('hidden');
+    console.log('[Project Shredder] File stowed successfully');
+  }
+
+  // Draw pixel art capsule
+  function drawCapsule(ctx, w, h) {
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Center the drawing
+    const cx = w / 2;
+    const cy = h / 2;
+    const s = 8; // Pixel size (doubled for larger canvas)
+
+    // Body (light gray)
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(cx - 2*s, cy - 8*s, 4*s, 16*s);
+
+    // Nose cone (red)
+    ctx.fillStyle = '#ff6666';
+    ctx.fillRect(cx - 3*s, cy - 10*s, 6*s, 3*s);
+    ctx.fillRect(cx - 2*s, cy - 12*s, 4*s, 2*s);
+    ctx.fillRect(cx - 1*s, cy - 14*s, 2*s, 2*s);
+
+    // Fins (dark gray)
+    ctx.fillStyle = '#999999';
+    ctx.fillRect(cx - 5*s, cy + 6*s, 3*s, 4*s); // Left fin
+    ctx.fillRect(cx + 2*s, cy + 6*s, 3*s, 4*s); // Right fin
+
+    // Window (dark blue)
+    ctx.fillStyle = '#3366cc';
+    ctx.fillRect(cx - 1*s, cy - 2*s, 2*s, 2*s);
+
+    // Exhaust (orange)
+    ctx.fillStyle = '#ff9933';
+    ctx.fillRect(cx - 1*s, cy + 8*s, 2*s, 2*s);
+  }
+
+  // Launch sequence
+  function launchCapsule() {
+    console.log('[Project Shredder] Launch sequence started');
+    projectShredderState.phase = 'launching';
+
+    // Hide launch button
+    launchBtn?.classList.add('hidden');
+
+    // Shake animation
+    capsule?.classList.add('launching');
+
+    // Get references to fade out the window
+    const viewWindow = document.getElementById('projectShredderView');
+    const osWindow = viewWindow?.querySelector('.os9-window');
+
+    // Phase 1: Shake (500ms)
+    setTimeout(() => {
+      capsule?.classList.remove('launching');
+
+      // Get capsule position BEFORE we start fading/transforming
+      const rect = capsule?.getBoundingClientRect();
+      if (!rect) {
+        console.error('[Project Shredder] Could not get capsule position');
+        return;
+      }
+
+      console.log('[Project Shredder] Capsule position:', {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      });
+
+      // Phase 2: Start transformation to star and fade UI
+      capsule?.classList.add('transforming');
+      osWindow?.classList.add('fading');
+      viewWindow?.classList.add('launching'); // Make entire view transparent
+
+      // Immediately launch the star into background.js so it's visible during fade
+      if (window.launchCapsule) {
+        console.log('[Project Shredder] Calling window.launchCapsule()');
+        window.launchCapsule({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+          filename: projectShredderState.filename,
+          isStar: true, // Flag to render as a star instead of capsule
+          startHidden: true // Start small and grow
+        });
+        console.log('[Project Shredder] Star launched into space!');
+      } else {
+        console.error('[Project Shredder] window.launchCapsule not available!');
+      }
+
+      // Phase 3: After transformation animation (1000ms), hide HTML capsule
+      setTimeout(() => {
+        projectShredderState.phase = 'flying';
+
+        // Hide HTML capsule
+        capsule?.classList.remove('visible');
+        capsule?.classList.remove('transforming');
+
+        // Setup capture callback
+        window.onCapsuleCaptured = (position) => {
+          console.log('[Project Shredder] Star captured at:', position);
+          handleCaptured(position);
+        };
+      }, 1000); // Wait for transform animation
+    }, 500); // Wait for shake animation
+  }
+
+  // Handle capsule capture
+  function handleCaptured(position) {
+    projectShredderState.phase = 'captured';
+
+    // Create particle burst
+    createParticleBurst(position.x, position.y);
+
+    // Show success message
+    successMsg?.classList.add('visible');
+
+    // Reset after 2 seconds
+    setTimeout(() => {
+      resetShredder();
+    }, 2000);
+  }
+
+  // Create particle burst effect
+  function createParticleBurst(x, y) {
+    const particleCount = 40;
+    const particles = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle-burst';
+      particle.style.left = `${x}px`;
+      particle.style.top = `${y}px`;
+
+      // Random direction
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const distance = 100 + Math.random() * 100;
+      const tx = Math.cos(angle) * distance;
+      const ty = Math.sin(angle) * distance;
+
+      particle.style.setProperty('--tx', `${tx}px`);
+      particle.style.setProperty('--ty', `${ty}px`);
+
+      document.body.appendChild(particle);
+      particles.push(particle);
+
+      // Remove after animation
+      setTimeout(() => {
+        particle.remove();
+      }, 800);
+    }
+  }
+
+  // Reset to idle state
+  function resetShredder() {
+    console.log('[Project Shredder] Resetting to idle state');
+    projectShredderState.phase = 'idle';
+    projectShredderState.filename = null;
+
+    successMsg?.classList.remove('visible');
+    message.textContent = 'Drop a file or click to select';
+
+    // Clear capsule canvas
+    if (ctx && capsuleCanvas) {
+      ctx.clearRect(0, 0, capsuleCanvas.width, capsuleCanvas.height);
+    }
+
+    // Reset file input
+    if (fileInput) fileInput.value = '';
+
+    // Restore window opacity and remove all animation classes
+    const viewWindow = document.getElementById('projectShredderView');
+    const osWindow = viewWindow?.querySelector('.os9-window');
+
+    if (viewWindow) {
+      viewWindow.classList.remove('launching');
+    }
+
+    if (osWindow) {
+      osWindow.classList.remove('fading');
+      osWindow.style.opacity = '1';
+    }
+
+    // Reset capsule element
+    if (capsule) {
+      capsule.classList.remove('visible', 'launching', 'transforming');
+    }
+
+    // Reset launch button
+    if (launchBtn) {
+      launchBtn.classList.add('hidden');
+    }
+
+    // Cleanup background canvas capsule
+    if (window.removeCapsule) {
+      window.removeCapsule();
+    }
+    window.onCapsuleCaptured = null;
+
+    console.log('[Project Shredder] Reset complete');
+  }
+
+  projectShredderState.initialized = true;
+  console.log('[Project Shredder] Initialization complete');
+}
+
+/* ============================================
+   LIBRARY & MOVIES FUNCTIONS
+   ============================================ */
+
+/**
+ * Load library data from covers.js manifest
+ */
+async function loadLibrary() {
+  try {
+    // Load covers manifest (contains book metadata and local cover paths)
+    const { default: coversManifest } = await import('../covers.js');
+
+    state.library.allBooks = coversManifest.map(book => ({
+      title: book.title,
+      author: book.author,
+      cover: book.cover,
+      noteLink: book.file,
+      hasNote: true
+    }));
+
+    // Sort alphabetically by title
+    state.library.allBooks.sort((a, b) => a.title.localeCompare(b.title));
+
+    renderLibraryShelves();
+    updateKindleTime();
+  } catch (err) {
+    console.warn('Failed to load library:', err);
+    state.library.allBooks = [];
+  }
+}
+
+/**
+ * Update Kindle status bar time display
+ */
+function updateKindleTime() {
+  const timeEl = document.querySelector('.kindle-time');
+  if (!timeEl) return;
+
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  timeEl.textContent = `${displayHours}:${minutes} ${ampm}`;
+}
+
+/**
+ * Render library as Kindle Paperwhite-style grid
+ */
+function renderLibraryShelves() {
+  const container = document.getElementById('libraryShelves');
+  if (!container) return;
+
+  if (state.library.allBooks.length === 0) {
+    container.innerHTML = '<div class="kindle-empty">No books yet. Add notes with "B." prefix to get started.</div>';
+    return;
+  }
+
+  container.innerHTML = state.library.allBooks.map(book => `
+    <div class="kindle-book" data-book-id="${filenameToSlug(book.title)}">
+      <div class="kindle-book-cover">
+        ${book.cover
+          ? `<img src="${book.cover}" alt="${book.title}" loading="lazy">`
+          : `<div class="kindle-book-cover-placeholder">${book.title}</div>`
+        }
+      </div>
+      <div class="kindle-book-info">
+        <div class="kindle-book-title">${book.title}</div>
+        <div class="kindle-book-author">${book.author}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/**
+ * Setup library interactions (click handlers)
+ */
+function setupLibraryInteractions() {
+  const container = document.getElementById('libraryShelves');
+  if (!container) return;
+
+  container.addEventListener('click', (e) => {
+    const bookCard = e.target.closest('.kindle-book');
+    if (!bookCard) return;
+
+    const bookId = bookCard.dataset.bookId;
+    const book = state.library.allBooks.find(b => filenameToSlug(b.title) === bookId);
+
+    if (book && book.noteLink) {
+      const post = state.posts.find(p => p.filename === book.noteLink);
+      if (post) {
+        state.currentPost = post;
+        performViewSwitch('notes');
+        renderNote(post, elements, state);
+      } else {
+        console.warn(`Note not found: ${book.noteLink}`);
+      }
+    }
+  });
+}
+
+/**
+ * Setup book suggestion modal
+ */
+function setupBookSuggestionModal() {
+  const modal = document.getElementById('suggestBookModal');
+  const openBtn = document.getElementById('suggestBookBtn');
+  const closeBtn = document.getElementById('suggestBookClose');
+  const form = document.getElementById('suggestBookForm');
+
+  if (!modal || !openBtn || !form) return;
+
+  // Open modal
+  openBtn.addEventListener('click', () => {
+    modal.classList.add('active');
+  });
+
+  // Close modal
+  closeBtn?.addEventListener('click', () => {
+    modal.classList.remove('active');
+    form.reset();
+  });
+
+  // Close on backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('active');
+      form.reset();
+    }
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      modal.classList.remove('active');
+      form.reset();
+    }
+  });
+
+  // Handle form submission via Formspree
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const submitBtn = form.querySelector('.suggest-book-submit');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Sending...';
+    submitBtn.disabled = true;
+
+    const formData = new FormData(form);
+
+    // Add a subject line for the email
+    const title = formData.get('title');
+    formData.append('_subject', `Book Suggestion: ${title}`);
+
+    try {
+      const response = await fetch('https://formspree.io/f/mwvqokky', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        submitBtn.textContent = 'Sent!';
+        setTimeout(() => {
+          modal.classList.remove('active');
+          form.reset();
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+        }, 1000);
+      } else {
+        throw new Error('Failed to send');
+      }
+    } catch (err) {
+      console.error('Form submission error:', err);
+      submitBtn.textContent = 'Error - Try Again';
+      submitBtn.disabled = false;
+      setTimeout(() => {
+        submitBtn.textContent = originalText;
+      }, 2000);
+    }
+  });
+}
+
+/**
  * Initialize app
  */
 async function init() {
@@ -4268,6 +4788,9 @@ async function init() {
   setupLabsInteractions();
   await loadGallery();
   setupGalleryInteractions();
+  await loadLibrary();
+  setupLibraryInteractions();
+  setupBookSuggestionModal();
 
   // Restore nerd mode state from localStorage
   const savedNerdMode = localStorage.getItem('galleryNerdMode');

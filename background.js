@@ -81,6 +81,9 @@
     { distance: 800, speed: 0.0003, angle: 1.5, size: 6.1, color: 'rgba(100, 120, 200, 0.36)' }  // Neptune - deep blue
   ];
 
+  // Space capsule for Project Shredder
+  let spaceCapsule = null;
+
   // Animation state
   let lastFrameTime = 0;
   const frameDelay = 1000 / 20; // 20 FPS for slower, more contemplative motion
@@ -419,6 +422,243 @@
       ctx.fill();
     }
 
+    // Update and draw space capsule if active (Project Shredder)
+    if (spaceCapsule && spaceCapsule.launched) {
+      // Calculate distance to black hole
+      const dx = blackHole.x - spaceCapsule.x;
+      const dy = blackHole.y - spaceCapsule.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Debug: Log occasionally (use a counter on the capsule object)
+      if (!spaceCapsule.logCounter) spaceCapsule.logCounter = 0;
+      spaceCapsule.logCounter++;
+      if (spaceCapsule.logCounter % 30 === 0) {
+        console.log('[background.js] Capsule flying:', {
+          position: { x: Math.round(spaceCapsule.x), y: Math.round(spaceCapsule.y) },
+          velocity: { vx: spaceCapsule.vx.toFixed(2), vy: spaceCapsule.vy.toFixed(2) },
+          distanceToBlackHole: Math.round(dist),
+          opacity: spaceCapsule.opacity.toFixed(2)
+        });
+      }
+
+      // Check if captured by event horizon
+      if (dist <= blackHole.eventHorizonRadius) {
+        // Trigger capture event
+        console.log('[background.js] Capsule CAPTURED! Distance:', dist);
+        if (window.onCapsuleCaptured) {
+          window.onCapsuleCaptured({
+            x: spaceCapsule.x,
+            y: spaceCapsule.y
+          });
+        }
+        spaceCapsule = null;
+      } else {
+        spaceCapsule.frameCount++;
+
+        // Handle star launch phases
+        if (spaceCapsule.isStar && spaceCapsule.launchPhase !== 'flying') {
+          if (spaceCapsule.launchPhase === 'launch') {
+            // Phase 1: Rocket upward with deceleration
+            spaceCapsule.vy += 0.3; // Gravity slows upward motion
+            spaceCapsule.x += spaceCapsule.vx;
+            spaceCapsule.y += spaceCapsule.vy;
+
+            // After 30 frames (~1 second), transition to arc phase
+            if (spaceCapsule.frameCount > 30) {
+              spaceCapsule.launchPhase = 'arc';
+              // Redirect velocity toward black hole center
+              const speed = Math.sqrt(spaceCapsule.vx * spaceCapsule.vx + spaceCapsule.vy * spaceCapsule.vy);
+              spaceCapsule.vx = (dx / dist) * speed * 1.2;
+              spaceCapsule.vy = (dy / dist) * speed * 1.2;
+            }
+          } else if (spaceCapsule.launchPhase === 'arc') {
+            // Phase 2: Arc toward black hole with increasing speed
+            const force = blackHole.mass / (dist * dist);
+            const ax = (dx / dist) * force * 0.003; // Stronger gravity
+            const ay = (dy / dist) * force * 0.003;
+
+            spaceCapsule.vx += ax;
+            spaceCapsule.vy += ay;
+            spaceCapsule.x += spaceCapsule.vx;
+            spaceCapsule.y += spaceCapsule.vy;
+
+            // Transition to spiral when close enough
+            if (dist < canvas.width * 0.3) {
+              spaceCapsule.launchPhase = 'spiral';
+            }
+          } else if (spaceCapsule.launchPhase === 'spiral') {
+            // Phase 3: Spiral into black hole
+            const force = blackHole.mass / (dist * dist);
+            const ax = (dx / dist) * force * 0.005; // Even stronger pull
+            const ay = (dy / dist) * force * 0.005;
+
+            spaceCapsule.vx += ax;
+            spaceCapsule.vy += ay;
+            spaceCapsule.x += spaceCapsule.vx;
+            spaceCapsule.y += spaceCapsule.vy;
+
+            // Shrink as it gets closer
+            spaceCapsule.size = Math.max(5, spaceCapsule.targetSize * (dist / (canvas.width * 0.3)));
+          }
+        } else {
+          // Regular capsule physics or star in flying mode
+          const force = blackHole.mass / (dist * dist);
+          const ax = (dx / dist) * force * 0.001;
+          const ay = (dy / dist) * force * 0.001;
+
+          spaceCapsule.vx += ax;
+          spaceCapsule.vy += ay;
+          spaceCapsule.x += spaceCapsule.vx;
+          spaceCapsule.y += spaceCapsule.vy;
+        }
+
+        // Calculate rotation angle based on velocity direction
+        spaceCapsule.angle = Math.atan2(spaceCapsule.vy, spaceCapsule.vx) + Math.PI / 2;
+
+        // Update star rotation for spinning effect
+        if (spaceCapsule.isStar) {
+          spaceCapsule.starRotation += 0.1;
+        }
+
+        // Handle grow-in animation if starting hidden
+        if (spaceCapsule.growing) {
+          spaceCapsule.opacity += 0.08; // Faster fade in
+          if (spaceCapsule.opacity >= spaceCapsule.targetOpacity) {
+            spaceCapsule.opacity = spaceCapsule.targetOpacity;
+            spaceCapsule.growing = false;
+          }
+        } else {
+          spaceCapsule.opacity = 1; // Keep full opacity during flight
+        }
+
+        // Add sparkle trail for stars
+        if (spaceCapsule.isStar && spaceCapsule.frameCount % 2 === 0) {
+          spaceCapsule.trail.push({
+            x: spaceCapsule.x,
+            y: spaceCapsule.y,
+            life: 1.0,
+            size: Math.random() * 3 + 2
+          });
+          // Keep trail limited
+          if (spaceCapsule.trail.length > 20) {
+            spaceCapsule.trail.shift();
+          }
+        }
+
+        // Draw sparkle trail for stars (before drawing the star itself)
+        if (spaceCapsule.isStar && spaceCapsule.trail) {
+          for (let i = 0; i < spaceCapsule.trail.length; i++) {
+            const sparkle = spaceCapsule.trail[i];
+            sparkle.life -= 0.05; // Fade out sparkles
+
+            if (sparkle.life > 0) {
+              ctx.save();
+              ctx.globalAlpha = sparkle.life * spaceCapsule.opacity;
+              ctx.fillStyle = `rgba(255, 221, 0, ${sparkle.life})`;
+              ctx.shadowBlur = 10;
+              ctx.shadowColor = '#ffdd00';
+
+              // Draw sparkle as a small star or circle
+              ctx.beginPath();
+              ctx.arc(sparkle.x, sparkle.y, sparkle.size * sparkle.life, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Add a cross sparkle effect
+              ctx.strokeStyle = `rgba(255, 255, 255, ${sparkle.life * 0.8})`;
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(sparkle.x - sparkle.size, sparkle.y);
+              ctx.lineTo(sparkle.x + sparkle.size, sparkle.y);
+              ctx.moveTo(sparkle.x, sparkle.y - sparkle.size);
+              ctx.lineTo(sparkle.x, sparkle.y + sparkle.size);
+              ctx.stroke();
+
+              ctx.restore();
+            }
+          }
+          // Remove dead sparkles
+          spaceCapsule.trail = spaceCapsule.trail.filter(s => s.life > 0);
+        }
+
+        ctx.save();
+        ctx.translate(spaceCapsule.x, spaceCapsule.y);
+        ctx.globalAlpha = spaceCapsule.opacity;
+
+        if (spaceCapsule.isStar) {
+          // Draw a star shape
+          ctx.rotate(spaceCapsule.starRotation);
+          const spikes = 5;
+          const outerRadius = spaceCapsule.size;
+          const innerRadius = spaceCapsule.size * 0.4;
+
+          ctx.beginPath();
+          for (let i = 0; i < spikes * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (Math.PI * i) / spikes;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.closePath();
+
+          // Gradient fill for star
+          const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, outerRadius);
+          gradient.addColorStop(0, '#ffffff');
+          gradient.addColorStop(0.5, '#ffdd00');
+          gradient.addColorStop(1, '#ff8800');
+          ctx.fillStyle = gradient;
+          ctx.fill();
+
+          // Add dramatic glow - larger during launch phases
+          const glowSize = spaceCapsule.launchPhase === 'launch' ? 25 :
+                          spaceCapsule.launchPhase === 'arc' ? 20 : 15;
+          ctx.shadowBlur = glowSize;
+          ctx.shadowColor = '#ffdd00';
+          ctx.fill();
+
+          // Add extra outer glow for more drama
+          ctx.shadowBlur = glowSize + 10;
+          ctx.shadowColor = 'rgba(255, 221, 0, 0.5)';
+          ctx.fill();
+        } else {
+          // Draw capsule as a simple pixel art shape
+          ctx.rotate(spaceCapsule.angle);
+
+          // Pixel art capsule (simple rocket shape)
+          const s = spaceCapsule.size / 10; // Scale factor
+
+          // Body (light gray)
+          ctx.fillStyle = '#cccccc';
+          ctx.fillRect(-2*s, -4*s, 4*s, 8*s);
+
+          // Nose cone (red)
+          ctx.fillStyle = '#ff6666';
+          ctx.fillRect(-3*s, -5*s, 6*s, 2*s);
+          ctx.fillRect(-2*s, -7*s, 4*s, 2*s);
+          ctx.fillRect(-1*s, -8*s, 2*s, 1*s);
+
+          // Fins (dark gray)
+          ctx.fillStyle = '#999999';
+          ctx.fillRect(-5*s, 3*s, 3*s, 3*s); // Left fin
+          ctx.fillRect(2*s, 3*s, 3*s, 3*s);  // Right fin
+
+          // Window (dark blue)
+          ctx.fillStyle = '#3366cc';
+          ctx.fillRect(-1*s, -1*s, 2*s, 2*s);
+
+          // Exhaust glow (orange)
+          ctx.fillStyle = `rgba(255, 150, 50, ${spaceCapsule.opacity * 0.6})`;
+          ctx.fillRect(-1*s, 4*s, 2*s, 3*s);
+        }
+
+        ctx.restore();
+      }
+    }
+
     // Update and draw particles
     ctx.lineCap = 'round';
     const particleOrbitMin = blackHole.eventHorizonRadius * 1.15;
@@ -668,6 +908,84 @@
       }
     }
   }
+
+  // =============================================================================
+  // PUBLIC API FOR PROJECT SHREDDER
+  // =============================================================================
+
+  /**
+   * Launch a space capsule from Project Shredder
+   * @param {Object} capsuleData - {x, y, filename, isStar, startHidden}
+   */
+  window.launchCapsule = function(capsuleData) {
+    console.log('[background.js] Launching capsule at:', capsuleData);
+
+    // Calculate initial velocity toward the black hole center
+    const dx = blackHole.x - capsuleData.x;
+    const dy = blackHole.y - capsuleData.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // If it's a star, give it a dramatic launch trajectory
+    // Otherwise use the old capsule trajectory
+    let vx, vy;
+    if (capsuleData.isStar) {
+      // Initial upward burst, then will arc toward center
+      const speed = 8; // Much faster for dramatic effect
+      vx = (dx / dist) * speed * 0.3; // Small horizontal component
+      vy = -speed; // Strong upward launch
+    } else {
+      // Original capsule trajectory
+      const speed = 1.5;
+      vx = (-dy / dist) * speed;
+      vy = (dx / dist) * speed - 2;
+    }
+
+    spaceCapsule = {
+      x: capsuleData.x,
+      y: capsuleData.y,
+      vx: vx,
+      vy: vy,
+      filename: capsuleData.filename,
+      size: capsuleData.isStar ? 20 : 20,
+      targetSize: capsuleData.isStar ? 20 : 20,
+      angle: 0,
+      opacity: capsuleData.startHidden ? 0 : 1,
+      targetOpacity: 1,
+      launched: true,
+      isStar: capsuleData.isStar || false,
+      starRotation: 0, // For star spinning animation
+      growing: capsuleData.startHidden || false,
+      trail: [], // Trail of sparkles
+      launchPhase: capsuleData.isStar ? 'launch' : 'flying', // launch -> arc -> spiral
+      frameCount: 0
+    };
+
+    console.log('[background.js] ' + (capsuleData.isStar ? 'Star' : 'Capsule') + ' initialized:', {
+      position: { x: spaceCapsule.x, y: spaceCapsule.y },
+      velocity: { vx: spaceCapsule.vx, vy: spaceCapsule.vy },
+      distanceToBlackHole: dist,
+      startHidden: capsuleData.startHidden
+    });
+  };
+
+  /**
+   * Remove the active space capsule
+   */
+  window.removeCapsule = function() {
+    spaceCapsule = null;
+  };
+
+  /**
+   * Get current capsule position (for debugging)
+   */
+  window.getCapsulePosition = function() {
+    if (!spaceCapsule) return null;
+    return { x: spaceCapsule.x, y: spaceCapsule.y };
+  };
+
+  // =============================================================================
+  // INITIALIZATION
+  // =============================================================================
 
   function init() {
     resize();
