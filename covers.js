@@ -7,35 +7,35 @@
 export default [
   {
     "file": "B. Atomic Habits.md",
-    "cover": "https://books.google.com/books/content?id=lFhbDwAAQBAJ&printsec=frontcover&img=1&zoom=1",
+    "cover": "covers/atomic-habits.jpg",
     "title": "Atomic Habits",
     "author": "James Clear",
     "rating": 0
   },
   {
     "file": "B. Building A Second Brain.md",
-    "cover": "https://books.google.com/books/content?id=WTpwEAAAQBAJ&printsec=frontcover&img=1&zoom=1",
+    "cover": "covers/building-a-second-brain.jpg",
     "title": "Building A Second Brain",
     "author": "Tiago Forte",
     "rating": 0
   },
   {
     "file": "B. Creativity, Inc..md",
-    "cover": "https://books.google.com/books/content?id=UqccAgAAQBAJ&printsec=frontcover&img=1&zoom=1",
+    "cover": "covers/creativity-inc.jpg",
     "title": "Creativity, Inc.",
     "author": "Ed Catmull",
     "rating": 0
   },
   {
     "file": "B. Feel-Good Productivity.md",
-    "cover": "https://books.google.com/books/content?id=stlw0AEACAAJ&printsec=frontcover&img=1&zoom=1",
+    "cover": "covers/feel-good-productivity.jpg",
     "title": "Feel-Good Productivity",
     "author": "Ali Abdaal",
     "rating": 0
   },
   {
     "file": "B. Show Your Work.md",
-    "cover": "https://books.google.com/books/content?id=UdDaCgAAQBAJ&printsec=frontcover&img=1&zoom=1",
+    "cover": "covers/show-your-work.jpg",
     "title": "Show Your Work",
     "author": "Austin Kleon",
     "rating": 0
@@ -56,7 +56,7 @@ export default [
   },
   {
     "file": "B. The Speed of Trust.md",
-    "cover": "https://books.google.com/books/content?id=31Qe_e61Y10C&printsec=frontcover&img=1&zoom=1",
+    "cover": "covers/the-speed-of-trust.jpg",
     "title": "The Speed of Trust",
     "author": "Stephen M.R. Covey",
     "rating": 0

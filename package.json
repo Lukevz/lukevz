@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.36.0",
-    "@vercel/kv": "^2.0.0"
+    "@vercel/kv": "^2.0.0",
+    "geist": "^1.7.0"
   },
   "engines": {
     "node": ">=18"

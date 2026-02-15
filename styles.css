@@ -1,4 +1,16 @@
 /* ==================== */
+/* Fonts */
+/* ==================== */
+
+@font-face {
+  font-family: 'Geist Pixel';
+  src: url('fonts/geist-pixel/GeistPixel-Square.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==================== */
 /* Global Hidden Element Rules */
 /* ==================== */
 
@@ -47,7 +59,7 @@
 .system-alert-content {
   padding: 0;
   padding-right: 2.5rem;
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
 }
 
 .system-alert-content h1 {
@@ -171,7 +183,7 @@
 }
 
 .info-popup-title {
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 0.9rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -229,7 +241,7 @@
   position: fixed;
   right: 20px;
   bottom: 16px;
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 0.875rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -320,7 +332,7 @@
 }
 
 .changelog-modal-title {
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -376,7 +388,7 @@
 }
 
 .changelog-version-header {
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -482,26 +494,23 @@
 }
 
 .menu-location {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1rem;
   color: var(--text-muted);
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   margin-right: var(--space-xs);
 }
 
 .menu-time {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1rem;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   white-space: nowrap;
 }
 
 .menu-divider {
   color: var(--text-muted);
-  font-size: 1.125rem;
-  font-weight: 300;
+  font-size: 1rem;
 }
 
 .menu-center {
@@ -548,9 +557,82 @@
 }
 
 .nav-icon-btn.active {
-  color: var(--accent);
+  color: white;
   background: var(--bg-active);
   gap: 0; /* Remove gap since we're hiding the label */
+}
+
+/* Navigation icon backgrounds match titlebar colors */
+.nav-icon-btn[data-view="tasks"].active {
+  background: #5B9BD5; /* Blue */
+}
+
+.nav-icon-btn[data-view="tasks"].active svg,
+.nav-icon-btn[data-view="tasks"].active img {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.nav-icon-btn[data-view="notes"].active {
+  background: #4DB8A8; /* Teal */
+}
+
+.nav-icon-btn[data-view="notes"].active svg,
+.nav-icon-btn[data-view="notes"].active img {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.nav-icon-btn[data-view="music"].active {
+  background: #9B59B6; /* Purple */
+}
+
+.nav-icon-btn[data-view="music"].active svg,
+.nav-icon-btn[data-view="music"].active img {
+  filter: brightness(0) invert(1); /* White icons on dark background */
+}
+
+.nav-icon-btn[data-view="thoughtTrain"].active {
+  background: #E89844; /* Orange */
+}
+
+.nav-icon-btn[data-view="thoughtTrain"].active svg,
+.nav-icon-btn[data-view="thoughtTrain"].active img {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.nav-icon-btn[data-view="labs"].active {
+  background: #52C41A; /* Green */
+}
+
+.nav-icon-btn[data-view="labs"].active svg,
+.nav-icon-btn[data-view="labs"].active img {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.nav-icon-btn[data-view="gallery"].active {
+  background: #E91E63; /* Pink */
+}
+
+.nav-icon-btn[data-view="gallery"].active svg,
+.nav-icon-btn[data-view="gallery"].active img {
+  filter: brightness(0) invert(1); /* White icons on dark background */
+}
+
+.nav-icon-btn[data-view="guestbook"].active {
+  background: #FFA726; /* Amber */
+}
+
+.nav-icon-btn[data-view="guestbook"].active svg,
+.nav-icon-btn[data-view="guestbook"].active img {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.nav-icon-btn[data-view="library"].active {
+  background: #5C6BC0; /* Indigo */
+}
+
+.nav-icon-btn[data-view="library"].active svg,
+.nav-icon-btn[data-view="library"].active img {
+  filter: brightness(0) invert(1); /* White icons on dark background */
 }
 
 /* External link indicator */
@@ -578,7 +660,7 @@
 
 .nav-icon-btn.active svg,
 .nav-icon-btn.active img {
-  filter: none;
+  filter: brightness(0) invert(1); /* Keep icons white on colored backgrounds */
 }
 
 .nav-label {
@@ -589,10 +671,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: var(--text-secondary);
-  font-family: 'Doto', var(--font-sans);
-  font-weight: 600;
+  font-family: 'Geist Pixel', var(--font-sans);
 }
 
 .weather-icon {
@@ -622,7 +703,6 @@
 }
 
 .weather-temp {
-  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -902,7 +982,80 @@ body.app-active .mobile-header-menu {
 
 .mobile-menu-app-btn.active {
   background: var(--bg-active);
-  color: var(--accent);
+  color: white;
+}
+
+/* Mobile menu buttons match titlebar colors */
+.mobile-menu-app-btn[data-view="tasks"].active {
+  background: #5B9BD5; /* Blue */
+  color: rgba(0, 0, 0, 0.87); /* Dark text on light background */
+}
+
+.mobile-menu-app-btn[data-view="tasks"].active svg {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.mobile-menu-app-btn[data-view="notes"].active {
+  background: #4DB8A8; /* Teal */
+  color: rgba(0, 0, 0, 0.87); /* Dark text on light background */
+}
+
+.mobile-menu-app-btn[data-view="notes"].active svg {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.mobile-menu-app-btn[data-view="music"].active {
+  background: #9B59B6; /* Purple */
+  color: white; /* White text on dark background */
+}
+
+.mobile-menu-app-btn[data-view="music"].active svg {
+  filter: brightness(0) invert(1); /* White icons on dark background */
+}
+
+.mobile-menu-app-btn[data-view="thoughtTrain"].active {
+  background: #E89844; /* Orange */
+  color: rgba(0, 0, 0, 0.87); /* Dark text on light background */
+}
+
+.mobile-menu-app-btn[data-view="thoughtTrain"].active svg {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.mobile-menu-app-btn[data-view="labs"].active {
+  background: #52C41A; /* Green */
+  color: rgba(0, 0, 0, 0.87); /* Dark text on light background */
+}
+
+.mobile-menu-app-btn[data-view="labs"].active svg {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.mobile-menu-app-btn[data-view="gallery"].active {
+  background: #E91E63; /* Pink */
+  color: white; /* White text on dark background */
+}
+
+.mobile-menu-app-btn[data-view="gallery"].active svg {
+  filter: brightness(0) invert(1); /* White icons on dark background */
+}
+
+.mobile-menu-app-btn[data-view="guestbook"].active {
+  background: #FFA726; /* Amber */
+  color: rgba(0, 0, 0, 0.87); /* Dark text on light background */
+}
+
+.mobile-menu-app-btn[data-view="guestbook"].active svg {
+  filter: brightness(0); /* Dark icons on light background */
+}
+
+.mobile-menu-app-btn[data-view="library"].active {
+  background: #5C6BC0; /* Indigo */
+  color: white; /* White text on dark background */
+}
+
+.mobile-menu-app-btn[data-view="library"].active svg {
+  filter: brightness(0) invert(1); /* White icons on dark background */
 }
 
 .mobile-menu-app-btn svg {
@@ -910,6 +1063,10 @@ body.app-active .mobile-header-menu {
   height: 24px;
   flex-shrink: 0;
   filter: brightness(0) invert(1);
+}
+
+.mobile-menu-app-btn.active svg {
+  filter: brightness(0) invert(1); /* Keep icons white on colored backgrounds */
 }
 
 .mobile-menu-app-btn span {
@@ -2054,7 +2211,7 @@ ul {
   max-width: 1200px; /* Default, overridden per-app below */
   margin: 0 auto; /* Center horizontally, no top margin - windows rise from header */
   background: var(--bg-primary);
-  border-radius: 8px 8px 0 0; /* Rounded top corners */
+  border-radius: 0; /* Flat, no rounded corners */
   overflow: hidden;
   position: relative;
 
@@ -2086,32 +2243,101 @@ ul {
 .guestbook-view .os9-window { max-width: 900px; }
 
 .os9-titlebar {
-  background: linear-gradient(180deg,
-    #3a3a3c 0%,
-    #2c2c2e 50%,
-    #1c1c1e 100%
-  );
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #3a3a3c; /* Default flat color */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   flex-shrink: 0;
-  /* Horizontal stripes pattern - dark mode */
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 1px,
-      rgba(255, 255, 255, 0.03) 1px,
-      rgba(255, 255, 255, 0.03) 2px
-    ),
-    linear-gradient(180deg,
-      #3a3a3c 0%,
-      #2c2c2e 50%,
-      #1c1c1e 100%
-    );
+}
+
+/* Unique flat colors for each app */
+.tasks-view .os9-titlebar {
+  background: #5B9BD5; /* Blue */
+}
+
+.tasks-view .os9-title {
+  color: rgba(0, 0, 0, 0.87); /* Dark text for light background */
+  text-shadow: none;
+}
+
+.notes-view .os9-titlebar {
+  background: #4DB8A8; /* Teal */
+}
+
+.notes-view .os9-title {
+  color: rgba(0, 0, 0, 0.87); /* Dark text for light background */
+  text-shadow: none;
+}
+
+.music-view .os9-titlebar {
+  background: #9B59B6; /* Purple */
+}
+
+.music-view .os9-title {
+  color: white; /* White text for dark background */
+}
+
+.thought-train-view .os9-titlebar {
+  background: #E89844; /* Orange */
+}
+
+.thought-train-view .os9-title {
+  color: rgba(0, 0, 0, 0.87); /* Dark text for light background */
+  text-shadow: none;
+}
+
+.labs-view .os9-titlebar {
+  background: #52C41A; /* Green */
+}
+
+.labs-view .os9-title {
+  color: rgba(0, 0, 0, 0.87); /* Dark text for light background */
+  text-shadow: none;
+}
+
+.gallery-view .os9-titlebar {
+  background: #E91E63; /* Pink */
+}
+
+.gallery-view .os9-title {
+  color: white; /* White text for dark background */
+}
+
+.guestbook-view .os9-titlebar {
+  background: #FFA726; /* Amber */
+}
+
+.guestbook-view .os9-title {
+  color: rgba(0, 0, 0, 0.87); /* Dark text for light background */
+  text-shadow: none;
+}
+
+.library-view .os9-titlebar {
+  background: #5C6BC0; /* Indigo */
+}
+
+.library-view .os9-title {
+  color: white; /* White text for dark background */
+}
+
+.life-stories-view .os9-titlebar {
+  background: #E74C3C; /* Red */
+}
+
+.life-stories-view .os9-title {
+  color: white; /* White text for medium-dark background */
+}
+
+.project-shredder-view .os9-titlebar {
+  background: #95A5A6; /* Gray */
+}
+
+.project-shredder-view .os9-title {
+  color: rgba(0, 0, 0, 0.87); /* Dark text for light background */
+  text-shadow: none;
 }
 
 .os9-titlebar-content {
@@ -2123,12 +2349,13 @@ ul {
 }
 
 .os9-title {
-  font-family: 'Chicago', 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 0.875rem; /* Increased from 0.75rem */
   font-weight: 900; /* Increased from 700 to make it bolder */
-  color: var(--text-secondary);
+  color: white; /* White text on colored titlebar backgrounds */
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
 }
 
 /* Titlebar with integrated toolbar (for Notes view) */
@@ -3521,7 +3748,7 @@ ul {
   --zen-pixel-size: 4px;
 
   /* Retro digital font stack */
-  --zen-font-display: 'Doto', var(--font-sans);
+  --zen-font-display: 'Geist Pixel', var(--font-sans);
   --zen-font-body: var(--font-sans);
 }
 
@@ -4214,7 +4441,7 @@ ul {
 }
 
 .timeline-year {
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 1.5rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -4606,14 +4833,14 @@ ul {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
 }
 
 .floor-number {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--accent);
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   line-height: 1;
   transition: opacity 0.2s ease-in-out;
 }
@@ -4641,7 +4868,7 @@ ul {
   cursor: var(--cursor-pointer);
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
   min-height: 32px;
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
 }
 
 .floor-btn:hover {
@@ -4756,7 +4983,7 @@ ul {
 }
 
 .train-eyebrow {
-  font-family: 'Doto', monospace;
+  font-family: 'Geist Pixel', monospace;
   font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -4885,7 +5112,7 @@ ul {
   padding: 8px 16px;
   background: linear-gradient(135deg, rgba(86, 152, 251, 0.12), rgba(86, 152, 251, 0.04));
   border-bottom: 1px dashed var(--border-light);
-  font-family: 'Doto', monospace;
+  font-family: 'Geist Pixel', monospace;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -4950,7 +5177,7 @@ ul {
   letter-spacing: 0.05em;
   color: var(--text-secondary);
   margin-bottom: var(--space-sm);
-  font-family: 'Doto', monospace;
+  font-family: 'Geist Pixel', monospace;
 }
 
 .train-route ol {
@@ -4987,7 +5214,7 @@ ul {
   border: 1px solid rgba(86, 152, 251, 0.3);
   border-radius: 4px;
   color: var(--accent);
-  font-family: 'Doto', monospace;
+  font-family: 'Geist Pixel', monospace;
 }
 
 /* No hover behavior - all content always visible */
@@ -5099,7 +5326,7 @@ ul {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-family: 'Doto', monospace;
+  font-family: 'Geist Pixel', monospace;
 }
 
 /* Empty State */
@@ -5156,7 +5383,7 @@ ul {
 }
 
 .train-nav-indicator {
-  font-family: 'Doto', monospace;
+  font-family: 'Geist Pixel', monospace;
   font-size: 0.875rem;
   color: var(--text-secondary);
   min-width: 60px;
@@ -5301,7 +5528,7 @@ ul {
   align-items: center;
   justify-content: center;
   font-size: 3rem;
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   color: var(--text-muted);
   background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
 }
@@ -5311,7 +5538,7 @@ ul {
 }
 
 .labs-card-title {
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -5388,7 +5615,7 @@ ul {
 }
 
 .labs-modal-title {
-  font-family: 'Doto', var(--font-sans);
+  font-family: 'Geist Pixel', var(--font-sans);
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -6940,7 +7167,7 @@ ul {
 }
 
 .library-view .os9-window {
-  max-width: 380px;
+  max-width: 600px;
   width: 100%;
   margin: 0 auto;
 }
@@ -6964,7 +7191,7 @@ ul {
 .kindle-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 16px;
 }
 
 .kindle-library-header {
@@ -6984,8 +7211,8 @@ ul {
 /* Kindle Books Grid */
 .kindle-books-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px 16px;
 }
 
 .kindle-empty {

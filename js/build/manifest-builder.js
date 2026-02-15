@@ -201,6 +201,12 @@ const KNOWN_AUTHORS = {
   'Show Your Work': 'Austin Kleon',
 };
 
+// Known ISBNs for books where title search returns wrong covers
+const KNOWN_ISBNS = {
+  'Atomic Habits': '9780735211292',
+  'Building A Second Brain': '9781982167387',
+};
+
 /**
  * Parse book metadata from markdown content
  * Handles various formats:
@@ -290,7 +296,7 @@ function titleToFilename(title) {
 }
 
 /**
- * Download a book cover from Open Library API
+ * Download a book cover from Google Books API (better English edition matching)
  * @param {string} title - Book title
  * @param {string} author - Book author
  * @param {string} destPath - Destination file path
@@ -298,8 +304,12 @@ function titleToFilename(title) {
  */
 async function downloadCover(title, author, destPath) {
   try {
-    // Search Open Library for the book
-    const searchUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&limit=5&language=eng`;
+    // If we have a known ISBN, search by that first for guaranteed correct edition
+    const isbn = KNOWN_ISBNS[title];
+    const query = isbn
+      ? `isbn:${isbn}`
+      : `intitle:${title}+inauthor:${author}`;
+    const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&langRestrict=en&maxResults=5&printType=books`;
 
     const response = await fetch(searchUrl);
     if (!response.ok) {
@@ -308,27 +318,59 @@ async function downloadCover(title, author, destPath) {
     }
 
     const data = await response.json();
-    if (!data.docs || data.docs.length === 0) {
+    if (!data.items || data.items.length === 0) {
       console.warn(`    No results for "${title}"`);
       return false;
     }
 
-    // Find the best match - prefer editions with cover_i and English language
-    let coverId = null;
-    for (const doc of data.docs) {
-      if (doc.cover_i) {
-        coverId = doc.cover_i;
-        break;
+    // Find the best match with a cover image
+    let coverUrl = null;
+    if (isbn) {
+      // ISBN search - trust the result, just find one with a cover
+      for (const item of data.items) {
+        const imageLinks = item.volumeInfo?.imageLinks;
+        if (imageLinks) {
+          coverUrl = imageLinks.extraLarge || imageLinks.large || imageLinks.medium || imageLinks.thumbnail;
+          if (coverUrl) break;
+        }
+      }
+    } else {
+      // Title/author search - filter out summaries/knockoffs/translations
+      const skipTitleWords = ['summary', 'workbook', 'study guide', 'illustration', 'review', 'analysis', 'companion', 'notebook', 'trivia', 'quiz', 'for fans', 'key takeaways', 'cliff notes', 'sparknotes'];
+      const skipPublishers = ['trivion', 'goldmine reads', 'readtrepreneur', 'instaread'];
+      const authorLower = author.toLowerCase();
+      for (const item of data.items) {
+        const info = item.volumeInfo;
+        if (!info) continue;
+        // Must be English
+        if (info.language && info.language !== 'en') continue;
+        const itemTitle = (info.title || '').toLowerCase() + ' ' + (info.subtitle || '').toLowerCase();
+        // Skip knockoff/summary editions
+        if (skipTitleWords.some(w => itemTitle.includes(w))) continue;
+        // Skip knockoff publishers
+        const publisher = (info.publisher || '').toLowerCase();
+        if (skipPublishers.some(p => publisher.includes(p))) continue;
+        // Prefer results where author actually matches
+        const authors = (info.authors || []).map(a => a.toLowerCase());
+        const authorMatch = authors.some(a => a.includes(authorLower) || authorLower.includes(a));
+        if (!authorMatch && authors.length > 0) continue;
+        // Skip if no cover
+        const imageLinks = info.imageLinks;
+        if (!imageLinks) continue;
+        coverUrl = imageLinks.extraLarge || imageLinks.large || imageLinks.medium || imageLinks.thumbnail;
+        if (coverUrl) break;
       }
     }
 
-    if (!coverId) {
+    if (!coverUrl) {
       console.warn(`    No cover image for "${title}"`);
       return false;
     }
 
-    // Get large cover from Open Library covers API
-    const coverUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+    // Google Books returns http URLs - upgrade to https and strip curl effect
+    coverUrl = coverUrl.replace('http://', 'https://').replace('&edge=curl', '');
+    // Request larger image via width parameter (keep default zoom for correct cover)
+    coverUrl += '&w=600';
 
     // Download the image
     const imageResponse = await fetch(coverUrl);

@@ -995,7 +995,7 @@
     prerunSimulation(60); // 60 frames at 20fps = 3 seconds
 
     // Load messages and start animation
-    loadMessages();
+    // loadMessages(); // Disabled - no text over black hole
 
     // Event listeners
     window.addEventListener('resize', resize);

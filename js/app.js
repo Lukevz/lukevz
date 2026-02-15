@@ -2450,8 +2450,11 @@ async function loadGoals(year = '2025') {
           const habitText = progressMatch[3];
           const percentage = Math.min(100, Math.round((current / total) * 100));
 
-          // Format numbers with "k" suffix for thousands
+          // Format numbers with "k" suffix for thousands and "M" for millions
           const formatNumber = (num) => {
+            if (num >= 1000000) {
+              return (num / 1000000).toFixed(num >= 10000000 ? 0 : 1).replace(/\.0$/, '') + 'M';
+            }
             if (num >= 1000) {
               return (num / 1000).toFixed(num >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k';
             }
