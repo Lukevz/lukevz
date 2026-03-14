@@ -7,7 +7,7 @@
 import { writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest, buildFlightsManifest } from '../js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -18,6 +18,7 @@ const labsDir = join(rootDir, 'labs');
 const soundsDir = join(rootDir, 'sounds');
 const galleryDir = join(rootDir, 'gallery');
 const coversDir = join(rootDir, 'covers');
+const flightsPath = join(rootDir, 'flights.md');
 
 
 async function build() {
@@ -104,6 +105,18 @@ export default ${JSON.stringify(covers, null, 2)};
 `;
   writeFileSync(join(rootDir, 'covers.js'), coversContent);
   console.log(`✓ Generated covers.js with ${covers.length} books`);
+
+  // Build flights manifest
+  const flights = buildFlightsManifest(flightsPath);
+  const flightsContent = `/**
+ * Flights Manifest (auto-generated)
+ * Run 'node build/build.js' to regenerate after editing flights.md
+ */
+
+export default ${JSON.stringify(flights, null, 2)};
+`;
+  writeFileSync(join(rootDir, 'flights.js'), flightsContent);
+  console.log(`✓ Generated flights.js with ${flights.length} flights`);
 }
 
 build().catch(console.error);

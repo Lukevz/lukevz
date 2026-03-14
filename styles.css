@@ -1193,55 +1193,72 @@ body.app-active .mobile-header-menu {
   --cursor-default: url('images/cursor-arcade.svg') 15 15, auto;
   --cursor-pointer: url('images/cursor-arcade-pointer.svg') 15 15, pointer;
 
-  --social-hover-bg: #111111;
-  --social-hover-fg: #ffffff;
+  --social-hover-bg: #1e1e2a;
+  --social-hover-fg: #EDE0D4;
 
   /* Effects */
   --glass-blur: 32px;
   --shell-radius: 16px;
 
+  /* ── Palette: LIGHT / FORM / COMBUSTION ── */
+  /* Translucent — warm acrylic light */
+  --rose-acrylic:    #E8A090;  /* primary warm */
+  --deep-blush:      #C45A6A;  /* mid accent */
+  --warm-ivory:      #F5E6D0;  /* light / background */
+  --amber-glow:      #E8C070;  /* light source */
+  /* Chromatic — soft gradients */
+  --iris-mist:       #7B6BAF;  /* cool accent */
+  --coral-diffuse:   #E87B5A;  /* warm mid */
+  --soft-bone:       #EDE0D4;  /* near-white */
+  --lavender-smoke:  #B8A0C8;  /* transition hue */
+  /* Combustion — neon on dark */
+  --plasma-blue:     #2060E8;  /* electric anchor */
+  --neon-flame:      #FF3020;  /* hot accent */
+  --void:            #181820;  /* deep background */
+  --white-core:      #F0F4FF;  /* light peak */
+
   /* Background image - JS will override with cache-busted version */
-  --bg-fill: #06080c;
+  --bg-fill: #0d0d12;
   --bg-image: url('images/dark.jpg');
-  --stars-color: rgba(255, 255, 255, 0.85);
+  --stars-color: rgba(240, 228, 212, 0.7);
 
-  /* Colors - WCAG AA compliant contrast ratios */
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #242424;
-  --bg-tertiary: #2d2d2d;
-  --bg-hover: #363636;
-  --bg-active: #404040;
+  /* Colors */
+  --bg-primary: #181820;     /* Void */
+  --bg-secondary: #1e1e2a;
+  --bg-tertiary: #252535;
+  --bg-hover: #2e2e3e;
+  --bg-active: #38384e;
 
-  --bg-primary-solid: #1a1a1a;
-  --bg-secondary-solid: #242424;
-  --bg-tertiary-solid: #2d2d2d;
+  --bg-primary-solid: #181820;
+  --bg-secondary-solid: #1e1e2a;
+  --bg-tertiary-solid: #252535;
 
-  --text-primary: #f5f5f5;
-  --text-secondary: #b3b3b3;
-  --text-muted: #808080;
+  --text-primary: #EDE0D4;   /* Soft Bone — warm white */
+  --text-secondary: #a898b8; /* muted lavender-gray */
+  --text-muted: #6a6280;     /* dark muted violet */
 
-  /* Accent: neutral gray palette (dark mode defaults) */
-  --accent: #9CA3AF;
-  --accent-hover: #D1D5DB;
-  --text-on-accent: #111827;
+  /* Accent: Lavender Smoke / Rose Acrylic */
+  --accent: #B8A0C8;
+  --accent-hover: #E8A090;
+  --text-on-accent: #181820;
 
-  --border: rgba(61, 61, 61, 0.7);
-  --border-light: rgba(74, 74, 74, 0.7);
+  --border: rgba(100, 88, 130, 0.35);
+  --border-light: rgba(120, 108, 160, 0.38);
 
-  --shadow-color: rgba(0, 0, 0, 0.4);
-  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --overlay-bg: rgba(0, 0, 0, 0.6);
 
-  /* Welcome/landing message is shown over the dark space background */
-  --welcome-surface: rgba(26, 26, 26, 0.92);
-  --welcome-border: rgba(255, 255, 255, 0.12);
-  --welcome-shadow: rgba(0, 0, 0, 0.55);
-  --welcome-text-primary: #f5f5f5;
-  --welcome-text-secondary: #b3b3b3;
-  --welcome-hover: rgba(255, 255, 255, 0.08);
+  /* Welcome/landing message */
+  --welcome-surface: rgba(24, 24, 32, 0.92);
+  --welcome-border: rgba(184, 160, 200, 0.18);
+  --welcome-shadow: rgba(0, 0, 0, 0.6);
+  --welcome-text-primary: #EDE0D4;
+  --welcome-text-secondary: #a898b8;
+  --welcome-hover: rgba(184, 160, 200, 0.08);
 
-  /* Gallery polaroid cards - lighter than bg-fill for dark mode */
-  --card-bg: #1a1a1a;
-  --image-bg: #242424;
+  /* Gallery polaroid cards */
+  --card-bg: #1e1e2a;
+  --image-bg: #252535;
 }
 
 /* Reset & Base */
@@ -2778,8 +2795,8 @@ ul {
 .habit-progress-bar {
   width: 120px;
   height: 20px;
-  background: #1a1a1a;
-  border: 2px solid #444;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-light);
   border-radius: 2px;
   position: relative;
   overflow: hidden;
@@ -3227,10 +3244,10 @@ ul {
   height: 100%;
   background: repeating-linear-gradient(
     90deg,
-    #9CA3AF 0px,
-    #9CA3AF 3px,
-    #6B7280 3px,
-    #6B7280 6px
+    var(--lavender-smoke) 0px,
+    var(--lavender-smoke) 3px,
+    var(--iris-mist) 3px,
+    var(--iris-mist) 6px
   );
   width: 0%;
   transition: width 0.15s linear;
@@ -3290,36 +3307,36 @@ ul {
 .zen-btn svg {
   width: 20px;
   height: 20px;
-  color: #2a2a2a; /* Dark gray for readability on grayscale buttons */
+  color: var(--void); /* Dark for readability on buttons */
 }
 
 .zen-btn:hover svg {
-  color: #1a1a1a;
+  color: var(--void);
 }
 
-/* Individual Button Colors - Mosaic Pattern (neutral grayscale like real Zen Mosaic) */
-.zen-btn-back { background: #4a4a4a; }
-.zen-btn-up { background: #8a8a8a; }
-.zen-btn-menu { background: #3a3a3a; }
-.zen-btn-left { background: #6a6a6a; }
+/* Individual Button Colors - Mosaic Pattern (palette-tinted) */
+.zen-btn-back { background: #2e2e3e; }
+.zen-btn-up { background: #4a3f5e; }
+.zen-btn-menu { background: #252535; }
+.zen-btn-left { background: #38384e; }
 .zen-btn-select {
-  background: linear-gradient(135deg, #b0b0b0 0%, #909090 100%);
+  background: linear-gradient(135deg, #B8A0C8 0%, #7B6BAF 100%);
 }
-.zen-btn-select svg { color: #2a2a2a; }
-.zen-btn-right { background: #5a5a5a; }
-.zen-btn-shuffle { background: #3a3a3a; }
-.zen-btn-down { background: #7a7a7a; }
-.zen-btn-repeat { background: #5a5a5a; }
+.zen-btn-select svg { color: var(--void); }
+.zen-btn-right { background: #322e48; }
+.zen-btn-shuffle { background: #252535; }
+.zen-btn-down { background: #3e3a54; }
+.zen-btn-repeat { background: #322e48; }
 
 /* Active states for shuffle/repeat */
 .zen-btn-shuffle.active,
 .zen-btn-repeat.active {
-  background: #a0a0a0;
+  background: var(--lavender-smoke);
 }
 
 .zen-btn-shuffle.active svg,
 .zen-btn-repeat.active svg {
-  color: #2a2a2a;
+  color: var(--void);
 }
 
 /* ZEN Branding */
@@ -3729,15 +3746,15 @@ ul {
 /* Creative Zen Mosaic Theme */
 /* ==================== */
 
-/* Zen Mosaic Color Palette - Neutral grayscale */
+/* Zen Mosaic Color Palette */
 .music-view {
-  --zen-body: #1a1a1a;
-  --zen-body-edge: #0d0d0d;
-  --zen-screen-bg: #2a2a2a;
-  --zen-screen-glow: rgba(128, 128, 128, 0.15);
-  --zen-lcd-text: #e8e8e8;
-  --zen-lcd-dim: #909090;
-  --zen-lcd-muted: #606060;
+  --zen-body: #181820;
+  --zen-body-edge: #0d0d12;
+  --zen-screen-bg: #1e1e2a;
+  --zen-screen-glow: rgba(184, 160, 200, 0.12);
+  --zen-lcd-text: #EDE0D4;
+  --zen-lcd-dim: #a898b8;
+  --zen-lcd-muted: #6a6280;
   --zen-accent: var(--accent);
   --zen-accent-dim: color-mix(in srgb, var(--accent) 75%, black);
   --zen-button: #3a3a3a;
@@ -6239,7 +6256,7 @@ ul {
 
   /* Keep body dark for black hole when no app is open */
   body {
-    background-color: #06080c;
+    background-color: #0d0d12;
   }
 
   /* Fix icon filters - remove invert to show dark icons */
@@ -6401,20 +6418,20 @@ ul {
   /* Keep header text LIGHT when no app is open (transparent header over dark space) */
   .top-menu-bar:not(.app-active) .menu-location,
   .top-menu-bar:not(.app-active) .menu-divider {
-    color: #808080; /* Keep muted gray for dark background */
+    color: #6a6280;
   }
 
   .top-menu-bar:not(.app-active) .menu-time,
   .top-menu-bar:not(.app-active) .weather-temp {
-    color: #f5f5f5; /* Keep light for dark background */
+    color: #EDE0D4;
   }
 
   .top-menu-bar:not(.app-active) .menu-weather {
-    color: #b3b3b3; /* Keep secondary light for dark background */
+    color: #a898b8;
   }
 
   .top-menu-bar:not(.app-active) .social-icon {
-    color: #b3b3b3;
+    color: #a898b8;
   }
 
   .top-menu-bar:not(.app-active) .social-icon:hover {
@@ -6424,16 +6441,16 @@ ul {
 
   /* Keep navbar DARK when no app is open (even in light mode) */
   .top-menu-bar:not(.app-active) .menu-nav {
-    background: rgba(36, 36, 36, 0.85);
-    border-color: rgba(61, 61, 61, 0.7);
+    background: rgba(24, 24, 32, 0.88);
+    border-color: rgba(100, 88, 130, 0.35);
   }
 
   .top-menu-bar:not(.app-active) .nav-icon-btn {
-    color: #f5f5f5;
+    color: #EDE0D4;
   }
 
   .top-menu-bar:not(.app-active) .nav-icon-btn:hover {
-    background: rgba(54, 54, 54, 0.85);
+    background: rgba(46, 46, 62, 0.88);
   }
 
   .top-menu-bar:not(.app-active) .nav-icon-btn.active {
@@ -7556,5 +7573,60 @@ ul {
 
   .rating-legend-header {
     font-size: 16px;
+  }
+}
+
+/* ==================== */
+/* Theme Switcher       */
+/* ==================== */
+
+.theme-switcher {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'Geist Pixel', var(--font-sans);
+  font-size: 13px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.theme-switcher-btn {
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 3px;
+  user-select: none;
+}
+
+.theme-switcher-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.theme-switcher-btn.active {
+  color: var(--accent-hover);
+  font-weight: 600;
+  cursor: default;
+}
+
+.theme-switcher-divider {
+  color: var(--border);
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .theme-switcher {
+    bottom: 80px;
+    padding: 6px 12px;
+    font-size: 12px;
   }
 }

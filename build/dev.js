@@ -11,7 +11,7 @@ import { createServer } from 'http';
 import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { URL } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest, buildFlightsManifest } from '../js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -21,6 +21,7 @@ const labsDir = join(rootDir, 'labs');
 const soundsDir = join(rootDir, 'sounds');
 const galleryDir = join(rootDir, 'gallery');
 const coversDir = join(rootDir, 'covers');
+const flightsPath = join(rootDir, 'flights.md');
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -124,6 +125,20 @@ export default ${JSON.stringify(gallery, null, 2)};
   console.log(`\x1b[32m✓\x1b[0m Rebuilt gallery.js (${gallery.length} albums)`);
 }
 
+// Build flights.js
+function buildFlights() {
+  const flights = buildFlightsManifest(flightsPath);
+  const content = `/**
+ * Flights Manifest (auto-generated)
+ * Run 'node build/build.js' to regenerate after editing flights.md
+ */
+
+export default ${JSON.stringify(flights, null, 2)};
+`;
+  writeFileSync(join(rootDir, 'flights.js'), content);
+  console.log(`\x1b[32m✓\x1b[0m Rebuilt flights.js (${flights.length} flights)`);
+}
+
 // Build covers.js (async - downloads missing covers)
 let booksApiKey = null;
 async function loadBooksApiKey() {
@@ -162,6 +177,7 @@ buildLabs();
 buildSounds();
 buildGallery();
 buildCovers();
+buildFlights();
 
 // Watch for changes in posts
 console.log(`\x1b[90m◉ Watching /posts for changes...\x1b[0m`);
@@ -217,6 +233,15 @@ if (existsSync(galleryDir)) {
       console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
       buildGallery();
     }
+  });
+}
+
+// Watch for changes in flights.md
+if (existsSync(flightsPath)) {
+  console.log(`\x1b[90m◉ Watching flights.md for changes...\x1b[0m`);
+  watch(flightsPath, (eventType, filename) => {
+    console.log(`\x1b[90m  Changed: flights.md\x1b[0m`);
+    buildFlights();
   });
 }
 
@@ -791,8 +816,19 @@ const server = createServer(async (req, res) => {
   const handled = await handleAPIProxy(req, res);
   if (handled) return;
 
-  const decodedUrl = decodeURIComponent(req.url);
-  let filePath = join(rootDir, decodedUrl === '/' ? 'index.html' : decodedUrl);
+  const decodedUrl = decodeURIComponent(req.url).split('?')[0];
+  let filePath;
+  if (decodedUrl === '/') {
+    filePath = join(rootDir, 'index.html');
+  } else if (decodedUrl === '/v1' || decodedUrl === '/v1/') {
+    filePath = join(rootDir, 'v1/index.html');
+  } else if (decodedUrl === '/work') {
+    filePath = join(rootDir, 'work.html');
+  } else if (decodedUrl === '/about') {
+    filePath = join(rootDir, 'about.html');
+  } else {
+    filePath = join(rootDir, decodedUrl);
+  }
   const ext = extname(filePath);
   const contentType = mimeTypes[ext] || 'application/octet-stream';
 

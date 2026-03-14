@@ -1,16 +1,32 @@
-[32m✓[0m Rebuilt posts.js (48 posts)
+[32m✓[0m Rebuilt posts.js (32 posts)
 [32m✓[0m Rebuilt thought-trains.js (3 thought trains)
-[32m✓[0m Rebuilt labs.js (2 labs)
+[32m✓[0m Rebuilt labs.js (4 labs)
+[32m✓[0m Rebuilt sounds.js (11 sounds)
+[32m✓[0m Rebuilt gallery.js (9 albums)
+[32m✓[0m Rebuilt flights.js (5 flights)
 [90m◉ Watching /posts for changes...[0m
 [90m◉ Watching /thought-train for changes...[0m
 [90m◉ Watching /labs for changes...[0m
-(node:40393) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/lukevz/code/lukevz/dev.js is not specified and it doesn't parse as CommonJS.
-Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to /Users/lukevz/package.json.
-(Use `node --trace-warnings ...` to show where the warning was created)
+[90m◉ Watching /sounds for changes...[0m
+[90m◉ Watching /gallery for changes...[0m
+[90m◉ Watching flights.md for changes...[0m
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
 
-[1m  Digital Garden[0m
-[90m  ─────────────────────────[0m
-  [36m➜[0m  http://localhost:3000
-[90m  ─────────────────────────[0m
+Error: listen EADDRINUSE: address already in use 127.0.0.1:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at node:net:2205:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '127.0.0.1',
+  port: 3000
+}
 
+Node.js v23.10.0
