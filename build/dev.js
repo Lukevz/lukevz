@@ -4,23 +4,24 @@
  * Watches /posts, /thought-train, /labs, /sounds folders and regenerates manifest files on changes
  */
 
-import { writeFileSync, watch, existsSync } from 'fs';
+import { writeFileSync, watch, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { createServer } from 'http';
 import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { URL } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../v1/js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
-const postsDir = join(rootDir, 'posts');
-const thoughtTrainDir = join(rootDir, 'thought-train');
-const labsDir = join(rootDir, 'labs');
-const soundsDir = join(rootDir, 'sounds');
-const galleryDir = join(rootDir, 'gallery');
-const coversDir = join(rootDir, 'covers');
+const v1Dir = join(rootDir, 'v1');
+const postsDir = join(v1Dir, 'posts');
+const thoughtTrainDir = join(v1Dir, 'thought-train');
+const labsDir = join(v1Dir, 'labs');
+const soundsDir = join(v1Dir, 'sounds');
+const galleryDir = join(v1Dir, 'gallery');
+const coversDir = join(v1Dir, 'covers');
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -55,7 +56,7 @@ function buildPosts() {
 
 export default ${JSON.stringify(posts, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'posts.js'), content);
+  writeFileSync(join(v1Dir, 'posts.js'), content);
   console.log(`\x1b[32m✓\x1b[0m Rebuilt posts.js (${posts.length} posts)`);
 }
 
@@ -70,7 +71,7 @@ function buildThoughtTrains() {
 
 export default ${JSON.stringify(thoughtTrains, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'thought-trains.js'), content);
+  writeFileSync(join(v1Dir, 'thought-trains.js'), content);
   console.log(`\x1b[32m✓\x1b[0m Rebuilt thought-trains.js (${thoughtTrains.length} thought trains)`);
 }
 
@@ -86,7 +87,7 @@ function buildLabs() {
 
 export default ${JSON.stringify(labs, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'labs.js'), content);
+  writeFileSync(join(v1Dir, 'labs.js'), content);
   console.log(`\x1b[32m✓\x1b[0m Rebuilt labs.js (${labs.length} labs)`);
 }
 
@@ -103,7 +104,7 @@ function buildSounds() {
 
 export default ${JSON.stringify(sounds, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'sounds.js'), content);
+  writeFileSync(join(v1Dir, 'sounds.js'), content);
   console.log(`\x1b[32m✓\x1b[0m Rebuilt sounds.js (${sounds.length} sounds)`);
 }
 
@@ -120,7 +121,7 @@ function buildGallery() {
 
 export default ${JSON.stringify(gallery, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'gallery.js'), content);
+  writeFileSync(join(v1Dir, 'gallery.js'), content);
   console.log(`\x1b[32m✓\x1b[0m Rebuilt gallery.js (${gallery.length} albums)`);
 }
 
@@ -129,7 +130,7 @@ let booksApiKey = null;
 async function loadBooksApiKey() {
   if (booksApiKey !== null) return booksApiKey;
   try {
-    const configPath = join(rootDir, 'books-config.js');
+    const configPath = join(v1Dir, 'books-config.js');
     if (existsSync(configPath)) {
       const configModule = await import(pathToFileURL(configPath).href);
       booksApiKey = configModule.default?.googleBooks?.apiKey || null;
@@ -151,7 +152,7 @@ async function buildCovers() {
 
 export default ${JSON.stringify(covers, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'covers.js'), content);
+  writeFileSync(join(v1Dir, 'covers.js'), content);
   console.log(`\x1b[32m✓\x1b[0m Rebuilt covers.js (${covers.length} books)`);
 }
 
@@ -230,7 +231,7 @@ async function loadMusicConfig() {
 
   musicConfigPromise = (async () => {
     try {
-      const configPath = join(rootDir, 'music-config.js');
+      const configPath = join(v1Dir, 'music-config.js');
       if (existsSync(configPath)) {
         const configUrl = pathToFileURL(configPath).href;
         const configModule = await import(configUrl);
@@ -257,7 +258,7 @@ async function loadBooksConfig() {
 
   booksConfigPromise = (async () => {
     try {
-      const configPath = join(rootDir, 'books-config.js');
+      const configPath = join(v1Dir, 'books-config.js');
       if (existsSync(configPath)) {
         const configUrl = pathToFileURL(configPath).href;
         const configModule = await import(configUrl);
@@ -293,6 +294,26 @@ async function handleAPIProxy(req, res) {
   if (req.method === 'OPTIONS') {
     res.writeHead(200, corsHeaders);
     res.end();
+    return true;
+  }
+
+  // Content directory listing endpoint
+  if (path === '/api/content/list' && req.method === 'GET') {
+    const category = url.searchParams.get('category');
+    if (!category || /[./\\]/.test(category)) {
+      res.writeHead(400, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'invalid category' }));
+      return true;
+    }
+    const dir = join(rootDir, 'content', category);
+    if (!existsSync(dir)) {
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ files: [] }));
+      return true;
+    }
+    const files = readdirSync(dir).filter(f => f.endsWith('.md')).sort();
+    res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ files }));
     return true;
   }
 
@@ -793,6 +814,14 @@ const server = createServer(async (req, res) => {
 
   const decodedUrl = decodeURIComponent(req.url);
   let filePath = join(rootDir, decodedUrl === '/' ? 'index.html' : decodedUrl);
+  // Serve index.html for directory requests; try path.html for extensionless routes
+  if (filePath.endsWith('/') || !extname(filePath)) {
+    const indexPath = join(filePath.endsWith('/') ? filePath : filePath + '/', 'index.html');
+    const htmlPath  = filePath + '.html';
+    try { await readFile(indexPath); filePath = indexPath; } catch {
+      try { await readFile(htmlPath); filePath = htmlPath; } catch {}
+    }
+  }
   const ext = extname(filePath);
   const contentType = mimeTypes[ext] || 'application/octet-stream';
 

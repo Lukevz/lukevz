@@ -2,900 +2,230 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="color-scheme" content="light dark">
-  <title>Lumos Notes</title>
-
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Lumos Notes">
-  <meta property="og:description" content="My interactive digital garden">
-  <meta property="og:image" content="images/og-header.png">
-  <!-- Optional: set this to your live URL -->
-  <meta property="og:url" content="https://lukevz.com">
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Lumos Notes">
-  <meta name="twitter:description" content="My interactive digital garden">
-  <meta name="twitter:image" content="images/og-header.png">
-
-  <link rel="icon" type="image/png" href="images/favicon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>lukevz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <!-- Animated Background Canvas -->
-  <canvas id="bgCanvas" style="transform: translateZ(0); -webkit-transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden;"></canvas>
 
-  <!-- Top Menu Bar -->
-  <header class="top-menu-bar" id="topMenuBar">
-    <div class="top-menu-bar-inner">
-    <div class="menu-left">
-      <span class="menu-location">ATL</span>
-      <span class="menu-time" id="menuTime">--:--</span>
-      <span class="menu-divider">|</span>
-      <span class="menu-weather" id="menuWeather">
-        <span class="weather-icon" id="weatherIcon">--</span>
-        <span class="weather-temp" id="weatherTemp">--</span>
-      </span>
-      <!-- Info Icon (Desktop Only) -->
-      <button class="info-icon-btn" id="infoIconBtn" aria-label="View info" aria-expanded="false">
-        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M3 3h2v18H3V3zm16 0H5v2h14v14H5v2h16V3h-2zm-8 6h2V7h-2v2zm2 8h-2v-6h2v6z" fill="currentColor"/>
-        </svg>
-      </button>
-    </div>
-    <div class="menu-center">
-      <!-- Navigation Icons -->
-      <nav class="menu-nav" id="menuNav">
-	        <button class="nav-icon-btn" data-view="guestbook" aria-label="Guestbook">
-	          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-	            <path d="M20 0h2v2h2v2h-2v2h-2V4h-2V2h2V0ZM8 4h8v2h-2v2h-2V6H8V4ZM6 8V6h2v2H6Zm0 8H4V8h2v8Zm2 2H6v-2h2v2Zm8 0v2H8v-2h8Zm2-2v2h-2v-2h2Zm-2-4v-2h2V8h2v8h-2v-4h-2Zm-4 0h4v2h-4v-2Zm0 0V8h-2v4h2Zm-8 6H2v2H0v2h2v2h2v-2h2v-2H4v-2Z"/>
-	          </svg>
-	          <span class="nav-label">Guestbook</span>
-	        </button>
-        <button class="nav-icon-btn" data-view="tasks" aria-label="Tasks">
-          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M19 4h2v2h-2V4zm-2 4V6h2v2h-2zm-2 0h2v2h-2V8zm0 0h-2V6h2v2zM3 6h8v2H3V6zm8 10H3v2h8v-2zm7 2v-2h2v-2h-2v2h-2v-2h-2v2h2v2h-2v2h2v-2h2zm0 0v2h2v-2h-2z" fill="currentColor"/>
-          </svg>
-          <span class="nav-label">Tasks</span>
-        </button>
-	        <button class="nav-icon-btn" data-view="notes" aria-label="Notes">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M3 2h18v14h-2v2h-2v-2h-2v2h2v2h-2v2H3V2zm2 2v16h8v-6h6V4H5z" fill="currentColor"/>
-	          </svg>
-	          <span class="nav-label">Notes</span>
-	        </button>
-	        <button class="nav-icon-btn" data-view="music" aria-label="Music">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M19 4H5v2H3v14h7v-8H5V6h14v6h-5v8h7V6h-2V4zm-3 10h3v4h-3v-4zm-8 0v4H5v-4h3z" fill="currentColor"/>
-	          </svg>
-          <span class="nav-label">Music</span>
-        </button>
-        <button class="nav-icon-btn" data-view="thoughtTrain" aria-label="Thought Trains">
-          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M4 4h16v2H4V4zm0 14h16v2H4v-2zM2 9h2v2H2V9zm4 0h2v2H6V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9zm2 4h-2v2h2v-2zm-4 0h-2v2h2v-2zm-4 0h-2v2h2v-2zm-4 0H6v2h2v-2zm-4 0H2v2h2v-2z" fill="currentColor"/>
-          </svg>
-          <span class="nav-label">Thought Trains</span>
-        </button>
-	        <button class="nav-icon-btn" data-view="labs" aria-label="Labs">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M9 2h2v2H9V2zm4 4V4h-2v2H9v2H7v2H5v2H3v2h2v2h2v2h2v2h2v2h2v-2h2v-2h2v-2h2v6h2V12h-2v-2h-2V8h-2V6h-2zm0 0v2h2v2h2v2h2v2H5v-2h2v-2h2V8h2V6h2z" fill="currentColor"/>
-	          </svg>
-	          <span class="nav-label">Labs</span>
-	        </button>
-	        <button class="nav-icon-btn" data-view="gallery" aria-label="Gallery">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M24 2H4v16h20V2zM6 16V4h16v12H6zM2 4H0v18h20v-2H2V4zm12 2h2v2h-2V6zm-2 4V8h2v2h-2zm-2 2v-2h2v2h-2zm0 0v2H8v-2h2zm8-2h-2V8h2v2zm0 0h2v2h-2v-2zM8 6h2v2H8V6z" fill="currentColor"/>
-	          </svg>
-	          <span class="nav-label">Gallery</span>
-	        </button>
-	        <button class="nav-icon-btn" data-view="library" aria-label="Library">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M3 3h8v2H3v12h8V5h2v12h8V5h-8V3h10v16H13v2h-2v-2H1V3h2zm16 7h-4v2h4v-2zm-4-3h4v2h-4V7zm2 6h-2v2h2v-2z" fill="currentColor"/> </svg>
-	          <span class="nav-label">Library</span>
-	        </button>
-	      </nav>
-	    </div>
-    <div class="menu-right">
-      <div class="social-icons" id="socialIcons">
-        <a href="https://x.com/lukevz" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="X (Twitter)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M18.42,14.009L27.891,3h-2.244l-8.224,9.559L10.855,3H3.28l9.932,14.455L3.28,29h2.244l8.684-10.095,6.936,10.095h7.576l-10.301-14.991h0Zm-3.074,3.573l-1.006-1.439L6.333,4.69h3.447l6.462,9.243,1.006,1.439,8.4,12.015h-3.447l-6.854-9.804h0Z"/></svg>
-          <span class="social-label">X</span>
-        </a>
-        <a href="https://www.youtube.com/@uxwithluke" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="YouTube">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M31.331,8.248c-.368-1.386-1.452-2.477-2.829-2.848-2.496-.673-12.502-.673-12.502-.673,0,0-10.007,0-12.502,.673-1.377,.37-2.461,1.462-2.829,2.848-.669,2.512-.669,7.752-.669,7.752,0,0,0,5.241,.669,7.752,.368,1.386,1.452,2.477,2.829,2.847,2.496,.673,12.502,.673,12.502,.673,0,0,10.007,0,12.502-.673,1.377-.37,2.461-1.462,2.829-2.847,.669-2.512,.669-7.752,.669-7.752,0,0,0-5.24-.669-7.752ZM12.727,20.758V11.242l8.364,4.758-8.364,4.758Z"/></svg>
-          <span class="social-label">YouTube</span>
-        </a>
-        <a href="https://www.instagram.com/lukevanzyl/" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Instagram">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M10.202,2.098c-1.49,.07-2.507,.308-3.396,.657-.92,.359-1.7,.84-2.477,1.619-.776,.779-1.254,1.56-1.61,2.481-.345,.891-.578,1.909-.644,3.4-.066,1.49-.08,1.97-.073,5.771s.024,4.278,.096,5.772c.071,1.489,.308,2.506,.657,3.396,.359,.92,.84,1.7,1.619,2.477,.779,.776,1.559,1.253,2.483,1.61,.89,.344,1.909,.579,3.399,.644,1.49,.065,1.97,.08,5.771,.073,3.801-.007,4.279-.024,5.773-.095s2.505-.309,3.395-.657c.92-.36,1.701-.84,2.477-1.62s1.254-1.561,1.609-2.483c.345-.89,.579-1.909,.644-3.398,.065-1.494,.081-1.971,.073-5.773s-.024-4.278-.095-5.771-.308-2.507-.657-3.397c-.36-.92-.84-1.7-1.619-2.477s-1.561-1.254-2.483-1.609c-.891-.345-1.909-.58-3.399-.644s-1.97-.081-5.772-.074-4.278,.024-5.771,.096m.164,25.309c-1.365-.059-2.106-.286-2.6-.476-.654-.252-1.12-.557-1.612-1.044s-.795-.955-1.05-1.608c-.192-.494-.423-1.234-.487-2.599-.069-1.475-.084-1.918-.092-5.656s.006-4.18,.071-5.656c.058-1.364,.286-2.106,.476-2.6,.252-.655,.556-1.12,1.044-1.612s.955-.795,1.608-1.05c.493-.193,1.234-.422,2.598-.487,1.476-.07,1.919-.084,5.656-.092,3.737-.008,4.181,.006,5.658,.071,1.364,.059,2.106,.285,2.599,.476,.654,.252,1.12,.555,1.612,1.044s.795,.954,1.051,1.609c.193,.492,.422,1.232,.486,2.597,.07,1.476,.086,1.919,.093,5.656,.007,3.737-.006,4.181-.071,5.656-.06,1.365-.286,2.106-.476,2.601-.252,.654-.556,1.12-1.045,1.612s-.955,.795-1.608,1.05c-.493,.192-1.234,.422-2.597,.487-1.476,.069-1.919,.084-5.657,.092s-4.18-.007-5.656-.071M21.779,8.517c.002,.928,.755,1.679,1.683,1.677s1.679-.755,1.677-1.683c-.002-.928-.755-1.679-1.683-1.677,0,0,0,0,0,0-.928,.002-1.678,.755-1.677,1.683m-12.967,7.496c.008,3.97,3.232,7.182,7.202,7.174s7.183-3.232,7.176-7.202c-.008-3.97-3.233-7.183-7.203-7.175s-7.182,3.233-7.174,7.203m2.522-.005c-.005-2.577,2.08-4.671,4.658-4.676,2.577-.005,4.671,2.08,4.676,4.658,.005,2.577-2.08,4.671-4.658,4.676-2.577,.005-4.671-2.079-4.676-4.656h0"/></svg>
-          <span class="social-label">Instagram</span>
-        </a>
-        <a href="https://www.threads.com/@lukevanzyl" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Threads">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M22.7,14.977c-.121-.058-.243-.113-.367-.167-.216-3.982-2.392-6.262-6.046-6.285-.017,0-.033,0-.05,0-2.185,0-4.003,.933-5.122,2.63l2.009,1.378c.836-1.268,2.147-1.538,3.113-1.538,.011,0,.022,0,.033,0,1.203,.008,2.111,.357,2.698,1.04,.428,.497,.714,1.183,.855,2.049-1.067-.181-2.22-.237-3.453-.166-3.474,.2-5.707,2.226-5.557,5.041,.076,1.428,.788,2.656,2.003,3.459,1.028,.678,2.351,1.01,3.727,.935,1.817-.1,3.242-.793,4.236-2.06,.755-.963,1.233-2.21,1.444-3.781,.866,.523,1.507,1.21,1.862,2.037,.603,1.405,.638,3.714-1.246,5.596-1.651,1.649-3.635,2.363-6.634,2.385-3.326-.025-5.842-1.091-7.478-3.171-1.532-1.947-2.323-4.759-2.353-8.359,.03-3.599,.821-6.412,2.353-8.359,1.636-2.079,4.151-3.146,7.478-3.171,3.35,.025,5.91,1.097,7.608,3.186,.833,1.025,1.461,2.313,1.874,3.815l2.355-.628c-.502-1.849-1.291-3.443-2.365-4.764-2.177-2.679-5.361-4.051-9.464-4.08h-.016c-4.094,.028-7.243,1.406-9.358,4.095-1.882,2.393-2.853,5.722-2.886,9.895v.01s0,.01,0,.01c.033,4.173,1.004,7.503,2.886,9.895,2.115,2.689,5.264,4.067,9.358,4.095h.016c3.64-.025,6.206-.978,8.32-3.09,2.765-2.763,2.682-6.226,1.771-8.352-.654-1.525-1.901-2.763-3.605-3.581Zm-6.285,5.909c-1.522,.086-3.104-.598-3.182-2.061-.058-1.085,.772-2.296,3.276-2.441,.287-.017,.568-.025,.844-.025,.909,0,1.76,.088,2.533,.257-.288,3.602-1.98,4.187-3.471,4.269Z"/></svg>
-          <span class="social-label">Threads</span>
-        </a>
-        <a href="https://www.linkedin.com/in/lukevz/" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="LinkedIn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" fill-rule="evenodd" d="M26.111,3H5.889c-1.595,0-2.889,1.293-2.889,2.889V26.111c0,1.595,1.293,2.889,2.889,2.889H26.111c1.595,0,2.889-1.293,2.889-2.889V5.889c0-1.595-1.293-2.889-2.889-2.889ZM10.861,25.389h-3.877V12.87h3.877v12.519Zm-1.957-14.158c-1.267,0-2.293-1.034-2.293-2.31s1.026-2.31,2.293-2.31,2.292,1.034,2.292,2.31-1.026,2.31-2.292,2.31Zm16.485,14.158h-3.858v-6.571c0-1.802-.685-2.809-2.111-2.809-1.551,0-2.362,1.048-2.362,2.809v6.571h-3.718V12.87h3.718v1.686s1.118-2.069,3.775-2.069,4.556,1.621,4.556,4.975v7.926Z"/></svg>
-          <span class="social-label">LinkedIn</span>
-        </a>
-      </div>
-      <!-- Hamburger Menu Button (Mobile Only) -->
-      <button class="hamburger-menu-btn" id="hamburgerMenuBtn" aria-label="Menu" aria-expanded="false">
-        <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm16 5H4v2h16v-2z" fill="currentColor"/>
-        </svg>
-      </button>
-    </div>
-    </div>
-  </header>
+  <canvas id="dotGrid"></canvas>
+  <div id="customCursor" aria-hidden="true"></div>
+  <div id="lens" aria-hidden="true"><canvas id="lensCanvas" width="128" height="128"></canvas></div>
 
-  <!-- Mobile Header Menu Dropdown -->
-  <div class="mobile-header-menu" id="mobileHeaderMenu">
-    <div class="mobile-header-menu-content">
-      <nav class="mobile-menu-apps">
-        <button class="mobile-menu-app-btn" data-view="tasks">
-          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M19 4h2v2h-2V4zm-2 4V6h2v2h-2zm-2 0h2v2h-2V8zm0 0h-2V6h2v2zM3 6h8v2H3V6zm8 10H3v2h8v-2zm7 2v-2h2v-2h-2v2h-2v-2h-2v2h2v2h-2v2h2v-2h2zm0 0v2h2v-2h-2z" fill="currentColor"/>
-          </svg>
-          <span>Tasks</span>
-        </button>
-	        <button class="mobile-menu-app-btn" data-view="notes">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M3 2h18v14h-2v2h-2v-2h-2v2h2v2h-2v2H3V2zm2 2v16h8v-6h6V4H5z" fill="currentColor"/>
-	          </svg>
-	          <span>Notes</span>
-	        </button>
-	        <button class="mobile-menu-app-btn" data-view="music">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M19 4H5v2H3v14h7v-8H5V6h14v6h-5v8h7V6h-2V4zm-3 10h3v4h-3v-4zm-8 0v4H5v-4h3z" fill="currentColor"/>
-	          </svg>
-          <span>Music</span>
-        </button>
-	        <button class="mobile-menu-app-btn" data-view="thoughtTrain">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M4 4h16v2H4V4zm0 14h16v2H4v-2zM2 9h2v2H2V9zm4 0h2v2H6V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9zm2 4h-2v2h2v-2zm-4 0h-2v2h2v-2zm-4 0h-2v2h2v-2zm-4 0H6v2h2v-2zm-4 0H2v2h2v-2z" fill="currentColor"/>
-	          </svg>
-	          <span>Thought Trains</span>
-	        </button>
-	        <button class="mobile-menu-app-btn" data-view="gallery">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-	            <path d="M24 2H4v16h20V2zM6 16V4h16v12H6zM2 4H0v18h20v-2H2V4zm12 2h2v2h-2V6zm-2 4V8h2v2h-2zm-2 2v-2h2v2h-2zm0 0v2H8v-2h2zm8-2h-2V8h2v2zm0 0h2v2h-2v-2zM8 6h2v2H8V6z" fill="currentColor"/>
-	          </svg>
-	          <span>Gallery</span>
-	        </button>
-	        <button class="mobile-menu-app-btn" data-view="guestbook">
-	          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-	            <path d="M20 0h2v2h2v2h-2v2h-2V4h-2V2h2V0ZM8 4h8v2h-2v2h-2V6H8V4ZM6 8V6h2v2H6Zm0 8H4V8h2v8Zm2 2H6v-2h2v2Zm8 0v2H8v-2h8Zm2-2v2h-2v-2h2Zm-2-4v-2h2V8h2v8h-2v-4h-2Zm-4 0h4v2h-4v-2Zm0 0V8h-2v4h2Zm-8 6H2v2H0v2h2v2h2v-2h2v-2H4v-2Z"/>
-	          </svg>
-	          <span>Guestbook</span>
-	        </button>
-	        <button class="mobile-menu-app-btn" data-view="library">
-	          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> <path d="M3 3h8v2H3v12h8V5h2v12h8V5h-8V3h10v16H13v2h-2v-2H1V3h2zm16 7h-4v2h4v-2zm-4-3h4v2h-4V7zm2 6h-2v2h2v-2z" fill="currentColor"/> </svg>
-	          <span>Library</span>
-	        </button>
-	      </nav>
-      <div class="mobile-menu-socials">
-        <a href="https://x.com/lukevz" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="X (Twitter)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M18.42,14.009L27.891,3h-2.244l-8.224,9.559L10.855,3H3.28l9.932,14.455L3.28,29h2.244l8.684-10.095,6.936,10.095h7.576l-10.301-14.991h0Zm-3.074,3.573l-1.006-1.439L6.333,4.69h3.447l6.462,9.243,1.006,1.439,8.4,12.015h-3.447l-6.854-9.804h0Z"/></svg>
-        </a>
-        <a href="https://www.youtube.com/@uxwithluke" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="YouTube">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M31.331,8.248c-.368-1.386-1.452-2.477-2.829-2.848-2.496-.673-12.502-.673-12.502-.673,0,0-10.007,0-12.502,.673-1.377,.37-2.461,1.462-2.829,2.848-.669,2.512-.669,7.752-.669,7.752,0,0,0,5.241,.669,7.752,.368,1.386,1.452,2.477,2.829,2.847,2.496,.673,12.502,.673,12.502,.673,0,0,10.007,0,12.502-.673,1.377-.37,2.461-1.462,2.829-2.847,.669-2.512,.669-7.752,.669-7.752,0,0,0-5.24-.669-7.752ZM12.727,20.758V11.242l8.364,4.758-8.364,4.758Z"/></svg>
-        </a>
-        <a href="https://www.instagram.com/lukevanzyl/" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="Instagram">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M10.202,2.098c-1.49,.07-2.507,.308-3.396,.657-.92,.359-1.7,.84-2.477,1.619-.776,.779-1.254,1.56-1.61,2.481-.345,.891-.578,1.909-.644,3.4-.066,1.49-.08,1.97-.073,5.771s.024,4.278,.096,5.772c.071,1.489,.308,2.506,.657,3.396,.359,.92,.84,1.7,1.619,2.477,.779,.776,1.559,1.253,2.483,1.61,.89,.344,1.909,.579,3.399,.644,1.49,.065,1.97,.08,5.771,.073,3.801-.007,4.279-.024,5.773-.095s2.505-.309,3.395-.657c.92-.36,1.701-.84,2.477-1.62s1.254-1.561,1.609-2.483c.345-.89,.579-1.909,.644-3.398,.065-1.494,.081-1.971,.073-5.773s-.024-4.278-.095-5.771-.308-2.507-.657-3.397c-.36-.92-.84-1.7-1.619-2.477s-1.561-1.254-2.483-1.609c-.891-.345-1.909-.58-3.399-.644s-1.97-.081-5.772-.074-4.278,.024-5.771,.096m.164,25.309c-1.365-.059-2.106-.286-2.6-.476-.654-.252-1.12-.557-1.612-1.044s-.795-.955-1.05-1.608c-.192-.494-.423-1.234-.487-2.599-.069-1.475-.084-1.918-.092-5.656s.006-4.18,.071-5.656c.058-1.364,.286-2.106,.476-2.6,.252-.655,.556-1.12,1.044-1.612s.955-.795,1.608-1.05c.493-.193,1.234-.422,2.598-.487,1.476-.07,1.919-.084,5.656-.092,3.737-.008,4.181,.006,5.658,.071,1.364,.059,2.106,.285,2.599,.476,.654,.252,1.12,.555,1.612,1.044s.795,.954,1.051,1.609c.193,.492,.422,1.232,.486,2.597,.07,1.476,.086,1.919,.093,5.656,.007,3.737-.006,4.181-.071,5.656-.06,1.365-.286,2.106-.476,2.601-.252,.654-.556,1.12-1.045,1.612s-.955,.795-1.608,1.05c-.493,.192-1.234,.422-2.597,.487-1.476,.069-1.919,.084-5.657,.092s-4.18-.007-5.656-.071M21.779,8.517c.002,.928,.755,1.679,1.683,1.677s1.679-.755,1.677-1.683c-.002-.928-.755-1.679-1.683-1.677,0,0,0,0,0,0-.928,.002-1.678,.755-1.677,1.683m-12.967,7.496c.008,3.97,3.232,7.182,7.202,7.174s7.183-3.232,7.176-7.202c-.008-3.97-3.233-7.183-7.203-7.175s-7.182,3.233-7.174,7.203m2.522-.005c-.005-2.577,2.08-4.671,4.658-4.676,2.577-.005,4.671,2.08,4.676,4.658,.005,2.577-2.08,4.671-4.658,4.676-2.577,.005-4.671-2.079-4.676-4.656h0Z"/></svg>
-        </a>
-        <a href="https://www.threads.com/@lukevanzyl" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="Threads">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" d="M22.7,14.977c-.121-.058-.243-.113-.367-.167-.216-3.982-2.392-6.262-6.046-6.285-.017,0-.033,0-.05,0-2.185,0-4.003,.933-5.122,2.63l2.009,1.378c.836-1.268,2.147-1.538,3.113-1.538,.011,0,.022,0,.033,0,1.203,.008,2.111,.357,2.698,1.04,.428,.497,.714,1.183,.855,2.049-1.067-.181-2.22-.237-3.453-.166-3.474,.2-5.707,2.226-5.557,5.041,.076,1.428,.788,2.656,2.003,3.459,1.028,.678,2.351,1.01,3.727,.935,1.817-.1,3.242-.793,4.236-2.06,.755-.963,1.233-2.21,1.444-3.781,.866,.523,1.507,1.21,1.862,2.037,.603,1.405,.638,3.714-1.246,5.596-1.651,1.649-3.635,2.363-6.634,2.385-3.326-.025-5.842-1.091-7.478-3.171-1.532-1.947-2.323-4.759-2.353-8.359,.03-3.599,.821-6.412,2.353-8.359,1.636-2.079,4.151-3.146,7.478-3.171,3.35,.025,5.91,1.097,7.608,3.186,.833,1.025,1.461,2.313,1.874,3.815l2.355-.628c-.502-1.849-1.291-3.443-2.365-4.764-2.177-2.679-5.361-4.051-9.464-4.08h-.016c-4.094,.028-7.243,1.406-9.358,4.095-1.882,2.393-2.853,5.722-2.886,9.895v.01s0,.01,0,.01c.033,4.173,1.004,7.503,2.886,9.895,2.115,2.689,5.264,4.067,9.358,4.095h.016c3.64-.025,6.206-.978,8.32-3.09,2.765-2.763,2.682-6.226,1.771-8.352-.654-1.525-1.901-2.763-3.605-3.581Zm-6.285,5.909c-1.522,.086-3.104-.598-3.182-2.061-.058-1.085,.772-2.296,3.276-2.441,.287-.017,.568-.025,.844-.025,.909,0,1.76,.088,2.533,.257-.288,3.602-1.98,4.187-3.471,4.269Z"/></svg>
-        </a>
-        <a href="https://www.linkedin.com/in/lukevz/" target="_blank" rel="noopener noreferrer" class="mobile-menu-social-icon" aria-label="LinkedIn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32"><path fill="currentColor" fill-rule="evenodd" d="M26.111,3H5.889c-1.595,0-2.889,1.293-2.889,2.889V26.111c0,1.595,1.293,2.889,2.889,2.889H26.111c1.595,0,2.889-1.293,2.889-2.889V5.889c0-1.595-1.293-2.889-2.889-2.889ZM10.861,25.389h-3.877V12.87h3.877v12.519Zm-1.957-14.158c-1.267,0-2.293-1.034-2.293-2.31s1.026-2.31,2.293-2.31,2.292,1.034,2.292,2.31-1.026,2.31-2.292,2.31Zm16.485,14.158h-3.858v-6.571c0-1.802-.685-2.809-2.111-2.809-1.551,0-2.362,1.048-2.362,2.809v6.571h-3.718V12.87h3.718v1.686s1.118-2.069,3.775-2.069,4.556,1.621,4.556,4.975v7.926Z"/></svg>
-        </a>
-      </div>
-    </div>
-  </div>
+  <!-- Hire Me toggle switch -->
+  <button id="hireBtn" role="switch" aria-checked="false">
+    <span class="switch-track"><span class="switch-thumb"></span></span>
+    <span class="switch-label">Hire Me<span class="switch-sublabel"> · currently unavailable</span></span>
+  </button>
 
-  <!-- System Alert -->
-  <div class="system-alert" id="systemAlert">
-    <div class="system-alert-content">
-      <h1>Welcome to my interactive digital garden</h1>
-      <p>A collection of my raw notes, ideas, crafted projects... and everything in between. Click around or feel free to enjoy the view.</p>
-    </div>
-    <button class="system-alert-close" aria-label="Close alert">
-      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <path d="M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z" fill="currentColor"/>
-      </svg>
-    </button>
-  </div>
-
-  <!-- Tasks View -->
-  <div class="view tasks-view" id="tasksView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Tasks</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <!-- Year Tabs Header (dynamically populated) -->
-        <div class="tasks-header">
-          <!-- Year tabs will be generated dynamically -->
-        </div>
-
-        <div class="tasks-container" id="tasksContainer">
-          <!-- Populated from year-specific goals.md files -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Notes View (existing Bear-like interface) -->
-  <div class="view notes-view" id="notesView">
-    <div class="os9-window">
-      <div class="os9-titlebar os9-titlebar-with-toolbar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Notes</span>
-        </div>
-        <div class="view-mode-toggle" id="viewModeToggle">
-          <button class="view-mode-btn active" data-mode="three-column" aria-label="Show all columns" title="Show Tags, Notes and Editor">
-            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M2 2h6v20H2V2zm8 0h6v20h-6V2zm8 0h6v20h-6V2z" fill="currentColor"/>
-            </svg>
-          </button>
-          <button class="view-mode-btn" data-mode="two-column" aria-label="Show notes and editor" title="Show Notes and Editor">
-            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M2 2h9v20H2V2zm11 0h11v20H13V2z" fill="currentColor"/>
-            </svg>
-          </button>
-          <button class="view-mode-btn" data-mode="one-column" aria-label="Show editor only" title="Show Editor Only">
-            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M2 2h20v20H2V2z" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="app">
-    <!-- Sidebar: Tag Navigation -->
-    <nav class="sidebar" aria-label="Tag navigation">
-      <ul class="tag-list" role="list" id="tagList">
-        <li>
-          <button class="tag-item active" data-tag="all" aria-current="true">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <span>All Notes</span>
-            <span class="tag-count" id="allNotesCount">0</span>
-          </button>
-        </li>
-        <!-- Tags populated by JS -->
-      </ul>
-    </nav>
-
-    <!-- Post List Pane -->
-    <section class="post-list" aria-label="Posts">
-      <ul class="posts" role="list" id="postsList">
-        <!-- Posts populated by JS -->
-      </ul>
-    </section>
-
-    <!-- Note View Pane -->
-    <article class="note-view" aria-label="Note content" id="noteView">
-      <div class="note-empty" id="noteEmpty">
-        <svg class="icon-large" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-        <p>Select a note to read</p>
-      </div>
-      <div class="note-content hidden" id="noteContent">
-        <header class="note-header">
-          <h1 id="noteTitle"></h1>
-          <div class="note-meta">
-            <time id="noteDate"></time>
-            <div class="note-tags" id="noteTags"></div>
-          </div>
-        </header>
-        <div class="note-body" id="noteBody"></div>
-      </div>
-    </article>
-
-    <!-- Mobile Menu Toggle -->
-    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle navigation" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <line x1="3" y1="12" x2="21" y2="12"/>
-        <line x1="3" y1="6" x2="21" y2="6"/>
-        <line x1="3" y1="18" x2="21" y2="18"/>
-      </svg>
-    </button>
-  </div>
-      </div><!-- End os9-window-body -->
-    </div><!-- End os9-window -->
-  </div><!-- End Notes View -->
-
-  <!-- Music View -->
-  <div class="view music-view" id="musicView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Music</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="zen-layout">
-      <!-- Left: Folder Navigation Sidebar -->
-      <div class="zen-sidebar" id="zenSidebar">
-        <div class="zen-sidebar-header">
-          <h3 class="zen-sidebar-title" id="zenSidebarTitle">Library</h3>
-        </div>
-        <div class="zen-folder-list" id="musicFolders" role="tablist" aria-label="Music folders">
-          <!-- Populated by JS -->
-        </div>
-        <div class="zen-playlist" id="musicPlaylist">
-          <!-- Populated from music.md -->
-        </div>
-      </div>
-
-      <!-- Right: The Zen Device -->
-      <div class="zen-device-container">
-        <div class="zen-device">
-          <!-- LCD Screen -->
-          <div class="zen-screen">
-            <div class="zen-screen-content">
-              <div class="zen-track-title" id="playerTitle">Nothing playing</div>
-              <div class="zen-track-artist" id="playerArtist"></div>
-              <div class="zen-artwork" id="artworkContainer">
-                <div class="zen-welcome-message">Welcome to Zen Mosaic, my first mp3 player</div>
-              </div>
-              <div class="zen-progress">
-                <div class="zen-progress-bar" id="progressBar">
-                  <div class="zen-progress-fill" id="progressFill"></div>
-                </div>
-                <div class="zen-progress-time">
-                  <span id="currentTime">0:00</span>
-                  <span id="duration">0:00</span>
-                </div>
-              </div>
-            </div>
-            <div class="zen-screen-scanlines"></div>
-          </div>
-
-          <!-- 3x3 Mosaic Button Grid -->
-          <div class="zen-mosaic-grid">
-            <!-- Row 1: Back, Up, Menu -->
-            <button class="zen-btn zen-btn-back" id="zenBtnBack" aria-label="Back">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-              </svg>
-            </button>
-            <button class="zen-btn zen-btn-up" id="zenBtnUp" aria-label="Previous track">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7 14l5-5 5 5z"/>
-              </svg>
-            </button>
-            <button class="zen-btn zen-btn-menu" id="zenBtnMenu" aria-label="Menu">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-              </svg>
-            </button>
-
-            <!-- Row 2: Left, Select/Play, Right -->
-            <button class="zen-btn zen-btn-left" id="zenBtnLeft" aria-label="Rewind">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>
-              </svg>
-            </button>
-            <button class="zen-btn zen-btn-select" id="playBtn" aria-label="Play/Pause">
-              <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              <svg class="icon-pause hidden" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-              </svg>
-            </button>
-            <button class="zen-btn zen-btn-right" id="zenBtnRight" aria-label="Forward">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
-              </svg>
-            </button>
-
-            <!-- Row 3: Shuffle, Down, Repeat -->
-            <button class="zen-btn zen-btn-shuffle" id="zenBtnShuffle" aria-label="Shuffle">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
-              </svg>
-            </button>
-            <button class="zen-btn zen-btn-down" id="zenBtnDown" aria-label="Next track">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7 10l5 5 5-5z"/>
-              </svg>
-            </button>
-            <button class="zen-btn zen-btn-repeat" id="zenBtnRepeat" aria-label="Repeat">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
-              </svg>
-            </button>
-          </div>
-
-          <!-- ZEN Branding -->
-          <div class="zen-branding">
-            <span class="zen-logo">ZEN</span>
-          </div>
-        </div>
-      </div>
-    </div>
-      </div><!-- End os9-window-body -->
-    </div><!-- End os9-window -->
-  </div>
-
-  <!-- Life Stories View -->
-  <div class="view life-stories-view" id="lifeStoriesView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Life Stories</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="life-stories-container">
-      <div class="elevator-sidebar">
-        <div class="elevator-controls">
-          <button class="elevator-btn elevator-up" id="elevatorUp" aria-label="Go up one floor">
-            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M12 4l8 8h-6v8h-4v-8H4z" fill="currentColor"/>
-            </svg>
-          </button>
-          <div class="floor-display">
-            <span class="floor-label">Floor</span>
-            <span class="floor-number" id="currentFloorNumber">1</span>
-          </div>
-          <button class="elevator-btn elevator-down" id="elevatorDown" aria-label="Go down one floor">
-            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M12 20l-8-8h6V4h4v8h6z" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
-        <div class="floor-list" id="floorList">
-          <!-- Floor buttons will be populated by JS -->
-        </div>
-      </div>
-      <div class="building-viewport" id="buildingViewport">
-        <canvas id="buildingCanvas" width="640" height="400"></canvas>
-      </div>
-    </div>
-      </div><!-- End os9-window-body -->
-    </div><!-- End os9-window -->
-  </div>
-
-  <!-- Thought Trains View -->
-  <div class="view thought-train-view" id="thoughtTrainView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Thought Trains</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="thought-train-container">
-      <div class="train-timeline-wrapper">
-        <header class="train-timeline-header">
-          <p class="train-eyebrow">Rabbit Holes & Random Fascinations</p>
-          <h3 class="train-title">Where My Brain Goes When Left Unsupervised</h3>
-        </header>
-
-        <div class="train-stack-container" id="trainStackContainer">
-          <div class="train-stack-3d" id="trainStack3D">
-            <!-- Cards populated by JS -->
-          </div>
-        </div>
-
-        <div class="train-nav-controls">
-          <button class="train-nav-prev" aria-label="Previous train">←</button>
-          <div class="train-nav-indicator">1 / 10</div>
-          <button class="train-nav-next" aria-label="Next train">→</button>
-        </div>
-      </div>
-    </div>
-      </div><!-- End os9-window-body -->
-    </div><!-- End os9-window -->
-  </div>
-
-  <!-- Labs View -->
-  <div class="view labs-view" id="labsView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Labs</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="labs-container">
-          <div class="labs-grid" id="labsGrid">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-      </div><!-- End os9-window-body -->
-    </div><!-- End os9-window -->
-  </div>
-
-  <!-- Labs Modal -->
-  <div class="labs-modal" id="labsModal" role="dialog" aria-labelledby="labsModalTitle" aria-hidden="true">
-    <div class="labs-modal-overlay"></div>
-    <div class="labs-modal-content">
-      <div class="labs-modal-header">
-        <h2 class="labs-modal-title" id="labsModalTitle"></h2>
-        <button class="labs-modal-close" aria-label="Close">
-          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z" fill="currentColor"/>
-          </svg>
-        </button>
-      </div>
-      <div class="labs-modal-body" id="labsModalBody">
-        <!-- Rendered markdown content -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Gallery View -->
-  <div class="view gallery-view" id="galleryView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Gallery</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="gallery-container">
-      <!-- Main grid of album stacks -->
-      <div class="gallery-grid" id="galleryGrid">
-        <!-- Populated by JS -->
-      </div>
-
-      <!-- Expanded album view -->
-      <div class="gallery-expanded" id="galleryExpanded" aria-hidden="true">
-        <div class="gallery-expanded-header">
-          <button class="gallery-back-btn" id="galleryBackBtn" aria-label="Back to albums">
-            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M20 11v2H8v2H6v-2H4v-2h2V9h2v2h12zM10 7H8v2h2V7zm0 0h2V5h-2v2zm0 10H8v-2h2v2zm0 0h2v2h-2v-2z" fill="currentColor"/>
-            </svg>
-          </button>
-          <div class="gallery-expanded-titles">
-            <h2 id="galleryExpandedTitle"></h2>
-            <p id="galleryExpandedSubtitle"></p>
-          </div>
-          <button class="gallery-nerd-mode-toggle" id="galleryNerdModeToggle" aria-label="Toggle EXIF data" title="Show camera settings (ISO, aperture, shutter speed, etc.)">
-            <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M3 3h18v18H3V3zm16 2H5v14h14V5zM7 12h2v5H7v-5zm10-5h-2v10h2V7zm-6 3h2v2h-2v-2zm2 4h-2v3h2v-3z" fill="currentColor"/>
-            </svg>
-            <span>Nerd Mode</span>
-          </button>
-        </div>
-        <div class="gallery-expanded-grid" id="galleryExpandedGrid">
-          <!-- Photo grid populated by JS -->
-        </div>
-      </div>
-    </div>
-      </div><!-- End os9-window-body -->
-    </div><!-- End os9-window -->
-  </div>
-
-  <!-- Gallery Lightbox -->
-  <div class="gallery-lightbox" id="galleryLightbox" aria-hidden="true">
-    <div class="gallery-lightbox-overlay"></div>
-    <button class="gallery-lightbox-close" id="galleryLightboxClose" aria-label="Close">
-      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <path d="M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z" fill="currentColor"/>
-      </svg>
-    </button>
-    <button class="gallery-lightbox-nav gallery-lightbox-prev" id="galleryLightboxPrev" aria-label="Previous">
-      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <path d="M20 11v2H8v2H6v-2H4v-2h2V9h2v2h12zM10 7H8v2h2V7zm0 0h2V5h-2v2zm0 10H8v-2h2v2zm0 0h2v2h-2v-2z" fill="currentColor"/>
-      </svg>
-    </button>
-    <button class="gallery-lightbox-nav gallery-lightbox-next" id="galleryLightboxNext" aria-label="Next">
-      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <path d="M4 11v2h12v2h2v-2h2v-2h-2V9h-2v2H4zm10-4h2v2h-2V7zm0 0h-2V5h2v2zm0 10h2v-2h-2v2zm0 0h-2v2h2v-2z" fill="currentColor"/>
-      </svg>
-    </button>
-    <div class="gallery-lightbox-content">
-      <img id="galleryLightboxImg" src="" alt="">
-    </div>
-  </div>
-
-  <!-- Project Shredder View -->
-  <div class="view project-shredder-view" id="projectShredderView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Project Shredder</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="project-shredder-container">
-          <!-- Drop zone overlay (covers entire viewport when dragging) -->
-          <div class="shredder-dropzone" id="shredderDropzone">
-            <div class="dropzone-content">
-              <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              <p class="dropzone-text">Drop file to stow in capsule</p>
-            </div>
-          </div>
-
-          <!-- Instructions / Status Area -->
-          <div class="shredder-instructions">
-            <p class="shredder-message" id="shredderMessage">Drop a file or click to select</p>
-            <button class="shredder-file-btn" id="shredderFileBtn">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              Select File
-            </button>
-            <input type="file" id="shredderFileInput" hidden>
-          </div>
-
-          <!-- Space Capsule (pinned to bottom initially) -->
-          <div class="space-capsule" id="spaceCapsule" aria-hidden="true">
-            <canvas id="capsuleCanvas" width="240" height="320"></canvas>
-            <div class="capsule-filename" id="capsuleFilename"></div>
-          </div>
-
-          <!-- Launch Button (appears after file is stowed) -->
-          <button class="launch-button hidden" id="launchButton">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2L2 12h3v8h14v-8h3L12 2z"/>
-            </svg>
-            <span>LAUNCH</span>
-          </button>
-
-          <!-- Success Message (appears after capture) -->
-          <div class="success-message hidden" id="successMessage">
-            <div class="success-content">
-              <svg class="success-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              <p class="success-text">File successfully launched into the void!</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Guestbook View -->
-  <div class="view guestbook-view" id="guestbookView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Guestbook</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="guestbook-container">
-
-          <!-- Mode Toggle Header -->
-          <div class="guestbook-header">
-        <button class="guestbook-mode-btn active" data-mode="draw">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-          </svg>
-          <span>Draw a Star</span>
-        </button>
-        <button class="guestbook-mode-btn" data-mode="gallery">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/>
-          </svg>
-          <span>View Gallery</span>
-        </button>
-      </div>
-
-      <!-- Drawing Canvas View -->
-      <div class="guestbook-draw-panel" id="guestbookDrawPanel">
-        <div class="guestbook-attribution">
-          This interactive guestbook was inspired by and is a tribute to <a href="https://annasgarden.dev/gallery" target="_blank" rel="noopener noreferrer">Anna's Garden</a>. Full credit and gratitude to Anna for the brilliant idea of letting visitors draw stars to leave their mark. Thank you for the inspiration!
-        </div>
-
-        <div class="guestbook-draw-content">
-          <div class="guestbook-canvas-wrapper">
-            <canvas id="guestbookCanvas" width="800" height="600"></canvas>
-          </div>
-
-          <div class="guestbook-controls">
-            <div class="guestbook-palette">
-              <button class="palette-color active" data-color="#ffffff" style="background: #ffffff" aria-label="White"></button>
-              <button class="palette-color" data-color="#ff6b6b" style="background: #ff6b6b" aria-label="Red"></button>
-              <button class="palette-color" data-color="#4ecdc4" style="background: #4ecdc4" aria-label="Cyan"></button>
-              <button class="palette-color" data-color="#ffe66d" style="background: #ffe66d" aria-label="Yellow"></button>
-              <button class="palette-color" data-color="#a8dadc" style="background: #a8dadc" aria-label="Light Blue"></button>
-              <button class="palette-color" data-color="#f1c0e8" style="background: #f1c0e8" aria-label="Pink"></button>
-            </div>
-
-            <div class="guestbook-actions">
-              <button class="guestbook-btn guestbook-btn-clear" id="clearCanvas" aria-label="Clear canvas">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                </svg>
-                <span>Clear</span>
-              </button>
-              <button class="guestbook-btn guestbook-btn-primary" id="saveDrawing" aria-label="Save drawing">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
-                </svg>
-                <span>Save to Gallery</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gallery Grid View -->
-      <div class="guestbook-gallery-panel hidden" id="guestbookGalleryPanel">
-        <div class="guestbook-gallery-grid" id="guestbookGalleryGrid">
-          <!-- Stars rendered here -->
-        </div>
-
-        <div class="guestbook-pagination" id="guestbookPagination">
-          <button class="pagination-btn" id="prevPage" aria-label="Previous page">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-            </svg>
-            <span>Previous</span>
-          </button>
-          <div class="pagination-info">
-            <span id="pageInfo">Page 1 of 1</span>
-          </div>
-          <button class="pagination-btn" id="nextPage" aria-label="Next page">
-            <span>Next</span>
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-    </div>
-        </div><!-- End guestbook-container -->
-      </div><!-- End os9-window-body -->
-    </div><!-- End os9-window -->
-  </div>
-
-  <!-- Library View -->
-  <div class="view library-view" id="libraryView">
-    <div class="os9-window">
-      <div class="os9-titlebar">
-        <div class="os9-titlebar-content">
-          <span class="os9-title">Library</span>
-        </div>
-      </div>
-      <div class="os9-window-body">
-        <div class="kindle-screen">
-          <!-- Kindle Content -->
-          <div class="kindle-content">
-            <div class="kindle-books-grid" id="libraryShelves"></div>
-          </div>
-
-          <!-- Kindle Bottom Nav -->
-          <div class="kindle-bottom-nav">
-            <button class="kindle-nav-btn active">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
-              </svg>
-              <span>Library</span>
-            </button>
-            <button class="kindle-nav-btn" id="suggestBookBtn">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-              </svg>
-              <span>Suggest</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Book Suggestion Modal -->
-  <div class="suggest-book-modal" id="suggestBookModal">
-    <div class="suggest-book-content">
-      <div class="suggest-book-header">
-        <h2>Suggest a Book</h2>
-        <button class="suggest-book-close" id="suggestBookClose" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-          </svg>
-        </button>
-      </div>
-      <form id="suggestBookForm" class="suggest-book-form">
-        <div class="suggest-book-field">
-          <label for="suggestTitle">Title</label>
-          <input type="text" id="suggestTitle" name="title" required placeholder="Book title">
-        </div>
-        <div class="suggest-book-field">
-          <label for="suggestAuthor">Author</label>
-          <input type="text" id="suggestAuthor" name="author" required placeholder="Author name">
-        </div>
-        <div class="suggest-book-field">
-          <label for="suggestMessage">Message <span class="optional">(optional)</span></label>
-          <textarea id="suggestMessage" name="message" rows="3" placeholder="Why should I read this?"></textarea>
-        </div>
-        <button type="submit" class="suggest-book-submit">Send Suggestion</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Info Button & Credits Popup -->
-  <button class="info-button" id="infoButton" aria-label="View credits" aria-expanded="false">
-    <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <path d="M3 3h2v18H3V3zm16 0H5v2h14v14H5v2h16V3h-2zm-8 6h2V7h-2v2zm2 8h-2v-6h2v6z" fill="currentColor"/>
+  <!-- Power button (bottom right) -->
+  <button id="powerBtn" title="Version selector" aria-label="Version selector">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+      <line x1="12" y1="2" x2="12" y2="12"/>
     </svg>
   </button>
 
-  <div class="info-popup" id="infoPopup" role="dialog" aria-labelledby="infoPopupTitle">
-    <div class="info-popup-content">
-      <h2 id="infoPopupTitle" class="info-popup-title">Credits</h2>
-      <p><span class="info-label">Icons</span> – <a href="https://pixelarticons.com" target="_blank" rel="noopener noreferrer">pixelarticons.com</a> &amp; <a href="https://nucleoapp.com" target="_blank" rel="noopener noreferrer">Nucleo</a></p>
-      <p><span class="info-label">Fonts</span> – <a href="https://vercel.com/font?type=pixel" target="_blank" rel="noopener noreferrer">Geist Pixel by Vercel</a></p>
-      <p><span class="info-label">Built with</span> – Cursor &amp; Claude Code</p>
-      <p><span class="info-label">Designed by</span> – Luke van Zyl</p>
+  <div id="mainPanel">
+
+  <!-- Intro -->
+  <div class="intro">
+    <div class="avatar-col">
+      <img src="/src/img/headshot-personal.jpg" alt="Luke van Zyl" class="avatar" id="avatarImg">
+    </div>
+    <div class="intro-text">
+      <h1>Hi, I'm Luke</h1>
+      <p class="description">Designer, tinkerer, and chronic note-taker. I make things for screens, write things that aren't finished yet, and occasionally convince a camera I know what I'm doing.</p>
     </div>
   </div>
 
-  <!-- App Version -->
-  <div class="app-version" id="appVersion" role="button" tabindex="0">Loading...</div>
+  <!-- App grid -->
+  <div class="launchpad">
 
-  <!-- Changelog Modal -->
-  <div class="changelog-modal" id="changelogModal" role="dialog" aria-labelledby="changelogModalTitle" aria-hidden="true">
-    <div class="changelog-modal-overlay"></div>
-    <div class="changelog-modal-content">
-      <div class="changelog-modal-header">
-        <h2 id="changelogModalTitle" class="changelog-modal-title">Version History</h2>
-        <button class="changelog-modal-close" aria-label="Close changelog">
-          <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M5 5h2v2H5V5zm4 4H7V7h2v2zm2 2H9V9h2v2zm2 0h-2v2H9v2H7v2H5v2h2v-2h2v-2h2v-2h2v2h2v2h2v2h2v-2h-2v-2h-2v-2h-2v-2zm2-2v2h-2V9h2zm2-2v2h-2V7h2zm0 0V5h2v2h-2z" fill="currentColor"/>
+    <!-- Studio -->
+    <button class="app" data-app="Studio">
+      <div class="app-icon" aria-hidden="true">
+        <svg width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper"><path d="M10.9997 15.333C11.4996 14.6665 12.4996 14.6667 12.9997 15.333L16.4997 20C17.1177 20.824 16.5298 22 15.4997 22H8.49969C7.4699 21.9998 6.88191 20.824 7.49969 20L10.9997 15.333ZM13.5807 3C13.689 3.22747 13.7497 3.48191 13.7497 3.75C13.7497 4.7165 12.9662 5.5 11.9997 5.5C11.0333 5.49983 10.2497 4.71639 10.2497 3.75C10.2497 3.48198 10.3104 3.22742 10.4186 3H13.5807Z" fill="url(#studio_bg)" mask="url(#studio_mask)"></path><path d="M10.9997 15.333C11.4996 14.6665 12.4996 14.6667 12.9997 15.333L16.4997 20C17.1177 20.824 16.5298 22 15.4997 22H8.49969C7.4699 21.9998 6.88191 20.824 7.49969 20L10.9997 15.333ZM13.5807 3C13.689 3.22747 13.7497 3.48191 13.7497 3.75C13.7497 4.7165 12.9662 5.5 11.9997 5.5C11.0333 5.49983 10.2497 4.71639 10.2497 3.75C10.2497 3.48198 10.3104 3.22742 10.4186 3H13.5807Z" fill="url(#studio_bg)" filter="url(#studio_blur)" clip-path="url(#studio_cp)"></path><path d="M16.5996 3C18.8398 3 19.9608 2.99957 20.8164 3.43555C21.5689 3.81902 22.181 4.43109 22.5645 5.18359C23.0004 6.03924 23 7.16018 23 9.40039V12.5996C23 14.8398 23.0004 15.9608 22.5645 16.8164C22.181 17.5689 21.5689 18.181 20.8164 18.5645C19.9608 19.0004 18.8398 19 16.5996 19H7.40039C5.16018 19 4.03924 19.0004 3.18359 18.5645C2.43109 18.181 1.81902 17.5689 1.43555 16.8164C0.999573 15.9608 1 14.8398 1 12.5996V9.40039C1 7.16018 0.999573 6.03924 1.43555 5.18359C1.81902 4.43109 2.43109 3.81902 3.18359 3.43555C4.03924 2.99957 5.16018 3 7.40039 3H11.002C10.8446 3.20908 10.75 3.46816 10.75 3.75C10.75 4.44036 11.3096 5 12 5C12.6904 5 13.25 4.44036 13.25 3.75C13.25 3.46816 13.1554 3.20908 12.998 3H16.5996Z" fill="url(#studio_glass)" data-glass="blur"></path><path d="M16.5996 18.25V19H7.40039V18.25H16.5996ZM22.25 12.5996V9.40039C22.25 8.26798 22.2497 7.46335 22.1982 6.83398C22.1475 6.21336 22.0506 5.82889 21.8955 5.52441C21.5839 4.91304 21.087 4.41605 20.4756 4.10449C20.1711 3.94936 19.7866 3.85247 19.166 3.80176C18.5367 3.75035 17.732 3.75 16.5996 3.75H7.40039C6.26798 3.75 5.46335 3.75035 4.83398 3.80176C4.21336 3.85247 3.82889 3.94936 3.52441 4.10449C2.91305 4.41605 2.41605 4.91305 2.10449 5.52441C1.94936 5.82889 1.85247 6.21336 1.80176 6.83398C1.75035 7.46335 1.75 8.26798 1.75 9.40039V12.5996C1.75 13.732 1.75035 14.5367 1.80176 15.166C1.85247 15.7866 1.94936 16.1711 2.10449 16.4756C2.41605 17.087 2.91305 17.5839 3.52441 17.8955C3.82889 18.0506 4.21336 18.1475 4.83398 18.1982C5.46335 18.2497 6.26798 18.25 7.40039 18.25V19L5.91602 18.9932C4.72431 18.9744 3.96088 18.9041 3.34766 18.6406L3.18359 18.5645C2.52512 18.2289 1.97413 17.7183 1.58984 17.0918L1.43555 16.8164C0.999573 15.9608 1 14.8398 1 12.5996V9.40039C1 7.16018 0.999573 6.03924 1.43555 5.18359C1.81902 4.43109 2.43109 3.81902 3.18359 3.43555C3.82525 3.10861 4.61607 3.02728 5.91602 3.00684L7.40039 3H16.5996C18.8398 3 19.9608 2.99957 20.8164 3.43555C21.5689 3.81902 22.181 4.43109 22.5645 5.18359C23.0004 6.03924 23 7.16018 23 9.40039V12.5996C23 14.8398 23.0004 15.9608 22.5645 16.8164L22.4102 17.0918C22.0259 17.7183 21.4749 18.2289 20.8164 18.5645L20.6523 18.6406C19.816 18.9999 18.6999 19 16.5996 19V18.25C17.732 18.25 18.5366 18.2497 19.166 18.1982C19.7866 18.1475 20.1711 18.0506 20.4756 17.8955C21.087 17.5839 21.5839 17.087 21.8955 16.4756C22.0506 16.1711 22.1475 15.7866 22.1982 15.166C22.2497 14.5367 22.25 13.732 22.25 12.5996Z" fill="url(#studio_shine)"></path><defs><linearGradient id="studio_bg" x1="12" y1="3" x2="12" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><linearGradient id="studio_glass" x1="12" y1="3" x2="12" y2="19" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(227,227,229,0.6)"></stop><stop offset="1" stop-color="rgba(187,187,192,0.6)"></stop></linearGradient><linearGradient id="studio_shine" x1="12" y1="3" x2="12" y2="12.266" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(255,255,255,1)"></stop><stop offset="1" stop-color="rgba(255,255,255,0)"></stop></linearGradient><filter id="studio_blur" x="-100%" y="-100%" width="400%" height="400%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2" in="SourceGraphic" edgeMode="none"></feGaussianBlur></filter><clipPath id="studio_cp"><path d="M16.5996 3C18.8398 3 19.9608 2.99957 20.8164 3.43555C21.5689 3.81902 22.181 4.43109 22.5645 5.18359C23.0004 6.03924 23 7.16018 23 9.40039V12.5996C23 14.8398 23.0004 15.9608 22.5645 16.8164C22.181 17.5689 21.5689 18.181 20.8164 18.5645C19.9608 19.0004 18.8398 19 16.5996 19H7.40039C5.16018 19 4.03924 19.0004 3.18359 18.5645C2.43109 18.181 1.81902 17.5689 1.43555 16.8164C0.999573 15.9608 1 14.8398 1 12.5996V9.40039C1 7.16018 0.999573 6.03924 1.43555 5.18359C1.81902 4.43109 2.43109 3.81902 3.18359 3.43555C4.03924 2.99957 5.16018 3 7.40039 3H11.002C10.8446 3.20908 10.75 3.46816 10.75 3.75C10.75 4.44036 11.3096 5 12 5C12.6904 5 13.25 4.44036 13.25 3.75C13.25 3.46816 13.1554 3.20908 12.998 3H16.5996Z"></path></clipPath><mask id="studio_mask"><rect width="100%" height="100%" fill="#FFF"></rect><path d="M16.5996 3C18.8398 3 19.9608 2.99957 20.8164 3.43555C21.5689 3.81902 22.181 4.43109 22.5645 5.18359C23.0004 6.03924 23 7.16018 23 9.40039V12.5996C23 14.8398 23.0004 15.9608 22.5645 16.8164C22.181 17.5689 21.5689 18.181 20.8164 18.5645C19.9608 19.0004 18.8398 19 16.5996 19H7.40039C5.16018 19 4.03924 19.0004 3.18359 18.5645C2.43109 18.181 1.81902 17.5689 1.43555 16.8164C0.999573 15.9608 1 14.8398 1 12.5996V9.40039C1 7.16018 0.999573 6.03924 1.43555 5.18359C1.81902 4.43109 2.43109 3.81902 3.18359 3.43555C4.03924 2.99957 5.16018 3 7.40039 3H11.002C10.8446 3.20908 10.75 3.46816 10.75 3.75C10.75 4.44036 11.3096 5 12 5C12.6904 5 13.25 4.44036 13.25 3.75C13.25 3.46816 13.1554 3.20908 12.998 3H16.5996Z" fill="#000"></path></mask></defs></g></svg>
+      </div>
+      <div class="app-meta">
+        <span class="app-label">Studio</span>
+        <span class="app-desc">Frameworks, tutorials, and process from a decade of designing software</span>
+      </div>
+    </button>
+
+    <!-- Field Notes -->
+    <button class="app" data-app="Field Notes">
+      <div class="app-icon" aria-hidden="true">
+        <svg width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper"><path d="M13.5033 4.10546C13.9972 3.8588 14.5972 4.05905 14.8441 4.55272C15.091 5.04677 14.8909 5.64767 14.3969 5.89452C9.24346 8.46948 6.54931 13.3573 5.67226 15.3955C4.5161 18.0824 4.09554 20.3858 4.00429 21.1426C3.93821 21.6909 3.43932 22.0827 2.89101 22.0166C2.34291 21.9503 1.9519 21.4515 2.01796 20.9033C2.12901 19.9821 2.59392 17.4894 3.83534 14.6045C4.79115 12.3833 7.7347 6.98775 13.5033 4.10546Z" fill="url(#fn_bg)" mask="url(#fn_mask)"></path><path d="M13.5033 4.10546C13.9972 3.8588 14.5972 4.05905 14.8441 4.55272C15.091 5.04677 14.8909 5.64767 14.3969 5.89452C9.24346 8.46948 6.54931 13.3573 5.67226 15.3955C4.5161 18.0824 4.09554 20.3858 4.00429 21.1426C3.93821 21.6909 3.43932 22.0827 2.89101 22.0166C2.34291 21.9503 1.9519 21.4515 2.01796 20.9033C2.12901 19.9821 2.59392 17.4894 3.83534 14.6045C4.79115 12.3833 7.7347 6.98775 13.5033 4.10546Z" fill="url(#fn_bg)" filter="url(#fn_blur)" clip-path="url(#fn_cp)"></path><path d="M21.996 2.97831C21.9443 2.38904 21.4169 1.95015 20.8353 2.00456C10.3866 2.9187 5.66294 10.0172 3.57739 15.2239C3.38207 15.7115 3.61863 16.2586 4.09897 16.4711L5.18087 16.9499C6.32808 17.459 7.45527 17.6848 7.52185 17.6962C8.74173 17.919 9.86938 18.031 10.9036 18.031C13.0562 18.031 14.8029 17.5472 16.1171 16.5872C16.6465 16.2 17.5038 15.4252 18.1023 14.1039C14.0582 14.8651 13.0046 11.9807 13.0046 11.9807C16.1248 12.7703 19.6729 13.0131 20.6233 9.36491C20.8218 8.49059 20.9483 7.64435 21.0697 6.82729L21.0738 6.79966C21.2651 5.52313 21.4453 4.32071 21.8551 3.6047C21.961 3.42108 22.0159 3.20542 21.996 2.97831Z" fill="url(#fn_glass)" data-glass="blur"></path><path d="M20.835 2.00493C21.4166 1.95052 21.9444 2.38928 21.9961 2.97856C22.0159 3.20546 21.9612 3.42104 21.8555 3.60454C21.4456 4.32055 21.2655 5.52332 21.0742 6.79985L21.0693 6.82719C20.9479 7.64425 20.8216 8.49095 20.6231 9.36528L20.5264 9.69536C19.4514 12.9972 16.0276 12.7454 13.0049 11.9805C13.0049 11.9805 14.0585 14.8647 18.1025 14.1036C17.5041 15.4247 16.6466 16.1998 16.1172 16.587L15.8652 16.7618C14.5827 17.6058 12.9212 18.0312 10.9033 18.0313V17.2813C12.9478 17.2812 14.5249 16.8216 15.6748 15.9815C15.9473 15.7822 16.3245 15.4571 16.6992 14.9795C15.294 14.9566 14.2734 14.4872 13.5635 13.9092C13.1026 13.534 12.7926 13.1301 12.5967 12.8174C12.4986 12.6608 12.4276 12.5254 12.3799 12.4248C12.356 12.3745 12.3383 12.3324 12.3252 12.3008C12.3186 12.285 12.3127 12.2713 12.3086 12.2608C12.3066 12.2557 12.3051 12.2509 12.3037 12.2471C12.303 12.2453 12.3023 12.2437 12.3018 12.2422L12.3008 12.2403V12.2393C12.3006 12.2388 12.3004 12.2378 13.0049 11.9805L12.2998 12.2383L11.8135 10.9053L13.1885 11.254C14.728 11.6436 16.2534 11.8624 17.4717 11.6036C18.0657 11.4773 18.5647 11.2418 18.9609 10.8741C19.3536 10.5096 19.686 9.97643 19.8936 9.18657C20.0833 8.34819 20.2069 7.53284 20.3281 6.71684V6.71586L20.332 6.68852C20.4267 6.05665 20.5229 5.41077 20.6494 4.83208C20.7742 4.26136 20.9414 3.6915 21.2041 3.23247L21.2051 3.23051C21.2398 3.17032 21.2545 3.10688 21.249 3.04399C21.2335 2.86654 21.0702 2.73567 20.9053 2.75102L20.9004 2.752C10.8482 3.63158 6.30477 10.4317 4.27345 15.503C4.23519 15.5988 4.27466 15.7286 4.40235 15.7852L5.48438 16.2637L5.48536 16.2647C6.01592 16.5001 6.54812 16.672 6.95899 16.7872C7.16334 16.8444 7.33496 16.8876 7.45802 16.9161L7.64942 16.9571L7.65626 16.9581C8.8403 17.1743 9.92247 17.2813 10.9033 17.2813V18.0313L10.5117 18.0254C9.58628 18.001 8.58902 17.8913 7.52149 17.6963C7.46023 17.6857 6.59157 17.5116 5.60841 17.128L5.18067 16.9502L4.09864 16.4707C3.6186 16.2581 3.38191 15.7111 3.57716 15.2237C5.63015 10.0984 10.2396 3.13998 20.3496 2.0518L20.835 2.00493Z" fill="url(#fn_shine)"></path><defs><linearGradient id="fn_bg" x1="8.48" y1="4" x2="8.48" y2="22.024" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><linearGradient id="fn_glass" x1="12.623" y1="2" x2="12.623" y2="18.031" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(227,227,229,0.6)"></stop><stop offset="1" stop-color="rgba(187,187,192,0.6)"></stop></linearGradient><linearGradient id="fn_shine" x1="12.754" y1="2" x2="12.754" y2="11.284" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(255,255,255,1)"></stop><stop offset="1" stop-color="rgba(255,255,255,0)"></stop></linearGradient><filter id="fn_blur" x="-100%" y="-100%" width="400%" height="400%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2" in="SourceGraphic" edgeMode="none"></feGaussianBlur></filter><clipPath id="fn_cp"><path d="M21.996 2.97831C21.9443 2.38904 21.4169 1.95015 20.8353 2.00456C10.3866 2.9187 5.66294 10.0172 3.57739 15.2239C3.38207 15.7115 3.61863 16.2586 4.09897 16.4711L5.18087 16.9499C6.32808 17.459 7.45527 17.6848 7.52185 17.6962C8.74173 17.919 9.86938 18.031 10.9036 18.031C13.0562 18.031 14.8029 17.5472 16.1171 16.5872C16.6465 16.2 17.5038 15.4252 18.1023 14.1039C14.0582 14.8651 13.0046 11.9807 13.0046 11.9807C16.1248 12.7703 19.6729 13.0131 20.6233 9.36491C20.8218 8.49059 20.9483 7.64435 21.0697 6.82729L21.0738 6.79966C21.2651 5.52313 21.4453 4.32071 21.8551 3.6047C21.961 3.42108 22.0159 3.20542 21.996 2.97831Z"></path></clipPath><mask id="fn_mask"><rect width="100%" height="100%" fill="#FFF"></rect><path d="M21.996 2.97831C21.9443 2.38904 21.4169 1.95015 20.8353 2.00456C10.3866 2.9187 5.66294 10.0172 3.57739 15.2239C3.38207 15.7115 3.61863 16.2586 4.09897 16.4711L5.18087 16.9499C6.32808 17.459 7.45527 17.6848 7.52185 17.6962C8.74173 17.919 9.86938 18.031 10.9036 18.031C13.0562 18.031 14.8029 17.5472 16.1171 16.5872C16.6465 16.2 17.5038 15.4252 18.1023 14.1039C14.0582 14.8651 13.0046 11.9807 13.0046 11.9807C16.1248 12.7703 19.6729 13.0131 20.6233 9.36491C20.8218 8.49059 20.9483 7.64435 21.0697 6.82729L21.0738 6.79966C21.2651 5.52313 21.4453 4.32071 21.8551 3.6047C21.961 3.42108 22.0159 3.20542 21.996 2.97831Z" fill="#000"></path></mask></defs></g></svg>
+      </div>
+      <div class="app-meta">
+        <span class="app-label">Field Notes</span>
+        <span class="app-desc">Vlogs and dispatches on slow living, WFH, and the creative life</span>
+      </div>
+    </button>
+
+    <!-- Garden -->
+    <button class="app" data-app="Garden">
+      <div class="app-icon" aria-hidden="true">
+        <svg width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper"><path d="M15.1638 5.76919C15.778 4.74364 17.2228 4.74358 17.8371 5.76919L21.7626 12.3251C22.4097 13.4062 21.6571 14.8015 20.4264 14.8017H20.1328L21.7626 17.5234C22.41 18.6045 21.6572 19.9997 20.4264 20H16.5004H12.5744C11.3435 20 10.59 18.6046 11.2372 17.5234L12.867 14.8017H12.5744C11.3436 14.8017 10.5903 13.4062 11.2372 12.3251L15.1638 5.76919Z" fill="url(#garden_bg)" mask="url(#garden_mask)"></path><path d="M15.1638 5.76919C15.778 4.74364 17.2228 4.74358 17.8371 5.76919L21.7626 12.3251C22.4097 13.4062 21.6571 14.8015 20.4264 14.8017H20.1328L21.7626 17.5234C22.41 18.6045 21.6572 19.9997 20.4264 20H16.5004H12.5744C11.3435 20 10.59 18.6046 11.2372 17.5234L12.867 14.8017H12.5744C11.3436 14.8017 10.5903 13.4062 11.2372 12.3251L15.1638 5.76919Z" fill="url(#garden_bg)" filter="url(#garden_blur)" clip-path="url(#garden_cp)"></path><path d="M8.28965 2.68454C8.87527 1.77185 10.1248 1.77178 10.7103 2.68454L16.7357 12.0834C17.4117 13.1381 16.7126 14.5785 15.5249 14.5786H13.5778L16.7357 19.5048C17.4117 20.5595 16.7126 21.9999 15.5249 22H9.5H3.47512C2.28729 22 1.58819 20.5595 2.2643 19.5048L5.42222 14.5786H3.47512C2.28729 14.5786 1.58819 13.1382 2.2643 12.0834L8.28965 2.68454Z" fill="url(#garden_glass)" data-glass="blur"></path><path d="M6.79398 13.8289L2.89554 19.909C2.71083 20.1972 2.71065 20.5417 2.84574 20.8201C2.97997 21.0967 3.21398 21.2498 3.47562 21.2498V21.9998L3.36527 21.9959C2.281 21.9132 1.65076 20.6141 2.20511 19.6043L2.26468 19.5047L5.42191 14.5789H3.47562V13.8289H6.79398ZM9.50003 21.2498V21.9998H3.47562V21.2498H9.50003ZM15.5244 21.2498V21.9998H9.50003V21.2498H15.5244ZM15.5244 13.8289V14.5789H13.5782L16.7354 19.5047C17.3902 20.5264 16.755 21.9103 15.6348 21.9959L15.5244 21.9998V21.2498C15.786 21.2498 16.0201 21.0968 16.1543 20.8201C16.2894 20.5417 16.2892 20.1971 16.1045 19.909L12.2061 13.8289H15.5244ZM8.29007 2.68439C8.8757 1.77191 10.1244 1.77183 10.71 2.68439L16.7354 12.0828C17.3902 13.1045 16.755 14.4884 15.6348 14.574L15.5244 14.5789V13.8289C15.7859 13.8289 16.02 13.6757 16.1543 13.3992C16.2894 13.1209 16.2891 12.7762 16.1045 12.4881L10.0791 3.08869C9.78874 2.63603 9.21146 2.63687 8.92093 3.08967L8.91996 3.08869L2.89554 12.4881C2.71092 12.7762 2.71065 13.1209 2.84574 13.3992C2.98 13.6756 3.21409 13.8289 3.47562 13.8289V14.5789L3.36527 14.574C2.28116 14.4913 1.65112 13.1931 2.20511 12.1834L2.26468 12.0828L8.29007 2.68439Z" fill="url(#garden_shine)"></path><defs><linearGradient id="garden_bg" x1="16.5" y1="5" x2="16.5" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><linearGradient id="garden_glass" x1="9.5" y1="2" x2="9.5" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(227,227,229,0.6)"></stop><stop offset="1" stop-color="rgba(187,187,192,0.6)"></stop></linearGradient><linearGradient id="garden_shine" x1="9.5" y1="2" x2="9.5" y2="13.582" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(255,255,255,1)"></stop><stop offset="1" stop-color="rgba(255,255,255,0)"></stop></linearGradient><filter id="garden_blur" x="-100%" y="-100%" width="400%" height="400%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2" in="SourceGraphic" edgeMode="none"></feGaussianBlur></filter><clipPath id="garden_cp"><path d="M8.28965 2.68454C8.87527 1.77185 10.1248 1.77178 10.7103 2.68454L16.7357 12.0834C17.4117 13.1381 16.7126 14.5785 15.5249 14.5786H13.5778L16.7357 19.5048C17.4117 20.5595 16.7126 21.9999 15.5249 22H9.5H3.47512C2.28729 22 1.58819 20.5595 2.2643 19.5048L5.42222 14.5786H3.47512C2.28729 14.5786 1.58819 13.1382 2.2643 12.0834L8.28965 2.68454Z"></path></clipPath><mask id="garden_mask"><rect width="100%" height="100%" fill="#FFF"></rect><path d="M8.28965 2.68454C8.87527 1.77185 10.1248 1.77178 10.7103 2.68454L16.7357 12.0834C17.4117 13.1381 16.7126 14.5785 15.5249 14.5786H13.5778L16.7357 19.5048C17.4117 20.5595 16.7126 21.9999 15.5249 22H9.5H3.47512C2.28729 22 1.58819 20.5595 2.2643 19.5048L5.42222 14.5786H3.47512C2.28729 14.5786 1.58819 13.1382 2.2643 12.0834L8.28965 2.68454Z" fill="#000"></path></mask></defs></g></svg>
+      </div>
+      <div class="app-meta">
+        <span class="app-label">Garden</span>
+        <span class="app-desc">Essays, notes, and half-formed ideas I've wrestled with enough to share</span>
+      </div>
+    </button>
+
+    <!-- Northstar -->
+    <button class="app" data-app="Northstar">
+      <div class="app-icon" aria-hidden="true">
+        <svg width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper"><path d="M19.0029 9.22168C18.9675 9.29643 18.933 9.37227 18.8955 9.44727C18.0679 11.1025 16.6403 13.0159 14.8281 14.8281C13.016 16.6402 11.1024 18.0669 9.44727 18.8945C9.37223 18.932 9.29648 18.9675 9.22168 19.0029L8.48145 17.1396C8.50491 17.1281 8.52897 17.1174 8.55273 17.1055C9.96859 16.3975 11.7116 15.1166 13.4141 13.4141C15.1165 11.7116 16.3975 9.96859 17.1055 8.55273C17.1173 8.529 17.1282 8.50489 17.1396 8.48145L19.0029 9.22168Z" fill="url(#sparkle_existing_0)" data-glass="origin" mask="url(#sparkle_mask)"></path><path d="M19.0029 9.22168C18.9675 9.29643 18.933 9.37227 18.8955 9.44727C18.0679 11.1025 16.6403 13.0159 14.8281 14.8281C13.016 16.6402 11.1024 18.0669 9.44727 18.8945C9.37223 18.932 9.29648 18.9675 9.22168 19.0029L8.48145 17.1396C8.50491 17.1281 8.52897 17.1174 8.55273 17.1055C9.96859 16.3975 11.7116 15.1166 13.4141 13.4141C15.1165 11.7116 16.3975 9.96859 17.1055 8.55273C17.1173 8.529 17.1282 8.50489 17.1396 8.48145L19.0029 9.22168Z" fill="url(#sparkle_existing_0)" data-glass="clone" filter="url(#sparkle_filter)" clip-path="url(#sparkle_clipPath)"></path><path d="M15.9375 7.9209L13.6262 2.09729C13.0418 0.624851 10.9578 0.624668 10.3732 2.09701L8.06055 7.9209C8.03514 7.98472 7.98472 8.03514 7.9209 8.06055L2.09599 10.3735C0.623789 10.9581 0.623787 13.0419 2.09599 13.6265L7.9209 15.9395C7.98472 15.9649 8.03514 16.0153 8.06055 16.0791L10.3731 21.903C10.9578 23.3753 13.0418 23.3752 13.6262 21.9027L15.9375 16.0791C15.963 16.0151 16.014 15.9648 16.0781 15.9395L21.9035 13.6265C23.3758 13.0419 23.3758 10.9581 21.9036 10.3735L16.0781 8.06055C16.014 8.0352 15.963 7.98495 15.9375 7.9209Z" fill="url(#sparkle_existing_1)" data-glass="blur"></path><path d="M10.3726 2.0971C10.9572 0.624749 13.0421 0.624646 13.6265 2.0971L15.9371 7.92039C15.9625 7.9843 16.0138 8.03463 16.0777 8.06004L21.9039 10.3735C23.3757 10.9583 23.3757 13.0418 21.9039 13.6265L16.0777 15.939C16.0137 15.9644 15.9625 16.0147 15.9371 16.0787L13.6265 21.9029L13.5669 22.0367C12.9338 23.3305 11.0654 23.3306 10.4322 22.0367L10.3726 21.9029L8.06009 16.0787C8.03463 16.015 7.98413 15.9644 7.92044 15.939L2.0962 13.6265C0.669876 13.0601 0.624999 11.0862 1.96241 10.4321L2.0962 10.3735L7.92044 8.06004C7.98426 8.03462 8.03467 7.98421 8.06009 7.92039L10.3726 2.0971ZM12.9292 2.37347C12.5952 1.5322 11.4039 1.53217 11.0699 2.37347L8.75735 8.19773C8.66843 8.42106 8.50255 8.60407 8.29153 8.71434L8.19778 8.75731L2.37257 11.0708C1.53154 11.405 1.53146 12.5951 2.37257 12.9292L8.19778 15.2427L8.29153 15.2857C8.47235 15.3802 8.61993 15.5277 8.71438 15.7085L8.75735 15.8013V15.8023L11.0699 21.6265C11.4041 22.4676 12.5953 22.4669 12.9292 21.6256L15.2408 15.8023V15.8013C15.3312 15.5742 15.4996 15.3925 15.7095 15.2837L15.8023 15.2417L21.6265 12.9292C22.4678 12.5952 22.4678 11.4048 21.6265 11.0708L15.8023 8.75731V8.75828C15.5811 8.67083 15.3958 8.50626 15.2837 8.29246L15.2408 8.19773L12.9292 2.37347Z" fill="url(#sparkle_existing_2)"></path><path d="M16.9213 4.31673C17.641 4.23159 18.4685 4.32697 19.0707 4.92904C19.673 5.53136 19.7682 6.35957 19.683 7.07943C19.6039 7.74668 19.3554 8.47673 19.0023 9.222L17.1391 8.48177C17.4727 7.80126 17.6488 7.24771 17.6967 6.84407C17.7209 6.63924 17.7087 6.50399 17.6898 6.42513C17.6809 6.38796 17.6709 6.36614 17.6654 6.35579C17.6605 6.34664 17.6566 6.3431 17.6566 6.3431C17.6566 6.3431 17.6527 6.33903 17.6439 6.33431C17.6336 6.32882 17.6118 6.31979 17.5746 6.31087C17.4958 6.29202 17.3612 6.27985 17.1566 6.30404C16.7393 6.3535 16.1603 6.53761 15.4476 6.89388C14.1203 7.55756 12.5051 8.72568 10.9057 10.2718L10.5863 10.5853C8.88391 12.2877 7.60189 14.0308 6.89393 15.4466C6.53751 16.1595 6.35356 16.7391 6.30409 17.1566C6.27991 17.3612 6.29207 17.4957 6.31093 17.5745C6.31984 17.6117 6.32888 17.6335 6.33436 17.6439C6.33907 17.6527 6.34315 17.6566 6.34315 17.6566L6.35585 17.6654C6.36617 17.6708 6.38818 17.6799 6.42518 17.6888C6.50404 17.7077 6.6393 17.7209 6.84413 17.6966C7.24768 17.6487 7.80148 17.4734 8.48182 17.14L9.22108 19.0033C8.47621 19.356 7.74638 19.6039 7.07948 19.6829C6.40458 19.7629 5.63425 19.6845 5.04432 19.1781L4.92909 19.0706C4.32688 18.4683 4.23154 17.64 4.31678 16.9202C4.40383 16.1863 4.69376 15.3754 5.10487 14.5531C5.93246 12.8979 7.35908 10.9834 9.17128 9.17122L9.51307 8.83626C11.2225 7.18347 13.0015 5.88064 14.5531 5.10482C15.3756 4.69361 16.1872 4.40372 16.9213 4.31673Z" fill="url(#sparkle_existing_3)"></path><path d="M5.5 4.25C5.5 4.94036 4.94036 5.5 4.25 5.5C3.55964 5.5 3 4.94036 3 4.25C3 3.55964 3.55964 3 4.25 3C4.94036 3 5.5 3.55964 5.5 4.25Z" fill="url(#sparkle_existing_4)"></path><defs><linearGradient id="sparkle_existing_0" x1="13.742" y1="8.481" x2="13.742" y2="19.003" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><linearGradient id="sparkle_existing_1" x1="12" y1="-2" x2="12" y2="26" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(227,227,229,0.6)"></stop><stop offset="1" stop-color="rgba(187,187,192,0.6)"></stop></linearGradient><linearGradient id="sparkle_existing_2" x1="12" y1=".993" x2="12" y2="13.742" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(255,255,255,1)"></stop><stop offset="1" stop-color="rgba(255,255,255,1)" stop-opacity="0"></stop></linearGradient><linearGradient id="sparkle_existing_3" x1="12" y1="4.29" x2="12" y2="19.71" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><linearGradient id="sparkle_existing_4" x1="4.25" y1="3" x2="4.25" y2="5.5" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><filter id="sparkle_filter" x="-100%" y="-100%" width="400%" height="400%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2" in="SourceGraphic" edgeMode="none"></feGaussianBlur></filter><clipPath id="sparkle_clipPath"><path d="M15.9375 7.9209L13.6262 2.09729C13.0418 0.624851 10.9578 0.624668 10.3732 2.09701L8.06055 7.9209C8.03514 7.98472 7.98472 8.03514 7.9209 8.06055L2.09599 10.3735C0.623789 10.9581 0.623787 13.0419 2.09599 13.6265L7.9209 15.9395C7.98472 15.9649 8.03514 16.0153 8.06055 16.0791L10.3731 21.903C10.9578 23.3753 13.0418 23.3752 13.6262 21.9027L15.9375 16.0791C15.963 16.0151 16.014 15.9648 16.0781 15.9395L21.9035 13.6265C23.3758 13.0419 23.3758 10.9581 21.9036 10.3735L16.0781 8.06055C16.014 8.0352 15.963 7.98495 15.9375 7.9209Z" fill="url(#sparkle_existing_1)"></path></clipPath><mask id="sparkle_mask"><rect width="100%" height="100%" fill="#FFF"></rect><path d="M15.9375 7.9209L13.6262 2.09729C13.0418 0.624851 10.9578 0.624668 10.3732 2.09701L8.06055 7.9209C8.03514 7.98472 7.98472 8.03514 7.9209 8.06055L2.09599 10.3735C0.623789 10.9581 0.623787 13.0419 2.09599 13.6265L7.9209 15.9395C7.98472 15.9649 8.03514 16.0153 8.06055 16.0791L10.3731 21.903C10.9578 23.3753 13.0418 23.3752 13.6262 21.9027L15.9375 16.0791C15.963 16.0151 16.014 15.9648 16.0781 15.9395L21.9035 13.6265C23.3758 13.0419 23.3758 10.9581 21.9036 10.3735L16.0781 8.06055C16.014 8.0352 15.963 7.98495 15.9375 7.9209Z" fill="#000"></path></mask></defs></g></svg>
+      </div>
+      <div class="app-meta">
+        <span class="app-label">Northstar</span>
+        <span class="app-desc">What I believe and where I'm trying to go</span>
+      </div>
+    </button>
+
+  </div>
+
+  <!-- Portfolio / case study cards (hidden until Hire Me is toggled) -->
+  <div class="portfolio" id="portfolioGrid">
+
+    <button class="study" data-case="figma-migration">
+      <div class="study-card">
+        <span class="study-tag">Design Ops · PwC Digital</span>
+        <h3 class="study-title">Upskilling 120+ Designers — High-Impact Migration to Figma</h3>
+      </div>
+    </button>
+
+    <button class="study" data-case="pattern-library">
+      <div class="study-card">
+        <span class="study-tag">Design Systems · PwC Digital</span>
+        <h3 class="study-title">Streamlining UX for 50+ Teams — Comprehensive UX Pattern Library</h3>
+      </div>
+    </button>
+
+    <button class="study" data-case="modular-generators">
+      <div class="study-card">
+        <span class="study-tag">Tooling · Blue Corona</span>
+        <h3 class="study-title">Cutting Design Time by 80% with Modular Generators</h3>
+      </div>
+    </button>
+
+    <button class="study" data-case="ai-automation">
+      <div class="study-card">
+        <span class="study-tag">AI · Automation</span>
+        <h3 class="study-title">Automating UX Workflows for 30% Time Savings</h3>
+      </div>
+    </button>
+
+  </div>
+
+  </div><!-- /#mainPanel -->
+
+  <!-- Now strip -->
+  <a href="#now" class="now-strip" id="nowStrip" aria-label="View now page" style="display:none"></a>
+
+  <!-- App panel -->
+  <div id="panelBackdrop">
+    <div id="panel">
+      <button id="panelBack">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Back
+      </button>
+      <h2 id="panelTitle"></h2>
+      <div id="panelContent"></div>
+    </div>
+  </div>
+
+  <!-- Section Modal -->
+  <div id="sModal" role="dialog" aria-modal="true" aria-labelledby="sModalTitle">
+    <div id="sModalFrame">
+      <div id="sModalTop">
+        <div id="sModalTopLeft">
+          <button id="sModalBack" aria-label="Back to index">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Back
+          </button>
+          <span id="sModalTitle"></span>
+        </div>
+        <button id="sModalClose" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
-      <div class="changelog-modal-body" id="changelogModalBody">
-        <!-- Changelog content will be loaded here -->
+      <div id="sModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Power fade overlay -->
+  <div id="powerFade"></div>
+
+  <!-- Version screen — Time Machine -->
+  <div id="versionScreen">
+    <div class="tm-bg"></div>
+    <div class="tm-scene">
+      <div class="tm-stack">
+
+        <!-- v1 — past, back window -->
+        <a href="/v1/" class="tm-card v1">
+          <div class="tm-chrome">
+            <span class="tm-dot r"></span>
+            <span class="tm-dot y"></span>
+            <span class="tm-dot g"></span>
+            <span class="tm-chrome-label">v1 &nbsp;·&nbsp; 2024</span>
+          </div>
+          <div class="tm-body">
+            <div>
+              <div class="tm-version-num">Galaxy</div>
+              <div class="tm-version-sub">Black hole · Bear notes · Digital garden</div>
+            </div>
+          </div>
+        </a>
+
+        <!-- v2 — present, front window -->
+        <a href="/" class="tm-card v2">
+          <div class="tm-chrome">
+            <span class="tm-dot r"></span>
+            <span class="tm-dot y"></span>
+            <span class="tm-dot g"></span>
+            <span class="tm-chrome-label">v2 &nbsp;·&nbsp; present</span>
+          </div>
+          <div class="tm-body">
+            <div>
+              <div class="tm-version-num">Launchpad</div>
+              <div class="tm-version-sub">App icons · Zen garden · Case studies</div>
+            </div>
+          </div>
+        </a>
+
+        <!-- Timeline bar -->
+        <div class="tm-timeline">
+          <div class="tm-tick now"><span>Today</span></div>
+          <div class="tm-tick"><span>2025</span></div>
+          <div class="tm-tick"><span>2024</span></div>
+        </div>
+
       </div>
     </div>
   </div>
 
-  <!-- Mini Music Player -->
-  <div class="mini-player" id="miniPlayer" role="region" aria-label="Mini music player" aria-hidden="true">
-    <div class="mini-player-content">
-      <div class="mini-player-thumb">
-        <img id="miniPlayerThumb" src="" alt="" style="display: none;">
-        <svg class="mini-player-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M9 18V5l12-2v13"/>
-          <circle cx="6" cy="18" r="3"/>
-          <circle cx="18" cy="16" r="3"/>
-        </svg>
-      </div>
-      <div class="mini-player-info">
-        <div class="mini-player-title" id="miniPlayerTitle">No track</div>
-        <div class="mini-player-artist" id="miniPlayerArtist">Select a track</div>
-      </div>
-      <button class="mini-player-play-btn" id="miniPlayerPlayBtn" aria-label="Play/Pause">
-        <svg class="mini-player-icon-play" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8 5v14l11-7z"/>
-        </svg>
-        <svg class="mini-player-icon-pause hidden" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-        </svg>
-      </button>
-    </div>
-  </div>
+  <script src="/js/main.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/exif-js@2.3.0/exif.js"></script>
-  <script type="module" src="js/app.js"></script>
-<script src="background.js"></script>
-<script src="cursor-trail.js"></script>
+  <!-- Now strip population -->
+  <script src="/js/now-strip.js"></script>
+
+  <script src="/js/grid.js"></script>
 </body>
 </html>
