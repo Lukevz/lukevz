@@ -16,6 +16,26 @@
     const SP = 28;
     let cells = [];
 
+    const GRID_RGB_LIGHT = [58, 61, 69];
+    const GRID_RGB_DARK = [178, 186, 202];
+    let gridDotRgb = '58,61,69';
+
+    function setGridDotBlend(blend) {
+      const t = Math.max(0, Math.min(1, blend));
+      const r = Math.round(GRID_RGB_LIGHT[0] + (GRID_RGB_DARK[0] - GRID_RGB_LIGHT[0]) * t);
+      const g = Math.round(GRID_RGB_LIGHT[1] + (GRID_RGB_DARK[1] - GRID_RGB_LIGHT[1]) * t);
+      const b = Math.round(GRID_RGB_LIGHT[2] + (GRID_RGB_DARK[2] - GRID_RGB_LIGHT[2]) * t);
+      gridDotRgb = `${r},${g},${b}`;
+    }
+
+    function readGridDotRgb() {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      setGridDotBlend(dark ? 1 : 0);
+    }
+    readGridDotRgb();
+
+    let ambientAnim = false;
+
     function buildCells(w, h) {
       const r = prng(8675309);
       cells = [];
@@ -23,9 +43,19 @@
         for (let by = SP / 2; by < h + SP; by += SP) {
           const rv = r(), al = 0.10 + r() * 0.06;
           const tp = rv < 0.50 ? 0 : rv < 0.78 ? 1 : 2; // 0=dot 1=sq 2=slash
-          cells.push({ bx, by, tp, al, sz: tp === 0 ? 0.8 + r() * 0.7 : 1.6 + r() * 1.0, fs: 7 + Math.floor(r() * 4), slash: '/' });
+          const cell = { bx, by, tp, al, sz: tp === 0 ? 0.8 + r() * 0.7 : 1.6 + r() * 1.0, fs: 7 + Math.floor(r() * 4), slash: '/' };
+          // Slow opacity drift on a few slashes — 0 → up to (peak × base alpha)
+          if (tp === 2 && r() < 0.16) {
+            cell.fadeBreath = {
+              phase: r() * 90000,
+              period: 16000 + r() * 22000,
+              peak: 0.5 + r() * 0.5
+            };
+          }
+          cells.push(cell);
         }
       }
+      ambientAnim = cells.some(c => c.fadeBreath);
     }
 
     /* ── Ripples ── */
@@ -67,9 +97,15 @@
             y += Math.sin(ang) * str;
           }
         }
-        const alpha = cl.al * holeFade(x, y, cx, cy);
+        let breathMult = 1;
+        if (cl.fadeBreath) {
+          const { phase, period, peak } = cl.fadeBreath;
+          const u = ((performance.now() + phase) % period) / period;
+          breathMult = peak * (0.5 - 0.5 * Math.cos(u * 2 * Math.PI));
+        }
+        const alpha = cl.al * breathMult * holeFade(x, y, cx, cy);
         if (alpha < 0.004) continue;
-        c.fillStyle = `rgba(58,61,69,${alpha})`;
+        c.fillStyle = `rgba(${gridDotRgb},${alpha})`;
         if      (cl.tp === 0) { c.beginPath(); c.arc(x, y, cl.sz, 0, 6.2832); c.fill(); }
         else if (cl.tp === 1) { c.fillRect(x - cl.sz / 2, y - cl.sz / 2, cl.sz, cl.sz); }
         else                  { c.font = `${cl.fs}px monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(cl.slash, x, y); }
@@ -108,6 +144,19 @@
     /* ── State ── */
     let mx = -300, my = -300, animating = false;
 
+    document.addEventListener('themeblend', e => {
+      const b = e.detail?.blend;
+      if (typeof b === 'number' && Number.isFinite(b)) {
+        setGridDotBlend(b);
+        if (canvas.width) drawGrid(ctx, canvas.width, canvas.height, performance.now());
+      }
+    });
+
+    new MutationObserver(() => {
+      readGridDotRgb();
+      if (canvas.width) drawGrid(ctx, canvas.width, canvas.height, performance.now());
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
     /* ── Mouse ── */
     document.addEventListener('mousemove', e => {
       mx = e.clientX; my = e.clientY;
@@ -123,16 +172,20 @@
     document.addEventListener('mouseenter', () => { cursorEl.style.opacity = '1'; });
 
     /* ── Animation loop ── */
-    function startAnim() { animating = true; requestAnimationFrame(tick); }
+    function startAnim() {
+      if (animating) return;
+      animating = true;
+      requestAnimationFrame(tick);
+    }
 
     function tick(ts) {
       ripples = ripples.filter(r => ts - r.t0 < RPDUR);
       drawGrid(ctx, canvas.width, canvas.height, ts);
-      if (ripples.length) {
+      if (ripples.length || ambientAnim) {
         requestAnimationFrame(tick);
       } else {
         animating = false;
-        drawGrid(ctx, canvas.width, canvas.height, 0);
+        drawGrid(ctx, canvas.width, canvas.height, ts);
       }
     }
 
@@ -140,8 +193,10 @@
     function resize() {
       canvas.width  = innerWidth;
       canvas.height = innerHeight;
+      readGridDotRgb();
       buildCells(canvas.width, canvas.height);
-      if (!animating) drawGrid(ctx, canvas.width, canvas.height, 0);
+      if (ambientAnim) startAnim();
+      else if (!animating) drawGrid(ctx, canvas.width, canvas.height, 0);
     }
 
     /* ── Slash flipper ── */
@@ -153,7 +208,7 @@
         const cell = slashCells[Math.floor(Math.random() * slashCells.length)];
         cell.slash = cell.slash === '/' ? '\\' : '/';
       }
-      if (!animating) drawGrid(ctx, canvas.width, canvas.height, 0);
+      if (canvas.width) drawGrid(ctx, canvas.width, canvas.height, performance.now());
       setTimeout(flipSlashes, 18000 + Math.random() * 8000); // every 18–26s
     }
     setTimeout(flipSlashes, 18000 + Math.random() * 8000);

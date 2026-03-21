@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>lukevz</title>
+  <script>
+    try {
+      var _t = localStorage.getItem('lukevz-theme');
+      if (_t === 'dark' || _t === 'light') document.documentElement.setAttribute('data-theme', _t);
+    } catch (e) {}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Geist+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -14,6 +20,12 @@
 <body>
 
   <canvas id="dotGrid"></canvas>
+  <!-- Theme cross-fade: conic arc pivots at bottom center, sweeps BL → BR (sun path) -->
+  <div id="themeTransition" class="theme-transition" aria-hidden="true">
+    <div class="theme-transition__wipe" aria-hidden="true">
+      <div class="theme-transition__arc" aria-hidden="true"></div>
+    </div>
+  </div>
   <div id="customCursor" aria-hidden="true"></div>
   <div id="lens" aria-hidden="true"><canvas id="lensCanvas" width="128" height="128"></canvas></div>
 
@@ -24,6 +36,53 @@
     <button class="tab-opt" data-mode="work">Work</button>
   </div>
 
+  <!-- Social links button (top left) -->
+  <button id="socialBtn" title="Social links" aria-label="Social links" aria-expanded="false">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/>
+    </svg>
+  </button>
+
+  <!-- Theme toggle (top right): moon = switch to dark, sun = switch to light -->
+  <button id="themeToggle" type="button" title="Dark mode" aria-label="Switch to dark mode" aria-pressed="false">
+    <svg class="theme-icon theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <svg class="theme-icon theme-icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+    </svg>
+  </button>
+
+  <!-- Social panel -->
+  <div id="socialPanel" aria-hidden="true">
+    <a href="https://x.com/lukevz" target="_blank" rel="noopener" class="social-row">
+      <span class="social-name">X</span>
+      <span class="social-handle">@lukevz</span>
+    </a>
+    <a href="https://www.youtube.com/@lukevanzylofficial" target="_blank" rel="noopener" class="social-row">
+      <span class="social-name">YouTube</span>
+      <span class="social-handle">@lukevanzylofficial</span>
+    </a>
+    <a href="https://www.youtube.com/@uxwithluke" target="_blank" rel="noopener" class="social-row">
+      <span class="social-name">UX Channel</span>
+      <span class="social-handle">@uxwithluke</span>
+    </a>
+    <a href="https://www.instagram.com/lukevanzyl/" target="_blank" rel="noopener" class="social-row">
+      <span class="social-name">Instagram</span>
+      <span class="social-handle">@lukevanzyl</span>
+    </a>
+    <a href="https://www.threads.com/@lukevanzyl" target="_blank" rel="noopener" class="social-row">
+      <span class="social-name">Threads</span>
+      <span class="social-handle">@lukevanzyl</span>
+    </a>
+    <a href="https://www.linkedin.com/in/lukevz/" target="_blank" rel="noopener" class="social-row">
+      <span class="social-name">LinkedIn</span>
+      <span class="social-handle">lukevz</span>
+    </a>
+  </div>
+
   <!-- Power button (bottom right) -->
   <button id="powerBtn" title="Version selector" aria-label="Version selector">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -31,8 +90,6 @@
       <line x1="12" y1="2" x2="12" y2="12"/>
     </svg>
   </button>
-
-  <div id="layout">
 
   <!-- Intro -->
   <div class="intro">
@@ -130,21 +187,20 @@
       </a>
     </div>
 
-    <!-- Previously button — opens case study list in panel -->
+    <!-- Previously button — opens case study list in panel (commented out for launch; restore when content is ready)
     <button id="prevBtn" class="section-divider" data-app="Previously" aria-label="View previous work">
       <span class="kpi-label">Previously</span>
       <svg class="section-squiggle" viewBox="0 0 240 8" preserveAspectRatio="none" aria-hidden="true">
         <path d="M0,4 C8,1 16,7 24,4 C32,1 40,7 48,4 C56,1 64,7 72,4 C80,1 88,7 96,4 C104,1 112,7 120,4 C128,1 136,7 144,4 C152,1 160,7 168,4 C176,1 184,7 192,4 C200,1 208,7 216,4 C224,1 232,7 240,4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
+    -->
 
     <!-- Case study cards injected by main.js from content/case-studies/ -->
 
   </div>
 
   </div><!-- /#mainPanel -->
-
-  </div><!-- /#layout -->
 
   <!-- Now strip -->
   <a href="#now" class="now-strip" id="nowStrip" aria-label="View now page" style="display:none"></a>
@@ -169,13 +225,15 @@
     <div id="sModalFrame">
       <div id="sModalTop">
         <div id="sModalTopLeft">
-          <button id="sModalBack" aria-label="Back to index">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"/>
-              <polyline points="12 19 5 12 12 5"/>
-            </svg>
-            Back
-          </button>
+          <div class="s-modal-lead">
+            <div class="s-modal-section-icon" id="sModalSectionIcon" aria-hidden="true"></div>
+            <button id="sModalBack" type="button" aria-label="Back to index">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </button>
+          </div>
           <span id="sModalTitle"></span>
         </div>
         <button id="sModalClose" aria-label="Close">

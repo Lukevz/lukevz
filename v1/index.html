@@ -27,27 +27,6 @@
   <!-- Animated Background Canvas -->
   <canvas id="bgCanvas" style="transform: translateZ(0); -webkit-transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden;"></canvas>
 
-  <!-- Version selector link -->
-  <a id="versionBack" href="/" style="
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 9999;
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: rgba(255,255,255,0.45);
-    text-decoration: none;
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 20px;
-    padding: 6px 14px;
-    transition: color 0.2s ease, border-color 0.2s ease;
-  " onmouseover="this.style.color='rgba(255,255,255,0.9)';this.style.borderColor='rgba(255,255,255,0.4)'"
-     onmouseout="this.style.color='rgba(255,255,255,0.45)';this.style.borderColor='rgba(255,255,255,0.15)'">
-    ← versions
-  </a>
-
   <!-- Top Menu Bar -->
   <header class="top-menu-bar" id="topMenuBar">
     <div class="top-menu-bar-inner">
@@ -867,8 +846,11 @@
     </div>
   </div>
 
-  <!-- App Version -->
-  <div class="app-version" id="appVersion" role="button" tabindex="0">Loading...</div>
+  <!-- Versions link + app version (inline, bottom-right) -->
+  <div class="version-footer" role="navigation" aria-label="Site version">
+    <a id="versionBack" class="version-back" href="/#versions">← versions</a>
+    <div class="app-version" id="appVersion" role="button" tabindex="0">Loading...</div>
+  </div>
 
   <!-- Changelog Modal -->
   <div class="changelog-modal" id="changelogModal" role="dialog" aria-labelledby="changelogModalTitle" aria-hidden="true">

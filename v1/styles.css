@@ -234,19 +234,50 @@
 }
 
 /* ==================== */
+/* Version footer       */
+/* (versions link + badge, inline) */
+/* ==================== */
+
+.version-footer {
+  position: fixed;
+  right: 20px;
+  bottom: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.version-back {
+  flex-shrink: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.version-back:hover {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ==================== */
 /* App Version Badge    */
 /* ==================== */
 
 .app-version {
-  position: fixed;
-  right: 20px;
-  bottom: 16px;
   font-family: 'Geist Pixel', var(--font-sans);
   font-size: 0.875rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-muted);
-  z-index: 1001;
   opacity: 0.8;
   cursor: pointer;
   transition: opacity var(--transition-fast), color var(--transition-fast);
@@ -258,10 +289,9 @@
 }
 
 @media (max-width: 768px) {
-  .app-version {
+  .version-footer {
     right: 16px;
     bottom: 12px;
-    /* Respect safe area on iOS Safari */
     bottom: calc(12px + env(safe-area-inset-bottom));
   }
 }
