@@ -1879,6 +1879,13 @@
 
     /* ── Responsive layout ── */
     @media (max-width: 640px) {
+      /* Switch from vertically-centered flex to top-aligned so content can scroll.
+         justify-content:center clips overflow at the top on mobile (flexbox quirk). */
+      body {
+        justify-content: flex-start;
+        padding-top: max(72px, calc(50vh - 209px));
+      }
+
       /* Hero: avatar stacks above description */
       .intro {
         flex-direction: column;
