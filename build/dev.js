@@ -4,7 +4,7 @@
  * Watches /posts, /thought-train, /labs, /sounds folders and regenerates manifest files on changes
  */
 
-import { writeFileSync, watch, existsSync, readdirSync } from 'fs';
+import { writeFileSync, readFileSync, watch, existsSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { createServer } from 'http';
@@ -156,69 +156,73 @@ export default ${JSON.stringify(covers, null, 2)};
   console.log(`\x1b[32m✓\x1b[0m Rebuilt covers.js (${covers.length} books)`);
 }
 
-// Initial build
-buildPosts();
-buildThoughtTrains();
-buildLabs();
-buildSounds();
-buildGallery();
-buildCovers();
+const v1Mode = process.argv.includes('--v1');
 
-// Watch for changes in posts
-console.log(`\x1b[90m◉ Watching /posts for changes...\x1b[0m`);
-watch(postsDir, { recursive: true }, (eventType, filename) => {
-  if (filename?.endsWith('.md')) {
-    console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
-    buildPosts();
-    // Rebuild covers if it's a book file
-    if (filename.toLowerCase().startsWith('b.')) {
-      buildCovers();
-    }
-  }
-});
+if (v1Mode) {
+  // Initial build
+  buildPosts();
+  buildThoughtTrains();
+  buildLabs();
+  buildSounds();
+  buildGallery();
+  buildCovers();
 
-// Watch for changes in thought-train
-console.log(`\x1b[90m◉ Watching /thought-train for changes...\x1b[0m`);
-watch(thoughtTrainDir, { recursive: true }, (eventType, filename) => {
-  if (filename?.endsWith('.md')) {
-    console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
-    buildThoughtTrains();
-  }
-});
-
-// Watch for changes in labs
-if (existsSync(labsDir)) {
-  console.log(`\x1b[90m◉ Watching /labs for changes...\x1b[0m`);
-  watch(labsDir, { recursive: true }, (eventType, filename) => {
+  // Watch for changes in posts
+  console.log(`\x1b[90m◉ Watching /posts for changes...\x1b[0m`);
+  watch(postsDir, { recursive: true }, (eventType, filename) => {
     if (filename?.endsWith('.md')) {
       console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
-      buildLabs();
+      buildPosts();
+      // Rebuild covers if it's a book file
+      if (filename.toLowerCase().startsWith('b.')) {
+        buildCovers();
+      }
     }
   });
-}
 
-// Watch for changes in sounds
-if (existsSync(soundsDir)) {
-  console.log(`\x1b[90m◉ Watching /sounds for changes...\x1b[0m`);
-  const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.qta'];
-  watch(soundsDir, { recursive: true }, (eventType, filename) => {
-    if (filename && audioExtensions.some(ext => filename.toLowerCase().endsWith(ext))) {
+  // Watch for changes in thought-train
+  console.log(`\x1b[90m◉ Watching /thought-train for changes...\x1b[0m`);
+  watch(thoughtTrainDir, { recursive: true }, (eventType, filename) => {
+    if (filename?.endsWith('.md')) {
       console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
-      buildSounds();
+      buildThoughtTrains();
     }
   });
-}
 
-// Watch for changes in gallery
-if (existsSync(galleryDir)) {
-  console.log(`\x1b[90m◉ Watching /gallery for changes...\x1b[0m`);
-  watch(galleryDir, { recursive: true }, (eventType, filename) => {
-    // Rebuild on any change: images, folder renames, deletions, etc.
-    if (filename) {
-      console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
-      buildGallery();
-    }
-  });
+  // Watch for changes in labs
+  if (existsSync(labsDir)) {
+    console.log(`\x1b[90m◉ Watching /labs for changes...\x1b[0m`);
+    watch(labsDir, { recursive: true }, (eventType, filename) => {
+      if (filename?.endsWith('.md')) {
+        console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
+        buildLabs();
+      }
+    });
+  }
+
+  // Watch for changes in sounds
+  if (existsSync(soundsDir)) {
+    console.log(`\x1b[90m◉ Watching /sounds for changes...\x1b[0m`);
+    const audioExtensions = ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.flac', '.webm', '.qta'];
+    watch(soundsDir, { recursive: true }, (eventType, filename) => {
+      if (filename && audioExtensions.some(ext => filename.toLowerCase().endsWith(ext))) {
+        console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
+        buildSounds();
+      }
+    });
+  }
+
+  // Watch for changes in gallery
+  if (existsSync(galleryDir)) {
+    console.log(`\x1b[90m◉ Watching /gallery for changes...\x1b[0m`);
+    watch(galleryDir, { recursive: true }, (eventType, filename) => {
+      // Rebuild on any change: images, folder renames, deletions, etc.
+      if (filename) {
+        console.log(`\x1b[90m  Changed: ${filename}\x1b[0m`);
+        buildGallery();
+      }
+    });
+  }
 }
 
 // Load music config for API proxy (lazy load)
@@ -240,6 +244,11 @@ async function loadMusicConfig() {
       }
     } catch (err) {
       console.log('\x1b[90m  Note: music-config.js not found or invalid:\x1b[0m', err.message);
+    }
+    // Fallback: check YOUTUBE_API_KEY env var
+    if (process.env.YOUTUBE_API_KEY) {
+      musicConfig = { youtube: { apiKey: process.env.YOUTUBE_API_KEY } };
+      return musicConfig;
     }
     musicConfig = false; // Mark as attempted
     return null;
@@ -273,6 +282,13 @@ async function loadBooksConfig() {
   })();
 
   return booksConfigPromise;
+}
+
+// Parse ISO 8601 duration string → seconds
+function parseDuration(iso) {
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (parseInt(m[1] || 0) * 3600) + (parseInt(m[2] || 0) * 60) + parseInt(m[3] || 0);
 }
 
 // In-memory storage for guestbook (development only)
@@ -311,9 +327,28 @@ async function handleAPIProxy(req, res) {
       res.end(JSON.stringify({ files: [] }));
       return true;
     }
-    const files = readdirSync(dir).filter(f => f.endsWith('.md')).sort();
+    const items = readdirSync(dir)
+      .filter(f => f.endsWith('.md'))
+      .map(f => {
+        const filePath = join(dir, f);
+        let date;
+        try {
+          const content = readFileSync(filePath, 'utf8');
+          const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+          if (fmMatch) {
+            const dateMatch = fmMatch[1].match(/^date:\s*(.+)$/m);
+            if (dateMatch) date = dateMatch[1].trim();
+          }
+        } catch (e) { /* ignore */ }
+        if (!date) {
+          const stat = statSync(filePath);
+          date = stat.birthtime.toISOString().split('T')[0];
+        }
+        return { file: f, date };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
     res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ files }));
+    res.end(JSON.stringify({ items, files: items.map(i => i.file) }));
     return true;
   }
 
@@ -803,6 +838,86 @@ async function handleAPIProxy(req, res) {
     return true;
   }
 
+  // YouTube channel videos endpoint
+  if (path === '/api/youtube/channel-videos' && req.method === 'GET') {
+    const handle = url.searchParams.get('handle') || 'lukevanzylofficial';
+    const config = await loadMusicConfig();
+
+    if (!config || !config.youtube || !config.youtube.apiKey) {
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'YouTube API key not found in config' }));
+      return true;
+    }
+
+    try {
+      // Get channel's uploads playlist ID
+      const channelRes = await fetch(
+        `https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet&forHandle=${handle}&key=${config.youtube.apiKey}`
+      );
+      const channelData = await channelRes.json();
+
+      if (!channelData.items?.length) {
+        res.writeHead(404, { ...corsHeaders, 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Channel @${handle} not found` }));
+        return true;
+      }
+
+      const channel = channelData.items[0];
+      const uploadsPlaylistId = channel.contentDetails.relatedPlaylists.uploads;
+      const channelTitle = channel.snippet.title;
+
+      // Paginate through uploads playlist
+      const videos = [];
+      let pageToken = null;
+
+      do {
+        let playlistUrl =
+          `https://www.googleapis.com/youtube/v3/playlistItems?` +
+          `part=snippet&maxResults=50&playlistId=${uploadsPlaylistId}&key=${config.youtube.apiKey}`;
+        if (pageToken) playlistUrl += `&pageToken=${pageToken}`;
+
+        const pageRes = await fetch(playlistUrl);
+        const pageData = await pageRes.json();
+
+        for (const item of pageData.items || []) {
+          const sn = item.snippet;
+          if (sn.title === 'Private video' || sn.title === 'Deleted video') continue;
+          videos.push({
+            videoId: sn.resourceId.videoId,
+            title: sn.title,
+            description: sn.description,
+            publishedAt: sn.publishedAt.split('T')[0],
+            thumbnail: sn.thumbnails?.high?.url || sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || ''
+          });
+        }
+
+        pageToken = pageData.nextPageToken || null;
+      } while (pageToken);
+
+      // Filter out Shorts: batch-fetch durations, drop videos < 3 minutes
+      const allIds = videos.map(v => v.videoId);
+      const durationMap = {};
+      for (let i = 0; i < allIds.length; i += 50) {
+        const batch = allIds.slice(i, i + 50).join(',');
+        const detailRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${batch}&key=${config.youtube.apiKey}`
+        );
+        const detailData = await detailRes.json();
+        for (const item of detailData.items || []) {
+          durationMap[item.id] = parseDuration(item.contentDetails.duration);
+        }
+      }
+      const longform = videos.filter(v => (durationMap[v.videoId] || 0) >= 180);
+
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ videos: longform, channelTitle }));
+    } catch (error) {
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+    }
+    return true;
+  }
+
   return false;
 }
 
@@ -812,8 +927,9 @@ const server = createServer(async (req, res) => {
   const handled = await handleAPIProxy(req, res);
   if (handled) return;
 
-  const decodedUrl = decodeURIComponent(req.url);
-  let filePath = join(rootDir, decodedUrl === '/' ? 'index.html' : decodedUrl);
+  const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+  const decodedPath = decodeURIComponent(reqUrl.pathname);
+  let filePath = join(rootDir, decodedPath === '/' ? 'index.html' : decodedPath);
   // Serve index.html for directory requests; try path.html for extensionless routes
   if (filePath.endsWith('/') || !extname(filePath)) {
     const indexPath = join(filePath.endsWith('/') ? filePath : filePath + '/', 'index.html');
@@ -842,6 +958,47 @@ const server = createServer(async (req, res) => {
     }
   }
 });
+
+// Auto-add frontmatter dates to content markdown files that lack them
+function ensureFrontmatterDates() {
+  const contentDir = join(rootDir, 'content');
+  if (!existsSync(contentDir)) return;
+  let updated = 0;
+  for (const category of readdirSync(contentDir)) {
+    const catDir = join(contentDir, category);
+    if (!statSync(catDir).isDirectory()) continue;
+    for (const file of readdirSync(catDir)) {
+      if (!file.endsWith('.md')) continue;
+      const filePath = join(catDir, file);
+      const content = readFileSync(filePath, 'utf8');
+      const hasFrontmatter = /^---\s*\n[\s\S]*?\n---/.test(content);
+      if (hasFrontmatter) {
+        // Check if frontmatter has a date field
+        const fm = content.match(/^---\s*\n([\s\S]*?)\n---/);
+        if (fm && /^date:/m.test(fm[1])) continue;
+        // Frontmatter exists but no date — inject date into it
+        if (fm) {
+          const date = statSync(filePath).birthtime.toISOString().split('T')[0];
+          const newFm = fm[1].trimEnd() + `\ndate: ${date}`;
+          const newContent = content.replace(/^---\s*\n[\s\S]*?\n---/, `---\n${newFm}\n---`);
+          writeFileSync(filePath, newContent);
+          updated++;
+          continue;
+        }
+      }
+      // No frontmatter at all — prepend it
+      const date = statSync(filePath).birthtime.toISOString().split('T')[0];
+      const newContent = `---\ndate: ${date}\n---\n\n${content}`;
+      writeFileSync(filePath, newContent);
+      updated++;
+    }
+  }
+  if (updated > 0) {
+    console.log(`\x1b[90m  Added frontmatter dates to ${updated} file${updated > 1 ? 's' : ''}\x1b[0m`);
+  }
+}
+
+ensureFrontmatterDates();
 
 server.listen(PORT, HOST, () => {
   const displayHost = HOST === '0.0.0.0' || HOST === '127.0.0.1' ? 'localhost' : HOST;

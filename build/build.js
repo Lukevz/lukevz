@@ -7,17 +7,17 @@
 import { writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../v1/js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const rootDir = join(__dirname, '..');
+const v1Dir = join(__dirname, '..', 'v1');
 
-const postsDir = join(rootDir, 'posts');
-const thoughtTrainDir = join(rootDir, 'thought-train');
-const labsDir = join(rootDir, 'labs');
-const soundsDir = join(rootDir, 'sounds');
-const galleryDir = join(rootDir, 'gallery');
-const coversDir = join(rootDir, 'covers');
+const postsDir = join(v1Dir, 'posts');
+const thoughtTrainDir = join(v1Dir, 'thought-train');
+const labsDir = join(v1Dir, 'labs');
+const soundsDir = join(v1Dir, 'sounds');
+const galleryDir = join(v1Dir, 'gallery');
+const coversDir = join(v1Dir, 'covers');
 
 
 async function build() {
@@ -32,7 +32,7 @@ async function build() {
 
 export default ${JSON.stringify(posts, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'posts.js'), postsContent);
+  writeFileSync(join(v1Dir, 'posts.js'), postsContent);
   console.log(`✓ Generated posts.js with ${posts.length} posts`);
 
   // Build thought trains manifest
@@ -45,7 +45,7 @@ export default ${JSON.stringify(posts, null, 2)};
 
 export default ${JSON.stringify(thoughtTrains, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'thought-trains.js'), thoughtTrainContent);
+  writeFileSync(join(v1Dir, 'thought-trains.js'), thoughtTrainContent);
   console.log(`✓ Generated thought-trains.js with ${thoughtTrains.length} thought trains`);
 
   // Build labs manifest (if directory exists)
@@ -58,7 +58,7 @@ export default ${JSON.stringify(thoughtTrains, null, 2)};
 
 export default ${JSON.stringify(labs, null, 2)};
 `;
-    writeFileSync(join(rootDir, 'labs.js'), labsContent);
+    writeFileSync(join(v1Dir, 'labs.js'), labsContent);
     console.log(`✓ Generated labs.js with ${labs.length} labs`);
   }
 
@@ -73,7 +73,7 @@ export default ${JSON.stringify(labs, null, 2)};
 
 export default ${JSON.stringify(sounds, null, 2)};
 `;
-    writeFileSync(join(rootDir, 'sounds.js'), soundsContent);
+    writeFileSync(join(v1Dir, 'sounds.js'), soundsContent);
     console.log(`✓ Generated sounds.js with ${sounds.length} sounds`);
   }
 
@@ -88,7 +88,7 @@ export default ${JSON.stringify(sounds, null, 2)};
 
 export default ${JSON.stringify(gallery, null, 2)};
 `;
-    writeFileSync(join(rootDir, 'gallery.js'), galleryContent);
+    writeFileSync(join(v1Dir, 'gallery.js'), galleryContent);
     console.log(`✓ Generated gallery.js with ${gallery.length} albums`);
   }
 
@@ -102,7 +102,7 @@ export default ${JSON.stringify(gallery, null, 2)};
 
 export default ${JSON.stringify(covers, null, 2)};
 `;
-  writeFileSync(join(rootDir, 'covers.js'), coversContent);
+  writeFileSync(join(v1Dir, 'covers.js'), coversContent);
   console.log(`✓ Generated covers.js with ${covers.length} books`);
 }
 

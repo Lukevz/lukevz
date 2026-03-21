@@ -1,0 +1,12 @@
+{
+  "updatedAt": "2026-03-14",
+  "items": [
+    { "label": "READING",   "value": "Artemis",        "note": "Andy Weir" },
+    { "label": "LISTENING", "value": "Kiss All The Time. Disco, Occasionally.",  "note": "Harry Styles" },
+    { "label": "BUILDING",  "value": "A Digital Garden"},
+    { "label": "WRITING",   "value": "WFH systems" },
+    { "label": "WATCHING",  "value": "Drive To Survive S8" },
+    { "label": "THINKING",  "value": "Slow attention" },
+    { "label": "LOCATION",  "value": "Atlanta, GA" }
+  ]
+}

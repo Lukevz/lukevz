@@ -19,8 +19,36 @@
           .replace(/\*([^*]+)\*/g, '<em>$1</em>');
       }
 
+      let inHTMLBlock = false;
+      let htmlBlockBuf = '';
+      const HTML_BLOCK_TAGS = /^<(iframe|div|figure|video|audio|script|style)[\s>]/i;
+      const HTML_CLOSE_TAGS = /<\/(iframe|div|figure|video|audio|script|style)>/i;
+
       for (const line of lines) {
         const t = line.trim();
+
+        // Accumulate multi-line HTML blocks
+        if (inHTMLBlock) {
+          htmlBlockBuf += '\n' + line;
+          if (HTML_CLOSE_TAGS.test(t)) {
+            html += htmlBlockBuf;
+            htmlBlockBuf = '';
+            inHTMLBlock = false;
+          }
+          continue;
+        }
+
+        // Detect start of an HTML block
+        if (HTML_BLOCK_TAGS.test(t)) {
+          closeUL(); closeOL(); closeBQ();
+          if (HTML_CLOSE_TAGS.test(t)) {
+            html += line; // single-line block
+          } else {
+            htmlBlockBuf = line;
+            inHTMLBlock = true;
+          }
+          continue;
+        }
 
         if (!t) { closeUL(); closeOL(); closeBQ(); continue; }
 
@@ -47,6 +75,7 @@
         }
         else { closeUL(); closeOL(); closeBQ(); html += `<p>${inline(t)}</p>`; }
       }
+      if (inHTMLBlock && htmlBlockBuf) html += htmlBlockBuf;
 
       closeUL(); closeOL(); closeBQ();
       return html;
@@ -103,6 +132,26 @@
       });
     }
 
+    // ── Restructure app buttons: wrap icon + label into app-card-left ──
+    document.querySelectorAll('.app').forEach(btn => {
+      const icon  = btn.querySelector('.app-icon');
+      const right = btn.querySelector('.app-card-right');
+      const appName = btn.dataset.app;
+
+      const left = document.createElement('div');
+      left.className = 'app-card-left';
+
+      const label = document.createElement('span');
+      label.className = 'app-label';
+      label.textContent = appName;
+      label.setAttribute('aria-hidden', 'true');
+
+      left.appendChild(icon);
+      left.appendChild(label);
+
+      btn.prepend(left);
+    });
+
     // ── Entrance ──
     animateHeadingIn(document.querySelector('h1'), 80);
 
@@ -131,7 +180,7 @@
       const oy = (r.top  + r.height / 2) - window.innerHeight / 2;
       panel.style.transformOrigin = `calc(50% + ${ox}px) calc(50% + ${oy}px)`;
 
-      panelTitle.textContent = btn.dataset.app;
+      panelTitle.textContent = btn.dataset.app || panelTitle.textContent;
       backdrop.style.pointerEvents = 'all';
 
       anime.remove([backdrop, panel]);
@@ -141,32 +190,95 @@
 
     // App buttons handled by hash router below
 
-    // ── Case study data (from JSON) ──
-    let caseStudies = {};
-    fetch('/content/studio/index.json')
-      .then(r => r.json())
-      .then(data => { caseStudies = data; })
-      .catch(() => {});
-
+    // ── Case study cards — loaded from content/case-studies/ ──
     const panelContent = document.getElementById('panelContent');
 
-    document.querySelectorAll('.study').forEach(btn => {
+    function parseFrontmatter(md) {
+      const match = md.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
+      if (!match) return { meta: {}, body: md };
+      const meta = {};
+      match[1].split('\n').forEach(line => {
+        const i = line.indexOf(':');
+        if (i > 0) meta[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+      });
+      return { meta, body: match[2] };
+    }
+
+    function buildStudyCard(meta, body) {
+      const btn = document.createElement('button');
+      btn.className = 'study';
+      btn.innerHTML = `
+        <div class="study-card">
+          ${meta.tag ? `<span class="study-tag">${meta.tag}</span>` : ''}
+          <h3 class="study-title">${meta.title || 'Untitled'}</h3>
+        </div>`;
       btn.addEventListener('click', () => {
-        const cs = caseStudies[btn.dataset.case];
-        if (!cs) return;
-        panelTitle.textContent = cs.title;
+        panelTitle.textContent = meta.title || '';
+        const metaRows = ['company', 'role', 'timeline', 'tools']
+          .filter(k => meta[k])
+          .map(k => `<div class="cs-meta-item"><span class="cs-meta-label">${k.charAt(0).toUpperCase()+k.slice(1)}</span><span class="cs-meta-value">${meta[k]}</span></div>`)
+          .join('');
         panelContent.innerHTML = `
-          <div class="cs-meta">
-            <div class="cs-meta-item"><span class="cs-meta-label">Company</span><span class="cs-meta-value">${cs.company}</span></div>
-            <div class="cs-meta-item"><span class="cs-meta-label">Role</span><span class="cs-meta-value">${cs.role}</span></div>
-            <div class="cs-meta-item"><span class="cs-meta-label">Timeline</span><span class="cs-meta-value">${cs.timeline}</span></div>
-            <div class="cs-meta-item"><span class="cs-meta-label">Tools</span><span class="cs-meta-value">${cs.tools}</span></div>
-          </div>
-          <div class="cs-body">${mdToHTML(cs.body)}</div>
-        `;
+          ${metaRows ? `<div class="cs-meta">${metaRows}</div>` : ''}
+          <div class="cs-body">${mdToHTML(body)}</div>`;
         openPanel(btn, btn.querySelector('.study-card'));
       });
-    });
+      return btn;
+    }
+
+    let loadedStudies = [];
+
+    fetch('/api/content/list?category=case-studies')
+      .then(r => r.json())
+      .then(({ items = [] }) => Promise.all(
+        items.map(({ file }) =>
+          fetch(`/content/case-studies/${encodeURIComponent(file)}`)
+            .then(r => r.text())
+            .then(md => { const { meta, body } = parseFrontmatter(md); return { meta, body }; })
+            .catch(() => null)
+        )
+      ))
+      .then(studies => {
+        loadedStudies = studies.filter(Boolean).filter(s => s.meta.title);
+        loadedStudies.forEach(({ meta, body }) => {
+          portfolioGrid.appendChild(buildStudyCard(meta, body));
+        });
+      })
+      .catch(() => {});
+
+    // ── Previously button — opens panel with case study list ──
+    const prevBtn = document.getElementById('prevBtn');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (panelOpen) return;
+        const list = document.createElement('div');
+        list.className = 'prev-list';
+        loadedStudies.forEach(({ meta, body }) => {
+          const item = document.createElement('button');
+          item.className = 'prev-list-item';
+          item.innerHTML = `
+            <span class="cs-company">${meta.company || ''}</span>
+            <span class="prev-item-title">${meta.title}</span>
+            ${meta.tag ? `<span class="kpi-label">${meta.tag}</span>` : ''}`;
+          item.addEventListener('click', () => {
+            panelTitle.textContent = meta.title;
+            const metaRows = ['company', 'role', 'timeline', 'tools']
+              .filter(k => meta[k])
+              .map(k => `<div class="cs-meta-item"><span class="cs-meta-label">${k.charAt(0).toUpperCase() + k.slice(1)}</span><span class="cs-meta-value">${meta[k]}</span></div>`)
+              .join('');
+            panelContent.innerHTML = `
+              ${metaRows ? `<div class="cs-meta">${metaRows}</div>` : ''}
+              <div class="cs-body">${mdToHTML(body)}</div>`;
+            panelContent.scrollTop = 0;
+          });
+          list.appendChild(item);
+        });
+        panelTitle.textContent = 'Previously';
+        panelContent.innerHTML = '';
+        panelContent.appendChild(list);
+        openPanel(prevBtn, prevBtn);
+      });
+    }
 
     function closePanel() {
       if (!panelOpen) return;
@@ -193,39 +305,52 @@
     backdrop.addEventListener('click', e => { if (e.target === backdrop) closePanel(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
 
-    // ── Hire Me toggle ──
-    const hireBtn      = document.getElementById('hireBtn');
+    // ── Mode tab (Life / Work) ──
+    const modeTab      = document.getElementById('modeTab');
+    const tabPill      = modeTab.querySelector('.tab-pill');
+    const tabOpts      = modeTab.querySelectorAll('.tab-opt');
     const avatarImg    = document.getElementById('avatarImg');
     const launchpad    = document.querySelector('.launchpad');
     const portfolioGrid = document.getElementById('portfolioGrid');
     const heading      = document.querySelector('h1');
     // Captured before splitText mutates innerHTML
     const defaultHeadline = "Hi, I'm Luke";
-    const hireHeadline    = 'Senior Product Designer designing <a href="https://instinct.vet/" target="_blank" rel="noopener" class="vet-link">software for veterinarians<svg class="vet-underline" viewBox="0 0 240 8" preserveAspectRatio="none" aria-hidden="true"><path class="vet-path" d="M1,5 C22,2 45,7 75,4 C105,1 128,7 155,4 C180,1 205,6 239,4" fill="none" stroke="#3a3d45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>.';
+    const workHeadline    = 'Designing <a href="https://instinct.vet/" target="_blank" rel="noopener" class="vet-link">software for veterinarians.<svg class="vet-underline" viewBox="0 0 240 8" preserveAspectRatio="none" aria-hidden="true"><path class="vet-path" d="M1,5 C22,2 45,7 75,4 C105,1 128,7 155,4 C180,1 205,6 239,4" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>';
     const descEl          = document.querySelector('.description');
     const defaultDesc     = descEl.innerHTML;
-    const hireDesc        = `I think in systems, design in details, and am always chasing the pattern that makes something complicated feel completely obvious.`;
+    const workDesc        = `I think in systems, design in details, and am always chasing the pattern that makes something complicated feel completely obvious.`;
     let portfolioMode  = false;
 
-    hireBtn.addEventListener('click', () => {
-      portfolioMode = !portfolioMode;
-      hireBtn.classList.toggle('active', portfolioMode);
-      hireBtn.setAttribute('aria-checked', portfolioMode);
-      history.pushState(null, '', portfolioMode ? '?hire' : location.pathname);
+    function positionTabPill(btn) {
+      tabPill.style.width  = btn.offsetWidth + 'px';
+      tabPill.style.transform = `translateX(${btn.offsetLeft - 4}px)`;
+    }
+
+    // Init pill on the active tab
+    requestAnimationFrame(() => positionTabPill(modeTab.querySelector('.tab-opt.active')));
+
+    function setMode(isWork) {
+      if (isWork === portfolioMode) return;
+      portfolioMode = isWork;
+
+      tabOpts.forEach(btn => {
+        const active = btn.dataset.mode === (isWork ? 'work' : 'life');
+        btn.classList.toggle('active', active);
+        if (active) positionTabPill(btn);
+      });
+
+      history.pushState(null, '', isWork ? '?work' : location.pathname);
+      document.body.classList.toggle('work-mode', isWork);
+      if (!isWork) document.getElementById('layout').scrollTo({ top: 0 });
 
       // Swap headshot
       if (avatarImg) {
-        avatarImg.src = portfolioMode ? '/src/img/headshot-work.jpg' : '/src/img/headshot-personal.jpg';
+        avatarImg.src = isWork ? '/src/img/headshot-work.jpg' : '/src/img/headshot-personal.jpg';
       }
 
       // Swap headline + description
       animateHeadingOut(heading, () => {
-        heading.innerHTML = portfolioMode ? hireHeadline : defaultHeadline;
-        // Pre-hide vet-path so it doesn't flash before the char animation finishes
-        if (portfolioMode) {
-          const vp = heading.querySelector('.vet-path');
-          if (vp) { const l = vp.getTotalLength(); vp.style.strokeDasharray = l; vp.style.strokeDashoffset = l; }
-        }
+        heading.innerHTML = isWork ? workHeadline : defaultHeadline;
         animateHeadingIn(heading);
       });
       anime({
@@ -234,9 +359,9 @@
         duration: 180,
         easing: 'easeInQuad',
         complete: () => {
-          descEl.innerHTML = portfolioMode ? hireDesc : defaultDesc;
+          descEl.innerHTML = isWork ? workDesc : defaultDesc;
           anime({ targets: descEl, opacity: 1, duration: 350, easing: 'easeOutQuad' });
-          if (portfolioMode) {
+          if (isWork) {
             const vetPath = descEl.querySelector('.vet-path');
             if (vetPath) {
               const len = vetPath.getTotalLength();
@@ -250,21 +375,20 @@
 
       // Show/hide now strip
       const nowStripEl = document.getElementById('nowStrip');
-      if (nowStripEl) nowStripEl.style.display = portfolioMode ? 'none' : '';
+      if (nowStripEl) nowStripEl.style.display = isWork ? 'none' : '';
 
-      if (portfolioMode) {
+      if (isWork) {
         anime({
           targets: launchpad,
           opacity: 0, scale: 0.95,
           duration: 280, easing: 'easeInQuad',
           complete: () => {
             launchpad.style.display = 'none';
-            // Clear any stale inline styles before showing portfolio
             portfolioGrid.style.opacity = '';
             portfolioGrid.style.transform = '';
             portfolioGrid.style.display = 'grid';
-            anime({ targets: '.study', opacity: [0, 1], translateY: [14, 0], duration: 600,
-              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(55) });
+            anime({ targets: '.study, .kpi', opacity: [0, 1], translateY: [14, 0], duration: 600,
+              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(40) });
           }
         });
       } else {
@@ -274,7 +398,6 @@
           duration: 280, easing: 'easeInQuad',
           complete: () => {
             portfolioGrid.style.display = 'none';
-            // Clear stale inline styles before showing launchpad
             launchpad.style.opacity = '';
             launchpad.style.transform = '';
             launchpad.style.display = 'flex';
@@ -283,6 +406,10 @@
           }
         });
       }
+    }
+
+    tabOpts.forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.dataset.mode === 'work'));
     });
 
     // ── Power → fade to black → version ──
@@ -339,10 +466,10 @@
 
     // ── Icon stroke-draw on hover ──
     const appColors = {
-      'Studio':      '#2B6AFF',
-      'Field Notes': '#FF6420',
-      'Garden':      '#1ED17A',
-      'Northstar':   '#FF3D8B'
+      'Studio':      '#FF6B6B',
+      'Field Notes': '#48D1CC',
+      'Garden':      '#FFD93D',
+      'Northstar':   '#1A3C40'
     };
 
     document.querySelectorAll('.app').forEach(btn => {
@@ -387,12 +514,35 @@
     const sModalBody  = document.getElementById('sModalBody');
     const nowStrip    = document.getElementById('nowStrip');
 
+    // Capture strip rect for expansion animation
+    let _nowStripRect = null;
+    if (nowStrip) {
+      nowStrip.addEventListener('click', () => {
+        _nowStripRect = nowStrip.getBoundingClientRect();
+      }, { capture: true });
+    }
+
     const SECTION_SLUGS = {
       'Studio':      'studio',
       'Field Notes': 'field-notes',
       'Garden':      'garden',
       'Northstar':   'northstar'
     };
+
+    // Fetch post counts and populate .app-count spans
+    Object.entries(SECTION_SLUGS).forEach(([appName, slug]) => {
+      fetch(`/api/content/list?category=${slug}`)
+        .then(r => r.json())
+        .then(data => {
+          const n = (data.items || data.files || []).length;
+          const btn = document.querySelector(`.app[data-app="${appName}"]`);
+          if (btn) {
+            const el = btn.querySelector('.app-count');
+            if (el) el.textContent = `${n} post${n !== 1 ? 's' : ''}`;
+          }
+        })
+        .catch(() => {});
+    });
 
     const SECTIONS = {
       'studio':      { label: 'Studio' },
@@ -425,19 +575,6 @@
       return '';
     }
 
-    function getStudioContent(slug) {
-      const cs = caseStudies[slug];
-      if (cs) return `
-        <div class="cs-meta">
-          <div class="cs-meta-item"><span class="cs-meta-label">Company</span><span class="cs-meta-value">${cs.company}</span></div>
-          <div class="cs-meta-item"><span class="cs-meta-label">Role</span><span class="cs-meta-value">${cs.role}</span></div>
-          <div class="cs-meta-item"><span class="cs-meta-label">Timeline</span><span class="cs-meta-value">${cs.timeline}</span></div>
-          <div class="cs-meta-item"><span class="cs-meta-label">Tools</span><span class="cs-meta-value">${cs.tools}</span></div>
-        </div>
-        <div class="cs-body">${mdToHTML(cs.body)}</div>`;
-      return `<p class="cs-p" style="color:var(--text-muted);font-style:italic;margin-top:8px">Coming soon.</p>`;
-    }
-
     function parseHash() {
       const h = location.hash.slice(1);
       if (!h) return null;
@@ -447,6 +584,107 @@
 
     let indexScrollPos = 0;
     let modalIsOpen = false;
+    const videoCache = {};
+
+    // YouTube handle per section
+    const SECTION_YT_HANDLES = {
+      'field-notes': 'lukevanzylofficial',
+      'studio': 'uxwithluke'
+    };
+
+    function fetchChannelVideos(handle) {
+      if (videoCache[handle]) return Promise.resolve(videoCache[handle]);
+      return fetch(`/api/youtube/channel-videos?handle=${handle}`)
+        .then(r => r.json())
+        .then(({ videos }) => { videoCache[handle] = videos || []; return videoCache[handle]; })
+        .catch(() => []);
+    }
+
+    function attachRowClicks() {
+      setTimeout(() => {
+        sModalBody.scrollTop = indexScrollPos;
+        sModalBody.querySelectorAll('.sm-row').forEach(btn => {
+          btn.addEventListener('click', () => {
+            indexScrollPos = sModalBody.scrollTop;
+            location.hash = `#${btn.dataset.section}/${btn.dataset.slug}`;
+          });
+        });
+      }, 140);
+    }
+
+    function renderMixedIndex(section) {
+      const ytHandle = SECTION_YT_HANDLES[section];
+      fadeSwap(`<div class="sm-list sm-fade sm-loading"><span style="color:var(--text-muted);font-size:0.85rem">Loading…</span></div>`);
+
+      const videosFetch = ytHandle ? fetchChannelVideos(ytHandle) : Promise.resolve([]);
+      const mdFetch = fetch(`/api/content/list?category=${section}`)
+        .then(r => r.json())
+        .then(({ items, files }) => items || (files || []).map(f => ({ file: f, date: '1970-01-01' })))
+        .catch(() => []);
+
+      Promise.all([videosFetch, mdFetch]).then(([videos, mdItems]) => {
+        const allItems = [];
+
+        videos.forEach(v => allItems.push({
+          type: 'video', slug: v.videoId, title: v.title, thumbnail: v.thumbnail, date: v.publishedAt
+        }));
+
+        mdItems.forEach(({ file, date }) => {
+          const name = file.replace(/\.md$/, '');
+          allItems.push({ type: 'md', slug: filenameToSlug(name), title: name, date: date || '1970-01-01' });
+        });
+
+        allItems.sort((a, b) => b.date.localeCompare(a.date));
+
+        if (!allItems.length) {
+          fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-style:italic;margin-top:8px">Nothing here yet.</p></div>`);
+          return;
+        }
+
+        const rows = allItems.map(item => {
+          if (item.type === 'video') {
+            const safeTitle = item.title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `<button class="sm-row sm-row--video" data-section="${section}" data-slug="${item.slug}">
+              <div class="sm-row-thumb-wrap"><img class="sm-row-thumb" src="${item.thumbnail}" alt="" loading="lazy"></div>
+              <span class="sm-row-info">
+                <span class="sm-row-title">${safeTitle}</span>
+                <span class="sm-row-sub">${item.date}</span>
+              </span>
+            </button>`;
+          } else {
+            const safeTitle = item.title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `<button class="sm-row sm-row--article" data-section="${section}" data-slug="${item.slug}">
+              <span class="sm-row-title">${safeTitle}</span>
+              <span class="sm-row-sub">${item.date}</span>
+            </button>`;
+          }
+        }).join('');
+
+        fadeSwap(`<div class="sm-mixed-grid sm-fade">${rows}</div>`);
+        attachRowClicks();
+      });
+    }
+
+    function renderVideoItem(section, videoId) {
+      const handle = SECTION_YT_HANDLES[section];
+      fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-size:0.85rem">Loading…</p></div>`);
+      fetchChannelVideos(handle).then(videos => {
+        const video = videos.find(v => v.videoId === videoId);
+        if (!video) {
+          fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-style:italic">Video not found.</p></div>`);
+          return;
+        }
+        const safeTitle = video.title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const desc = video.description
+          ? `<p style="color:var(--text-muted);font-size:0.85rem;line-height:1.6;white-space:pre-wrap">${video.description.replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 600)}${video.description.length > 600 ? '…' : ''}</p>`
+          : '';
+        const iframe = `<div class="fn-video-wrap"><iframe src="https://www.youtube.com/embed/${videoId}" title="${video.title.replace(/"/g, '&quot;')}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+        fadeSwap(`<div class="sm-fade cs-body"><h1>${safeTitle}</h1>${iframe}${desc}</div>`);
+        setTimeout(() => { sModalBody.scrollTop = 0; }, 140);
+      }).catch(() => {
+        fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-style:italic">Couldn't load video.</p></div>`);
+      });
+    }
 
     function openSModal() {
       if (modalIsOpen) return;
@@ -458,7 +696,7 @@
     function closeSModal() {
       if (!modalIsOpen) return;
       modalIsOpen = false;
-      sModal.classList.remove('sm-open');
+      sModal.classList.remove('sm-open', 'sm-now');
       sModal.style.pointerEvents = 'none';
       history.pushState(null, '', location.pathname + location.search);
     }
@@ -480,29 +718,8 @@
       sModalTitle.textContent = data.label;
       sModalBack.style.display = 'none';
 
-      if (section === 'studio') {
-        const studioItems = [
-          { slug: 'figma-migration',    title: 'Upskilling 120+ Designers: High-Impact Migration to Figma',    sub: 'Design Ops · PwC Digital' },
-          { slug: 'pattern-library',    title: 'Streamlining UX for 50+ Teams: Comprehensive Pattern Library', sub: 'Design Systems · PwC Digital' },
-          { slug: 'modular-generators', title: 'Cutting Design Time by 80% with Modular Generators',           sub: 'Tooling · Blue Corona' },
-          { slug: 'ai-automation',      title: 'Automating UX Workflows for 30% Time Savings',                 sub: 'AI · Automation' }
-        ];
-        const rows = studioItems.map(it =>
-          `<button class="sm-row" data-section="${section}" data-slug="${it.slug}">
-            <span class="sm-row-title">${it.title}</span>
-            <span class="sm-row-sub">${it.sub}</span>
-          </button>`
-        ).join('');
-        fadeSwap(`<div class="sm-list sm-fade">${rows}</div>`);
-        setTimeout(() => {
-          sModalBody.scrollTop = indexScrollPos;
-          sModalBody.querySelectorAll('.sm-row').forEach(btn => {
-            btn.addEventListener('click', () => {
-              indexScrollPos = sModalBody.scrollTop;
-              location.hash = `#${btn.dataset.section}/${btn.dataset.slug}`;
-            });
-          });
-        }, 140);
+      if (section === 'field-notes' || section === 'studio') {
+        renderMixedIndex(section);
         return;
       }
 
@@ -510,16 +727,19 @@
       fadeSwap(`<div class="sm-list sm-fade sm-loading"><span style="color:var(--text-muted);font-size:0.85rem">Loading…</span></div>`);
       fetch(`/api/content/list?category=${section}`)
         .then(r => r.json())
-        .then(({ files }) => {
-          if (!files || !files.length) {
+        .then(({ items, files }) => {
+          const mdItems = items || (files || []).map(f => ({ file: f, date: '1970-01-01' }));
+          mdItems.sort((a, b) => b.date.localeCompare(a.date));
+          if (!mdItems.length) {
             fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-style:italic;margin-top:8px">Nothing here yet.</p></div>`);
             return;
           }
-          const rows = files.map(filename => {
-            const name = filename.replace(/\.md$/, '');
+          const rows = mdItems.map(({ file, date }) => {
+            const name = file.replace(/\.md$/, '');
             const slug = filenameToSlug(name);
-            return `<button class="sm-row" data-section="${section}" data-slug="${slug}" data-filename="${encodeURIComponent(filename)}">
+            return `<button class="sm-row" data-section="${section}" data-slug="${slug}">
               <span class="sm-row-title">${name}</span>
+              <span class="sm-row-sub">${date}</span>
             </button>`;
           }).join('');
           fadeSwap(`<div class="sm-list sm-fade">${rows}</div>`);
@@ -544,10 +764,24 @@
       sModalTitle.textContent = data.label;
       sModalBack.style.display = 'inline-flex';
 
-      if (section === 'studio') {
-        const content = getStudioContent(slug);
-        fadeSwap(`<div class="sm-fade">${content}</div>`);
-        setTimeout(() => { sModalBody.scrollTop = 0; }, 140);
+      if (section === 'field-notes' || section === 'studio') {
+        // YouTube video IDs are 11 chars of base64url
+        if (/^[A-Za-z0-9_-]{11}$/.test(slug)) {
+          renderVideoItem(section, slug);
+          return;
+        }
+        // Markdown article in content/[section]/
+        fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-size:0.85rem">Loading…</p></div>`);
+        fetch(`/api/content/list?category=${section}`)
+          .then(r => r.json())
+          .then(({ items, files }) => {
+            const fileList = items ? items.map(i => i.file) : (files || []);
+            const filename = slugToFilename(slug, fileList);
+            if (!filename) { fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-style:italic">Not found.</p></div>`); return null; }
+            return fetch(`/content/${section}/${encodeURIComponent(filename)}`).then(r => r.text());
+          })
+          .then(md => { if (md) { fadeSwap(`<div class="sm-fade cs-body">${mdToHTML(md)}</div>`); setTimeout(() => { sModalBody.scrollTop = 0; }, 140); } })
+          .catch(() => { fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-style:italic">Couldn't load content.</p></div>`); });
         return;
       }
 
@@ -555,8 +789,9 @@
       fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-size:0.85rem">Loading…</p></div>`);
       fetch(`/api/content/list?category=${section}`)
         .then(r => r.json())
-        .then(({ files }) => {
-          const filename = slugToFilename(slug, files || []);
+        .then(({ items, files }) => {
+          const fileList = items ? items.map(i => i.file) : (files || []);
+          const filename = slugToFilename(slug, fileList);
           if (!filename) {
             fadeSwap(`<div class="sm-fade"><p style="color:var(--text-muted);font-style:italic">Not found.</p></div>`);
             return;
@@ -574,6 +809,7 @@
     }
 
     function renderNowBoard() {
+      sModal.classList.add('sm-now');
       sModalTitle.textContent = 'Now';
       sModalBack.style.display = 'none';
 
@@ -585,7 +821,6 @@
             '<span class="now-board-wordmark">NOW</span>' +
             '<span class="now-board-subtitle">DEPARTURES</span>' +
           '</div>' +
-          '<span class="now-board-airline">LUKE VAN ZYL</span>' +
         '</div>' +
         '<div class="now-board-rows" id="nbRows"></div>' +
         '<div class="now-board-foot">' +
@@ -595,6 +830,22 @@
 
       sModalBody.innerHTML = '';
       sModalBody.appendChild(board);
+
+      // Expansion animation from now strip
+      if (_nowStripRect) {
+        const stripRect = _nowStripRect;
+        _nowStripRect = null;
+        const frameW = window.innerWidth * 0.68;
+        const frameH = window.innerHeight * 0.85;
+        const tx = (stripRect.left + stripRect.width / 2) - window.innerWidth / 2;
+        const ty = (stripRect.top + stripRect.height / 2) - window.innerHeight / 2;
+        const sx = stripRect.width / frameW;
+        const sy = stripRect.height / frameH;
+        sModalFrame.animate([
+          { transform: `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`, borderRadius: '12px', opacity: '0.7' },
+          { transform: 'translate(0, 0) scale(1)', borderRadius: '20px', opacity: '1' }
+        ], { duration: 520, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'none' });
+      }
 
       function makeNbCell(parent) {
         const el = document.createElement('div');
@@ -632,19 +883,19 @@
             fbEl.style.transition = 'none';
             fbEl.style.transform = 'rotateX(90deg)';
             void fbEl.offsetWidth;
-            ftEl.style.transition = 'transform 140ms ease-in';
+            ftEl.style.transition = 'transform 120ms ease-in';
             ftEl.style.transform = 'rotateX(-90deg)';
             setTimeout(() => {
-              fbEl.style.transition = 'transform 140ms ease-out';
+              fbEl.style.transition = 'transform 120ms ease-out';
               fbEl.style.transform = 'rotateX(0deg)';
-            }, 70);
+            }, 60);
             setTimeout(() => {
               cb.textContent = nc;
               fbEl.style.transition = 'none'; fbEl.style.transform = 'rotateX(90deg)';
               ftEl.style.transition = 'none'; ftEl.style.transform = 'rotateX(0deg)';
               ft.textContent = nc;
               resolve();
-            }, 225);
+            }, 192);
           });
         }
         parent.appendChild(el);
@@ -672,7 +923,7 @@
           for (let i = 0; i < MAX; i++) {
             const ch = padded[i];
             if (animate) {
-              const d = baseDelay + i * 88;
+              const d = baseDelay + i * 75;
               promises.push(new Promise(r => setTimeout(() => cells[i].setChar(ch, true).then(r), d)));
             } else {
               cells[i].setChar(ch, false);
@@ -684,7 +935,7 @@
       }
 
       const LABELS = ['READING','LISTENING','BUILDING','WRITING','WATCHING','THINKING','LOCATION'];
-      const ROW_STAGGER = 190;
+      const ROW_STAGGER = 162;
       const rowsEl = board.querySelector('#nbRows');
       const footCellsEl = board.querySelector('#nbFootCells');
 
@@ -692,17 +943,7 @@
       rows.forEach(r => r.setValue('–'.repeat(MAX), false));
 
       function renderFooterDate(dateStr) {
-        footCellsEl.innerHTML = '';
-        const chars = dateStr.replace(/-/g, '·');
-        for (const ch of chars) {
-          const cell = document.createElement('div');
-          cell.className = 'nb-foot-cell';
-          const span = document.createElement('span');
-          span.className = 'nb-foot-char';
-          span.textContent = ch;
-          cell.appendChild(span);
-          footCellsEl.appendChild(cell);
-        }
+        footCellsEl.textContent = dateStr;
       }
 
       fetch('/src/data/now.json')
@@ -783,6 +1024,9 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalIsOpen) doClose(); });
 
     window.addEventListener('hashchange', handleHash);
+
+    // Restore work mode from ?work query param
+    if (location.search === '?work') setMode(true);
 
     // Deep link on load
     handleHash();

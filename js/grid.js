@@ -1,0 +1,164 @@
+(function () {
+
+    /* ── PRNG ── */
+    function prng(seed) {
+      let s = seed >>> 0;
+      return () => {
+        s = Math.imul(s ^ s >>> 15, s | 1);
+        s ^= s + Math.imul(s ^ s >>> 7, s | 61);
+        return ((s ^ s >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    /* ── Grid canvas ── */
+    const canvas = document.getElementById('dotGrid');
+    const ctx    = canvas.getContext('2d');
+    const SP = 28;
+    let cells = [];
+
+    function buildCells(w, h) {
+      const r = prng(8675309);
+      cells = [];
+      for (let bx = SP / 2; bx < w + SP; bx += SP) {
+        for (let by = SP / 2; by < h + SP; by += SP) {
+          const rv = r(), al = 0.10 + r() * 0.06;
+          const tp = rv < 0.50 ? 0 : rv < 0.78 ? 1 : 2; // 0=dot 1=sq 2=slash
+          cells.push({ bx, by, tp, al, sz: tp === 0 ? 0.8 + r() * 0.7 : 1.6 + r() * 1.0, fs: 7 + Math.floor(r() * 4), slash: '/' });
+        }
+      }
+    }
+
+    /* ── Ripples ── */
+    const RPDUR = 1800, RPSPD = 180, RPAMP = 1.8;
+    let ripples = [], lastRp = 0;
+
+    /* ── Hole (content clearing) ── */
+    // Ellipse semi-axes of the fully-clear zone, plus transition width
+    const HOLE_RX   = 240;  // horizontal half-width of the clear zone (px)
+    const HOLE_RY   = 280;  // vertical half-height of the clear zone (px)
+    const HOLE_FADE = 0.9;  // transition width as a fraction of the hole radius
+
+    function holeFade(x, y, cx, cy) {
+      const ex = (x - cx) / HOLE_RX;
+      const ey = (y - cy) / HOLE_RY;
+      const ed = Math.sqrt(ex * ex + ey * ey);
+      if (ed < 1) return 0;
+      if (ed > 1 + HOLE_FADE) return 1;
+      const t = (ed - 1) / HOLE_FADE;
+      return t * t * (3 - 2 * t); // smoothstep
+    }
+
+    /* ── Draw grid ── */
+    function drawGrid(c, w, h, ts) {
+      c.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+      for (const cl of cells) {
+        if (cl.bx > w + SP || cl.by > h + SP) continue;
+        let x = cl.bx, y = cl.by;
+        for (const rp of ripples) {
+          const dt = (ts - rp.t0) / 1000;
+          const d  = Math.hypot(x - rp.x, y - rp.y);
+          const dW = d - dt * RPSPD;
+          const dc = Math.max(0, 1 - (ts - rp.t0) / RPDUR);
+          if (Math.abs(dW) < 36 && dc > 0) {
+            const str = Math.sin(dW * 0.13) * RPAMP * dc;
+            const ang = Math.atan2(y - rp.y, x - rp.x);
+            x += Math.cos(ang) * str;
+            y += Math.sin(ang) * str;
+          }
+        }
+        const alpha = cl.al * holeFade(x, y, cx, cy);
+        if (alpha < 0.004) continue;
+        c.fillStyle = `rgba(58,61,69,${alpha})`;
+        if      (cl.tp === 0) { c.beginPath(); c.arc(x, y, cl.sz, 0, 6.2832); c.fill(); }
+        else if (cl.tp === 1) { c.fillRect(x - cl.sz / 2, y - cl.sz / 2, cl.sz, cl.sz); }
+        else                  { c.font = `${cl.fs}px monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(cl.slash, x, y); }
+      }
+    }
+
+    /* ── Lens ── */
+    const lens       = document.getElementById('lens');
+    const lensCanvas = document.getElementById('lensCanvas');
+    const lc         = lensCanvas.getContext('2d');
+    const LZ = 2.2, LD = 128;
+    lensCanvas.width = lensCanvas.height = LD;
+
+    function drawLens(mx, my) {
+      const sw = LD / LZ;
+      lc.clearRect(0, 0, LD, LD);
+      lc.drawImage(canvas, mx - sw / 2, my - sw / 2, sw, sw, 0, 0, LD, LD);
+    }
+
+    /* ── Custom cursor ── */
+    const cursorEl = document.getElementById('customCursor');
+
+    const PSVG = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none"><path d="M2 8.4C2 6.15979 2 5.03969 2.43597 4.18404C2.81947 3.43139 3.43139 2.81947 4.18404 2.43597C5.03969 2 6.15979 2 8.4 2H15.6C17.8402 2 18.9603 2 19.816 2.43597C20.5686 2.81947 21.1805 3.43139 21.564 4.18404C22 5.03969 22 6.15979 22 8.4V15.6C22 17.8402 22 18.9603 21.564 19.816C21.1805 20.5686 20.5686 21.1805 19.816 21.564C18.9603 22 17.8402 22 15.6 22H8.4C6.15979 22 5.03969 22 4.18404 21.564C3.43139 21.1805 2.81947 20.5686 2.43597 19.816C2 18.9603 2 17.8402 2 15.6V8.4Z" fill="url(#dq_bg)" mask="url(#dq_mask)"></path><path d="M2 8.4C2 6.15979 2 5.03969 2.43597 4.18404C2.81947 3.43139 3.43139 2.81947 4.18404 2.43597C5.03969 2 6.15979 2 8.4 2H15.6C17.8402 2 18.9603 2 19.816 2.43597C20.5686 2.81947 21.1805 3.43139 21.564 4.18404C22 5.03969 22 6.15979 22 8.4V15.6C22 17.8402 22 18.9603 21.564 19.816C21.1805 20.5686 20.5686 21.1805 19.816 21.564C18.9603 22 17.8402 22 15.6 22H8.4C6.15979 22 5.03969 22 4.18404 21.564C3.43139 21.1805 2.81947 20.5686 2.43597 19.816C2 18.9603 2 17.8402 2 15.6V8.4Z" fill="url(#dq_bg)" filter="url(#dq_blur)" clip-path="url(#dq_cp)"></path><path d="M8.24247 10.4549C7.78665 9.087 9.08838 7.78527 10.4563 8.24109L21.7466 12.0045C23.319 12.529 23.3487 14.7428 21.7907 15.3094L17.0385 17.0371L15.3108 21.7894C14.7442 23.3473 12.5304 23.3177 12.0059 21.7452L8.24247 10.4549Z" fill="url(#dq_glass)"></path><path d="M8.2424 10.4549C7.78659 9.08699 9.08833 7.78524 10.4563 8.24106L21.7463 12.0047C23.3188 12.5292 23.3482 14.7429 21.7903 15.3094L17.0383 17.037L15.3108 21.7889L15.2531 21.9305C14.6286 23.2985 12.6473 23.2718 12.0598 21.8875L12.0061 21.745L8.2424 10.4549ZM10.219 8.95297C9.43731 8.69254 8.69388 9.43597 8.95432 10.2176L12.717 21.5077C13.0167 22.406 14.2818 22.4233 14.6057 21.5331L16.3332 16.7811L16.3664 16.7049C16.4515 16.5328 16.6 16.3982 16.7824 16.3319L21.5344 14.6043C22.4247 14.2805 22.4074 13.0153 21.509 12.7157L10.219 8.95297Z" fill="url(#dq_shine)"></path><defs><linearGradient id="dq_bg" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><linearGradient id="dq_glass" x1="8.665" y1="8.664" x2="18.672" y2="18.67" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(227,227,229,0.6)"></stop><stop offset="1" stop-color="rgba(187,187,192,0.6)"></stop></linearGradient><linearGradient id="dq_shine" x1="15.546" y1="8.148" x2="15.546" y2="16.715" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(255,255,255,1)"></stop><stop offset="1" stop-color="rgba(255,255,255,0)"></stop></linearGradient><filter id="dq_blur" x="-100%" y="-100%" width="400%" height="400%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2" in="SourceGraphic" edgeMode="none"></feGaussianBlur></filter><clipPath id="dq_cp"><path d="M8.24247 10.4549C7.78665 9.087 9.08838 7.78527 10.4563 8.24109L21.7466 12.0045C23.319 12.529 23.3487 14.7428 21.7907 15.3094L17.0385 17.0371L15.3108 21.7894C14.7442 23.3473 12.5304 23.3177 12.0059 21.7452L8.24247 10.4549Z"></path></clipPath><mask id="dq_mask"><rect width="100%" height="100%" fill="#FFF"></rect><path d="M8.24247 10.4549C7.78665 9.087 9.08838 7.78527 10.4563 8.24109L21.7466 12.0045C23.319 12.529 23.3487 14.7428 21.7907 15.3094L17.0385 17.0371L15.3108 21.7894C14.7442 23.3473 12.5304 23.3177 12.0059 21.7452L8.24247 10.4549Z" fill="#000"></path></mask></defs></g></svg>`;
+
+    const CSVG = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none"><path d="M12 19.5C12.5522 19.5001 13 19.9478 13 20.5V23C13 23.5522 12.5522 23.9999 12 24C11.4477 24 11 23.5523 11 23V20.5C11 19.9477 11.4477 19.5 12 19.5ZM12 6.5C15.0376 6.5 17.5 8.96243 17.5 12C17.5 15.0375 15.0375 17.5 12 17.5C8.96245 17.5 6.50003 15.0375 6.5 12C6.5 8.96243 8.96243 6.5 12 6.5ZM3.60742 11C4.11155 11.0513 4.50488 11.4774 4.50488 11.9951C4.50482 12.5127 4.11152 12.9389 3.60742 12.9902L3.50488 12.9951H1.00488C0.452639 12.9951 0.00494878 12.5473 0.00488281 11.9951C0.00488281 11.4428 0.452598 10.9951 1.00488 10.9951H3.50488L3.60742 11ZM23.1074 11C23.6115 11.0513 24.0049 11.4774 24.0049 11.9951C24.0048 12.5127 23.6115 12.9389 23.1074 12.9902L23.0049 12.9951H20.5049C19.9526 12.9951 19.5049 12.5473 19.5049 11.9951C19.5049 11.4428 19.9526 10.9951 20.5049 10.9951H23.0049L23.1074 11ZM12 0C12.5522 6.59659e-05 13 0.447756 13 1V3.5C13 4.05224 12.5522 4.49993 12 4.5C11.4477 4.5 11 4.05228 11 3.5V1C11 0.447715 11.4477 0 12 0Z" fill="url(#csvg_parts)" mask="url(#csvg_mask)"></path><path d="M12 19.5C12.5522 19.5001 13 19.9478 13 20.5V23C13 23.5522 12.5522 23.9999 12 24C11.4477 24 11 23.5523 11 23V20.5C11 19.9477 11.4477 19.5 12 19.5ZM12 6.5C15.0376 6.5 17.5 8.96243 17.5 12C17.5 15.0375 15.0375 17.5 12 17.5C8.96245 17.5 6.50003 15.0375 6.5 12C6.5 8.96243 8.96243 6.5 12 6.5ZM3.60742 11C4.11155 11.0513 4.50488 11.4774 4.50488 11.9951C4.50482 12.5127 4.11152 12.9389 3.60742 12.9902L3.50488 12.9951H1.00488C0.452639 12.9951 0.00494878 12.5473 0.00488281 11.9951C0.00488281 11.4428 0.452598 10.9951 1.00488 10.9951H3.50488L3.60742 11ZM23.1074 11C23.6115 11.0513 24.0049 11.4774 24.0049 11.9951C24.0048 12.5127 23.6115 12.9389 23.1074 12.9902L23.0049 12.9951H20.5049C19.9526 12.9951 19.5049 12.5473 19.5049 11.9951C19.5049 11.4428 19.9526 10.9951 20.5049 10.9951H23.0049L23.1074 11ZM12 0C12.5522 6.59659e-05 13 0.447756 13 1V3.5C13 4.05224 12.5522 4.49993 12 4.5C11.4477 4.5 11 4.05228 11 3.5V1C11 0.447715 11.4477 0 12 0Z" fill="url(#csvg_parts)" filter="url(#csvg_blur)" clip-path="url(#csvg_cp)"></path><path d="M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2ZM12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8Z" fill="url(#csvg_glass)"></path><path d="M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2ZM12 2.75C6.89137 2.75 2.75 6.89137 2.75 12C2.75 17.1086 6.89137 21.25 12 21.25C17.1086 21.25 21.25 17.1086 21.25 12C21.25 6.89137 17.1086 2.75 12 2.75Z" fill="url(#csvg_shine)"></path><defs><linearGradient id="csvg_parts" x1="12.005" y1="0" x2="12.005" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(87,87,87,1)"></stop><stop offset="1" stop-color="rgba(21,21,21,1)"></stop></linearGradient><linearGradient id="csvg_glass" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(227,227,229,0.6)"></stop><stop offset="1" stop-color="rgba(187,187,192,0.6)"></stop></linearGradient><linearGradient id="csvg_shine" x1="12" y1="2" x2="12" y2="13.582" gradientUnits="userSpaceOnUse"><stop stop-color="rgba(255,255,255,1)"></stop><stop offset="1" stop-color="rgba(255,255,255,0)"></stop></linearGradient><filter id="csvg_blur" x="-100%" y="-100%" width="400%" height="400%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2" in="SourceGraphic" edgeMode="none"></feGaussianBlur></filter><clipPath id="csvg_cp"><path d="M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2ZM12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8Z"></path></clipPath><mask id="csvg_mask"><rect width="100%" height="100%" fill="#FFF"></rect><path d="M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2ZM12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8Z" fill="#000"></path></mask></defs></g></svg>`;
+
+    let cMode = '';
+    function setCursor(mode) {
+      if (mode === cMode) return;
+      cMode = mode;
+      cursorEl.innerHTML = mode === 'cross' ? CSVG : PSVG;
+      cursorEl.style.transform = mode === 'cross' ? 'translate(-12px,-12px)' : 'translate(-8px,-9px)';
+    }
+    setCursor('pointer');
+
+    /* ── State ── */
+    let mx = -300, my = -300, animating = false;
+
+    /* ── Mouse ── */
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursorEl.style.left = mx + 'px';
+      cursorEl.style.top  = my + 'px';
+      cursorEl.style.opacity = '1';
+
+      const inter = e.target.closest('button,a,input,select,[role=button]');
+      setCursor(inter ? 'cross' : 'pointer');
+    });
+
+    document.addEventListener('mouseleave', () => { cursorEl.style.opacity = '0'; });
+    document.addEventListener('mouseenter', () => { cursorEl.style.opacity = '1'; });
+
+    /* ── Animation loop ── */
+    function startAnim() { animating = true; requestAnimationFrame(tick); }
+
+    function tick(ts) {
+      ripples = ripples.filter(r => ts - r.t0 < RPDUR);
+      drawGrid(ctx, canvas.width, canvas.height, ts);
+      if (ripples.length) {
+        requestAnimationFrame(tick);
+      } else {
+        animating = false;
+        drawGrid(ctx, canvas.width, canvas.height, 0);
+      }
+    }
+
+    /* ── Resize ── */
+    function resize() {
+      canvas.width  = innerWidth;
+      canvas.height = innerHeight;
+      buildCells(canvas.width, canvas.height);
+      if (!animating) drawGrid(ctx, canvas.width, canvas.height, 0);
+    }
+
+    /* ── Slash flipper ── */
+    function flipSlashes() {
+      const slashCells = cells.filter(c => c.tp === 2);
+      if (!slashCells.length) return;
+      const count = 1 + Math.floor(Math.random() * 2); // flip 1–2 at a time
+      for (let i = 0; i < count; i++) {
+        const cell = slashCells[Math.floor(Math.random() * slashCells.length)];
+        cell.slash = cell.slash === '/' ? '\\' : '/';
+      }
+      if (!animating) drawGrid(ctx, canvas.width, canvas.height, 0);
+      setTimeout(flipSlashes, 18000 + Math.random() * 8000); // every 18–26s
+    }
+    setTimeout(flipSlashes, 18000 + Math.random() * 8000);
+
+    resize();
+    window.addEventListener('resize', () => { clearTimeout(canvas._rt); canvas._rt = setTimeout(resize, 100); });
+
+  })();

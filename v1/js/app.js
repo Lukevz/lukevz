@@ -3,25 +3,26 @@
  * Lightweight markdown blog with 3-pane layout
  */
 
-// State
-const state = {
-  posts: [],
-  tags: new Map(),
-  currentTag: 'all',
-  currentPost: null,
-  currentView: null,
-  expandedTags: new Set(), // Track expanded parent tags
-  windows: {
-    openWindows: new Set() // Track which windows are open
-  },
-  thoughtTrains: [],            // Array of parsed train objects
-  currentTrainIndex: 0,         // Currently focused card index
-  filteredTrains: [],           // Trains after tag filtering
-  trainTags: new Map(),         // Tag → count mapping
-  currentTrainTag: 'all',       // Active tag filter
-  isTrainExpanded: false,       // Track if detail view is open
-  labs: []                      // Array of parsed lab objects
-};
+// Import configuration and utilities
+import { tagIcons, musicFolderIcons, weatherIcons } from './config/icons.js';
+import { defaultMusicFolders, hiddenTags, LAST_OPEN_WINDOW_STORAGE_KEY, PLAYLIST_CACHE_DURATION } from './config/constants.js';
+import { state, musicState, lifeStoriesState, projectShredderState } from './config/state.js';
+import { formatDate, filenameToSlug, findPostBySlugInArray } from './utils/dom.js';
+import { setLastOpenWindowId } from './utils/storage.js';
+import { parseMarkdown } from './utils/markdown.js';
+import { parsePost } from './parsers/post-parser.js';
+import { parseThoughtTrain } from './parsers/train-parser.js';
+import { parseLab } from './parsers/lab-parser.js';
+import { parseAlbum } from './parsers/gallery-parser.js';
+
+// Import notes feature modules
+import { buildTagNav } from './features/notes/tag-nav.js';
+import { renderPosts } from './features/notes/note-list.js';
+import { renderNote, closeNote } from './features/notes/note-viewer.js';
+import { getNoteFromUrl, updateNoteUrl } from './features/notes/url-router.js';
+
+// Import gallery feature modules
+import { getAlbumFromUrl, updateAlbumUrl } from './features/gallery/url-router.js';
 
 // DOM Elements
 const elements = {
@@ -40,28 +41,6 @@ const elements = {
 // ==========================================
 // View Management System
 // ==========================================
-
-const LAST_OPEN_WINDOW_STORAGE_KEY = 'lastOpenWindowId';
-
-function getLastOpenWindowId() {
-  try {
-    return localStorage.getItem(LAST_OPEN_WINDOW_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setLastOpenWindowId(windowId) {
-  try {
-    if (!windowId) {
-      localStorage.removeItem(LAST_OPEN_WINDOW_STORAGE_KEY);
-      return;
-    }
-    localStorage.setItem(LAST_OPEN_WINDOW_STORAGE_KEY, windowId);
-  } catch {
-    // ignore
-  }
-}
 
 /**
  * Check if we're on mobile
@@ -84,6 +63,9 @@ function closeWindow(window) {
   const windowId = window.id.replace('View', '');
   window.classList.remove('active');
   state.windows.openWindows.delete(windowId);
+
+  // Clear current view since we're closing it
+  state.currentView = null;
 
   // Update nav icon button state
   const navBtn = document.querySelector(`.nav-icon-btn[data-view="${windowId}"]`);
@@ -153,24 +135,27 @@ async function openWindow(windowId) {
   // Update top menu bar to solid state when app is active
   const topMenuBar = document.getElementById('topMenuBar');
   if (topMenuBar) {
+    console.log('[openWindow] Adding app-active class to topMenuBar');
     topMenuBar.classList.add('app-active');
+  } else {
+    console.warn('[openWindow] topMenuBar element not found');
   }
 
   // Handle special cases for specific windows
   if (windowId === 'notes' && state.posts.length > 0) {
-    const noteFromUrl = getNoteFromUrl();
+    const noteFromUrl = getNoteFromUrl(state.posts);
     if (noteFromUrl) {
       state.currentPost = noteFromUrl;
-      renderNote(noteFromUrl, false);
+      renderNote(noteFromUrl, elements, state, false);
     } else {
       // If no note in URL, always default to Garden Readme first
       const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
       if (defaultPost) {
         state.currentPost = defaultPost;
-        renderNote(defaultPost);
+        renderNote(defaultPost, elements, state);
       } else if (state.currentPost) {
         // Fall back to current post if Garden Readme doesn't exist
-        renderNote(state.currentPost);
+        renderNote(state.currentPost, elements, state);
       }
     }
   }
@@ -183,6 +168,12 @@ async function openWindow(windowId) {
   // Initialize life stories when opened
   if (windowId === 'lifeStories') {
     initLifeStories();
+  }
+
+  // Initialize project shredder when opened
+  if (windowId === 'projectShredder') {
+    console.log('[switchView] Initializing Project Shredder');
+    initProjectShredder();
   }
 
   // Initialize thought train when opened
@@ -201,1060 +192,28 @@ async function openWindow(windowId) {
  */
 function toggleWindow(windowId) {
   if (state.windows.openWindows.has(windowId)) {
-    // If clicking the same view, close it
-    const window = document.getElementById(`${windowId}View`);
-    closeWindow(window);
+    // If clicking the same view, close it and go to home
+    const win = document.getElementById(`${windowId}View`);
+    closeWindow(win);
+    // Clear URL hash
+    window.history.pushState(null, '', window.location.pathname);
   } else {
-    // Close all other views first (single view mode)
-    const openWindows = Array.from(state.windows.openWindows);
-    openWindows.forEach(openWindowId => {
-      if (openWindowId !== windowId) {
-        const win = document.getElementById(`${openWindowId}View`);
-        if (win) closeWindow(win);
-      }
-    });
-    openWindow(windowId);
+    // Use switchView to properly handle URL routing
+    switchView(windowId);
   }
 }
 
-// Tag icons (Lucide icon SVG paths - https://lucide.dev/icons/)
-const tagIcons = {
-  // Default tag icon
-  default: '<path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>',
-
-  // Your actual tags
-  // Briefcase for business
-  business: '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
-  // Video for uxwithluke
-  uxwithluke: '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
-  // Library/notebook for commonplace
-  commonplace: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
-  // Book for books
-  books: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
-  // Quote for quotes
-  quotes: '<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>',
-  // Heart for life
-  life: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
-  // Compass for northstar
-  northstar: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
-  // Circle-check for status
-  status: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
-  // Check-circle for complete
-  complete: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
-  // Pen for writing
-  writing: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
-
-  // Additional common icons
-  // Lightbulb for ideas
-  ideas: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
-  // Folder for projects
-  projects: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
-  // Book for journal
-  journal: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
-  // File text for notes
-  notes: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
-  // Book open for reading
-  reading: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
-  // Code for code
-  code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
-  // Palette for design
-  design: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2Z"/>',
-  // Clipboard for clippings
-  clippings: '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
-  // Languages/book-a for vocab
-  vocab: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
-  // Briefcase for work
-  work: '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
-  // Plane for travel
-  travel: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
-  // Music for music
-  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-  // Camera for photo
-  photo: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
-  // Activity/heart pulse for health
-  health: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-  // Wallet for finance
-  finance: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
-  // Utensils for food
-  food: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
-  // Shopping cart for shopping
-  shopping: '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
-  // Graduation cap for learning
-  learning: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
-  // Dumbbell for fitness
-  fitness: '<path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/>',
-  // Home for home
-  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
-  // Star for star
-  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-  // Archive for archive
-  archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
-  // Bookmark for bookmarks
-  bookmarks: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
-  // Sparkles for inspiration
-  inspiration: '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>',
-  // Podcast for podcasts
-  podcasts: '<path d="M16.85 18.58a9 9 0 1 0-9.7 0"/><path d="M8 14a5 5 0 1 1 8 0"/><circle cx="12" cy="11" r="1"/><path d="M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z"/>'
-};
-
-// Music folder tabs icons
-const musicFolderIcons = {
-  Ambience: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><path d="M7.75,2c-.689,0-1.25,.561-1.25,1.25s.561,1.25,1.25,1.25,1.25-.561,1.25-1.25-.561-1.25-1.25-1.25Z" fill="currentColor"></path><path d="M10.194,6.846l-4.273,5.812c-.486,.66-.014,1.592,.806,1.592H15.273c.82,0,1.291-.932,.806-1.592l-4.273-5.812c-.4-.543-1.212-.543-1.611,0Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><path d="M7.731,10.195l-2.128-2.879c-.3-.406-.906-.406-1.206,0l-2.763,3.738c-.366,.495-.012,1.196,.603,1.196h3.984" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>',
-  Music: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><path d="M9.615,2.382l3.5-.477c.6-.082,1.135,.385,1.135,.991v1.731c0,.5-.369,.923-.865,.991l-4.635,.632V3.373c0-.5,.369-.923,.865-.991Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><line x1="8.75" y1="6.25" x2="8.75" y2="13.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line><circle cx="6" cy="13.5" r="2.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></circle><path d="M4.493,5.742l-.946-.315-.316-.947c-.102-.306-.609-.306-.711,0l-.316,.947-.946,.315c-.153,.051-.257,.194-.257,.356s.104,.305,.257,.356l.946,.315,.316,.947c.051,.153,.194,.256,.355,.256s.305-.104,.355-.256l.316-.947,.946-.315c.153-.051,.257-.194,.257-.356s-.104-.305-.257-.356Z" fill="currentColor"></path><path d="M16.658,10.99l-1.263-.421-.421-1.263c-.137-.408-.812-.408-.949,0l-.421,1.263-1.263,.421c-.204,.068-.342,.259-.342,.474s.138,.406,.342,.474l1.263,.421,.421,1.263c.068,.204,.26,.342,.475,.342s.406-.138,.475-.342l.421-1.263,1.263-.421c.204-.068,.342-.259,.342-.474s-.138-.406-.342-.474Z" fill="currentColor"></path><circle cx="5.25" cy="2.25" r=".75" fill="currentColor"></circle></svg>',
-  Podcasts: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="5.75" y="1.75" width="6.5" height="9.5" rx="3.25" ry="3.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></rect><path d="M15.25,8c0,3.452-2.798,6.25-6.25,6.25h0c-3.452,0-6.25-2.798-6.25-6.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><line x1="9" y1="14.25" x2="9" y2="16.25" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></line></svg>',
-  Sounds: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><rect x="2" y="5" width="2" height="8" rx="1" fill="currentColor"/><rect x="6" y="3" width="2" height="12" rx="1" fill="currentColor"/><rect x="10" y="7" width="2" height="6" rx="1" fill="currentColor"/><rect x="14" y="9" width="2" height="2" rx="1" fill="currentColor"/></svg>'
-};
-
-const defaultMusicFolders = ['Music', 'Podcasts', 'Ambience', 'Sounds'];
 
 /**
- * Lightweight Markdown Parser
+ * Notes Feature Functions
+ * (Modular versions available in ./features/notes/)
  */
-function parseMarkdown(text) {
-  let html = text;
-
-  // Preserve iframes and other allowed HTML elements before escaping
-  const preservedElements = [];
-  const iframePlaceholder = '\u0000\u0001IFRAMEBLOCK';
-
-  // Extract and preserve iframes
-  html = html.replace(/<iframe[^>]*>.*?<\/iframe>/gs, (match) => {
-    preservedElements.push(match);
-    const placeholder = `${iframePlaceholder}${preservedElements.length}\u0001\u0000`;
-    console.log('Preserved iframe:', match.substring(0, 100));
-    console.log('Placeholder:', placeholder);
-    return placeholder;
-  });
-
-  // Escape HTML (but not our placeholders)
-  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // Code blocks (before other transformations)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
-
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Helper function to encode path segments properly
-  function encodePathSegments(path) {
-    // Split by /, encode each segment, then rejoin
-    return path.split('/').map(segment => encodeURIComponent(segment)).join('/');
-  }
-
-  // Helper function to process markdown content (used for blockquotes and regular content)
-  function processMarkdownContent(content) {
-    let processed = content;
-    
-    // Headers
-    processed = processed.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
-    processed = processed.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
-    processed = processed.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
-    
-    // Images - fix Bear export paths (relative paths need posts/ prefix)
-    // Process BEFORE text formatting to prevent mangling of URLs with underscores
-    processed = processed.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-      if (src && !src.startsWith('/') && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:')) {
-        try {
-          // Decode the URL-encoded path from Bear export
-          const decodedPath = decodeURIComponent(src);
-          // Encode each path segment separately to handle special characters like commas
-          const encodedPath = encodePathSegments(decodedPath);
-          // Use absolute path from root to avoid any base path issues
-          src = `/posts/${encodedPath}`;
-        } catch (e) {
-          // If decoding fails, try encoding the original path segment by segment
-          try {
-            const encodedPath = encodePathSegments(src);
-            src = `/posts/${encodedPath}`;
-          } catch (e2) {
-            // Last resort: use original path with absolute path
-            src = `/posts/${src}`;
-          }
-        }
-      }
-      return `<img src="${src}" alt="${alt}" loading="lazy">`;
-    });
-    
-    // Links
-    processed = processed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    
-    // Bold and Italic (process bold before italic to avoid conflicts)
-    processed = processed.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-    processed = processed.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
-    processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    processed = processed.replace(/__(.+?)__/g, '<strong>$1</strong>');
-    processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    processed = processed.replace(/_(.+?)_/g, '<em>$1</em>');
-    
-    // Strikethrough
-    processed = processed.replace(/~~(.+?)~~/g, '<del>$1</del>');
-    
-    return processed;
-  }
-
-  // Process blockquotes FIRST (before other markdown) so we can process markdown inside them
-  // Group consecutive blockquote lines together
-  const blockquoteLines = html.split('\n');
-  const blockquoteProcessedLines = [];
-  let blockquoteContent = [];
-  let inBlockquote = false;
-  
-  function flushBlockquote() {
-    if (blockquoteContent.length > 0) {
-      const content = blockquoteContent.join('\n');
-      const processed = processMarkdownContent(content);
-      // Process lists inside blockquote
-      const listProcessed = processListsInContent(processed);
-      // Process paragraphs inside blockquote
-      const paragraphProcessed = processParagraphsInContent(listProcessed);
-      blockquoteProcessedLines.push(`<blockquote>${paragraphProcessed}</blockquote>`);
-      blockquoteContent = [];
-    }
-    inBlockquote = false;
-  }
-  
-  function processParagraphsInContent(content) {
-    return content.split('\n\n').map(block => {
-      block = block.trim();
-      if (!block) return '';
-      if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') ||
-          block.startsWith('<blockquote') || block.startsWith('<pre') || block.startsWith('<hr') ||
-          block.startsWith('<p>') || block.startsWith(iframePlaceholder)) {
-        return block;
-      }
-      // Wrap in paragraph if not already a block element
-      if (!block.startsWith('<')) {
-        return `<p>${block.replace(/\n/g, '<br>')}</p>`;
-      }
-      return block;
-    }).join('\n');
-  }
-  
-  function processListsInContent(content) {
-    const listContentLines = content.split('\n');
-    const listProcessedLines = [];
-    let inList = false;
-    let listItems = [];
-    let listType = null;
-
-    function flushList() {
-      if (listItems.length > 0) {
-        const tag = listType === 'ordered' ? 'ol' : 'ul';
-        listProcessedLines.push(`<${tag}>${listItems.join('')}</${tag}>`);
-        listItems = [];
-      }
-      inList = false;
-      listType = null;
-    }
-
-    for (const line of listContentLines) {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        if (inList) flushList();
-        listProcessedLines.push('');
-        continue;
-      }
-
-      // Check if line is already HTML (from headers, etc.)
-      if (line.startsWith('<')) {
-        if (inList) flushList();
-        listProcessedLines.push(line);
-        continue;
-      }
-
-      // Check for checkbox items first
-      const checkboxMatch = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.+)$/);
-      const unorderedMatch = !checkboxMatch ? line.match(/^\s*[-*+]\s+(.+)$/) : null;
-      const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
-
-      if (checkboxMatch) {
-        if (listType === 'ordered') flushList();
-        inList = true;
-        listType = 'unordered';
-        const isChecked = checkboxMatch[1].toLowerCase() === 'x';
-        const content = checkboxMatch[2];
-        listItems.push(`<li class="task-item${isChecked ? ' completed' : ''}"><input type="checkbox" ${isChecked ? 'checked' : ''} disabled> ${content}</li>`);
-      } else if (unorderedMatch) {
-        if (listType === 'ordered') flushList();
-        inList = true;
-        listType = 'unordered';
-        listItems.push(`<li>${unorderedMatch[1]}</li>`);
-      } else if (orderedMatch) {
-        if (listType === 'unordered') flushList();
-        inList = true;
-        listType = 'ordered';
-        listItems.push(`<li>${orderedMatch[1]}</li>`);
-      } else {
-        if (inList) flushList();
-        listProcessedLines.push(line);
-      }
-    }
-    flushList();
-    return listProcessedLines.join('\n');
-  }
-  
-  for (let i = 0; i < blockquoteLines.length; i++) {
-    const line = blockquoteLines[i];
-    if (line.startsWith('&gt; ')) {
-      inBlockquote = true;
-      blockquoteContent.push(line.substring(5)); // Remove '&gt; ' prefix
-    } else {
-      if (inBlockquote) {
-        flushBlockquote();
-      }
-      blockquoteProcessedLines.push(line);
-    }
-  }
-  flushBlockquote();
-  
-  html = blockquoteProcessedLines.join('\n');
-
-  // Now process markdown for non-blockquote content
-  // Headers (allow optional space after #)
-  html = html.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
-
-  // Images - fix Bear export paths (relative paths need posts/ prefix)
-  // Process BEFORE text formatting to prevent mangling of URLs with underscores
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-    // If the path is relative (doesn't start with /, http://, or https://), prepend posts/
-    // Bear exports create paths like "Note Name/Image.png" which need to be "posts/Note Name/Image.png"
-    if (src && !src.startsWith('/') && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:')) {
-      // Decode URL-encoded paths (Bear exports use %20 for spaces, etc.)
-      try {
-        const decodedPath = decodeURIComponent(src);
-        // Encode each path segment separately to handle special characters like commas
-        const encodedPath = encodePathSegments(decodedPath);
-        // Use absolute path from root to avoid any base path issues
-        src = `/posts/${encodedPath}`;
-      } catch (e) {
-        // If decoding fails, try encoding the original path segment by segment
-        try {
-          const encodedPath = encodePathSegments(src);
-          src = `/posts/${encodedPath}`;
-        } catch (e2) {
-          // Last resort: use original path with absolute path
-          src = `/posts/${src}`;
-        }
-      }
-    }
-    return `<img src="${src}" alt="${alt}" loading="lazy">`;
-  });
-
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
-  // Bold and Italic
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  html = html.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
-  // Only match italic if not inside quotes (HTML attributes are in quotes)
-  // This prevents matching underscores in img src="..." or other attributes
-  html = html.replace(/_(.+?)_/g, (match, content, offset, fullString) => {
-    // Check if we're inside quotes (HTML attribute)
-    const before = fullString.substring(0, offset);
-    const after = fullString.substring(offset + match.length);
-    // Count unescaped quotes before and after
-    const quotesBefore = (before.match(/[^\\]"/g) || []).length;
-    const quotesAfter = (after.match(/[^\\]"/g) || []).length;
-    // If odd number of quotes before, we're inside an attribute
-    if (quotesBefore % 2 !== 0) {
-      return match; // Return unchanged if inside HTML attribute
-    }
-    return `<em>${content}</em>`;
-  });
-
-  // Strikethrough
-  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
-
-  // Horizontal rules
-  html = html.replace(/^---$/gm, '<hr>');
-  html = html.replace(/^\*\*\*$/gm, '<hr>');
-
-  // Process lists - need to handle before paragraph wrapping
-  // Split into lines to process lists properly
-  const lines = html.split('\n');
-  const processedLines = [];
-  let inUnorderedList = false;
-  let inOrderedList = false;
-  let listItems = [];
-
-  function flushList() {
-    if (listItems.length > 0) {
-      const tag = inOrderedList ? 'ol' : 'ul';
-      processedLines.push(`<${tag}>${listItems.join('')}</${tag}>`);
-      listItems = [];
-    }
-    inUnorderedList = false;
-    inOrderedList = false;
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmedLine = line.trim();
-
-    // Skip empty lines but don't break lists
-    if (!trimmedLine) {
-      // Empty line - flush list if we're in one, but don't add the empty line yet
-      if (inUnorderedList || inOrderedList) {
-        flushList();
-      }
-      processedLines.push('');
-      continue;
-    }
-
-    // Check for checkbox items first (before regular list items)
-    const checkboxMatch = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.+)$/);
-    const unorderedMatch = !checkboxMatch ? line.match(/^\s*[-*+]\s+(.+)$/) : null;
-    const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
-
-    if (checkboxMatch) {
-      if (inOrderedList) {
-        flushList();
-      }
-      inUnorderedList = true;
-      const isChecked = checkboxMatch[1].toLowerCase() === 'x';
-      const content = checkboxMatch[2];
-      listItems.push(`<li class="task-item${isChecked ? ' completed' : ''}"><input type="checkbox" ${isChecked ? 'checked' : ''} disabled> ${content}</li>`);
-    } else if (unorderedMatch) {
-      if (inOrderedList) {
-        flushList();
-      }
-      inUnorderedList = true;
-      listItems.push(`<li>${unorderedMatch[1]}</li>`);
-    } else if (orderedMatch) {
-      if (inUnorderedList) {
-        flushList();
-      }
-      inOrderedList = true;
-      listItems.push(`<li>${orderedMatch[1]}</li>`);
-    } else {
-      // Not a list item - flush any current list
-      if (inUnorderedList || inOrderedList) {
-        flushList();
-      }
-      processedLines.push(line);
-    }
-  }
-  // Flush any remaining list
-  flushList();
-
-  html = processedLines.join('\n');
-
-  // Paragraphs
-  html = html.split('\n\n').map(block => {
-    block = block.trim();
-    if (!block) return '';
-    if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') ||
-        block.startsWith('<blockquote') || block.startsWith('<pre') || block.startsWith('<hr') ||
-        block.startsWith('<p>') || block.startsWith(iframePlaceholder)) {
-      return block;
-    }
-    // Wrap in paragraph if not already a block element
-    if (!block.startsWith('<')) {
-      return `<p>${block.replace(/\n/g, '<br>')}</p>`;
-    }
-    return block;
-  }).join('\n');
-
-  // Restore preserved iframes
-  html = html.replace(/\u0000\u0001IFRAMEBLOCK(\d+)\u0001\u0000/g, (_match, index) => {
-    console.log('Restoring iframe at index:', index);
-    const iframe = preservedElements[parseInt(index) - 1]; // -1 because we used length (1-based) not index (0-based)
-    console.log('Restored iframe:', iframe ? iframe.substring(0, 100) : 'NOT FOUND');
-    return iframe;
-  });
-
-  console.log('Final HTML contains iframe tag:', html.includes('<iframe'));
-
-  return html;
-}
-
-/**
- * Parse Bear-style front matter and tags
- * Bear exports with tags as #tag in the content
- * @param {string} content - The markdown content
- * @param {string} filename - The filename
- * @param {string|null} createdDate - Optional creation date from manifest (original Bear date)
- */
-function parsePost(content, filename, createdDate = null) {
-  const lines = content.split('\n');
-  let title = filename.replace('.md', '');
-  // Use manifest date if provided, otherwise fall back to today
-  let date = createdDate || new Date().toISOString().split('T')[0];
-  const tags = [];
-  let body = content;
-
-  // Check for YAML front matter
-  if (lines[0] === '---') {
-    const endIndex = lines.indexOf('---', 1);
-    if (endIndex !== -1) {
-      const frontMatter = lines.slice(1, endIndex).join('\n');
-      body = lines.slice(endIndex + 1).join('\n');
-
-      // Parse front matter
-      const titleMatch = frontMatter.match(/^title:\s*["']?(.+?)["']?\s*$/m);
-      const dateMatch = frontMatter.match(/^date:\s*["']?(.+?)["']?\s*$/m);
-      const tagsMatch = frontMatter.match(/^tags:\s*\[([^\]]+)\]/m);
-
-      if (titleMatch) title = titleMatch[1];
-      if (dateMatch) date = dateMatch[1];
-      if (tagsMatch) {
-        tagsMatch[1].split(',').forEach(tag => {
-          tags.push(tag.trim().replace(/["']/g, ''));
-        });
-      }
-    }
-  }
-
-  // Extract Bear-style hashtags from body (supports nested tags like #clippings/vocab)
-  const hashtagMatches = body.matchAll(/#([a-zA-Z][\w-]*(?:\/[\w-]+)*)/g);
-  for (const match of hashtagMatches) {
-    const tag = match[1].toLowerCase();
-    if (!tags.includes(tag)) {
-      tags.push(tag);
-    }
-  }
-
-  // Extract title from first H1 if not in front matter
-  const h1Match = body.match(/^#\s+(.+)$/m);
-  if (h1Match && title === filename.replace('.md', '')) {
-    title = h1Match[1];
-    // Remove the first H1 from body since we're using it as title
-    body = body.replace(/^#\s+.+\n?/, '');
-  }
-
-  // Clean hashtags from body for display (supports nested tags)
-  const cleanBody = body.replace(/#([a-zA-Z][\w-]*(?:\/[\w-]+)*)/g, '').trim();
-
-  // Debug: log if this post contains iframe
-  if (cleanBody.includes('<iframe')) {
-    console.log('[PARSE] Post with iframe detected:', filename);
-    console.log('[PARSE] Body contains iframe:', cleanBody.substring(0, 300));
-  }
-
-  // Generate excerpt
-  const excerpt = cleanBody
-    .replace(/[#*_`\[\]]/g, '')
-    .replace(/\n+/g, ' ')
-    .trim()
-    .slice(0, 120) + '...';
-
-  return {
-    title,
-    date,
-    tags: tags.length > 0 ? tags : ['notes'],
-    body: cleanBody,
-    excerpt,
-    filename
-  };
-}
-
-/**
- * Parse Thought Train markdown with custom frontmatter
- * @param {string} content - The markdown content
- * @param {string} filename - The filename
- * @param {string|null} createdDate - Optional creation date from manifest
- */
-function parseThoughtTrain(content, filename, createdDate = null) {
-  let frontmatter = {};
-  let body = content;
-
-  // Extract YAML frontmatter
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (frontmatterMatch) {
-    const yaml = frontmatterMatch[1];
-
-    // Parse YAML fields
-    yaml.split('\n').forEach(line => {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex === -1) return;
-
-      const key = line.substring(0, colonIndex).trim();
-      const value = line.substring(colonIndex + 1).trim();
-
-      if (!key || !value) return;
-
-      // Handle arrays (route field)
-      if (value.startsWith('[') && value.endsWith(']')) {
-        try {
-          // Parse array, handling both single and double quotes
-          const arrayContent = value.slice(1, -1);
-          frontmatter[key] = arrayContent
-            .split(',')
-            .map(item => item.trim().replace(/^["']|["']$/g, ''))
-            .filter(item => item.length > 0);
-        } catch (e) {
-          frontmatter[key] = [];
-        }
-      } else {
-        // Remove quotes from string values
-        frontmatter[key] = value.replace(/^["']|["']$/g, '');
-      }
-    });
-
-    body = content.replace(frontmatterMatch[0], '').trim();
-  }
-
-  // Extract Bear hashtags from body
-  const hashtagMatches = body.matchAll(/#([a-zA-Z][\w-]*(?:\/[\w-]+)*)/g);
-  const tags = [...new Set([
-    ...(frontmatter.tags || []),
-    ...Array.from(hashtagMatches, m => m[1])
-  ])];
-
-  // Clean body of hashtags for display
-  const cleanBody = body.replace(/#([a-zA-Z][\w-]*(?:\/[\w-]+)*)/g, '').trim();
-
-  return {
-    title: frontmatter.title || filename.replace('.md', ''),
-    date: frontmatter.date || createdDate || new Date().toISOString().split('T')[0],
-    startPoint: frontmatter.startPoint || '',
-    endPoint: frontmatter.endPoint || '',
-    route: Array.isArray(frontmatter.route) ? frontmatter.route : [],
-    takeaways: frontmatter.takeaways || '',
-    quote: frontmatter.quote || '',
-    whyCared: frontmatter.whyCared || '',
-    nextRabbitHole: frontmatter.nextRabbitHole || '',
-    tags,
-    body: cleanBody,
-    filename
-  };
-}
-
-/**
- * Parse lab markdown file with frontmatter
- */
-function parseLab(content, filename, createdDate = null) {
-  let frontmatter = {};
-  let body = content;
-
-  // Extract YAML frontmatter
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (frontmatterMatch) {
-    const yaml = frontmatterMatch[1];
-
-    // Parse YAML fields
-    yaml.split('\n').forEach(line => {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex === -1) return;
-
-      const key = line.substring(0, colonIndex).trim();
-      const value = line.substring(colonIndex + 1).trim();
-
-      if (!key || !value) return;
-
-      // Handle arrays
-      if (value.startsWith('[') && value.endsWith(']')) {
-        try {
-          const arrayContent = value.slice(1, -1);
-          frontmatter[key] = arrayContent
-            .split(',')
-            .map(item => item.trim().replace(/^["']|["']$/g, ''))
-            .filter(item => item.length > 0);
-        } catch (e) {
-          frontmatter[key] = [];
-        }
-      } else {
-        // Remove quotes from string values
-        frontmatter[key] = value.replace(/^["']|["']$/g, '');
-      }
-    });
-
-    body = content.replace(frontmatterMatch[0], '').trim();
-  }
-
-  return {
-    title: frontmatter.title || filename.replace('.md', ''),
-    description: frontmatter.description || '',
-    thumbnail: frontmatter.thumbnail || '',
-    url: frontmatter.url || '',
-    view: frontmatter.view || '',
-    tags: frontmatter.tags || [],
-    date: frontmatter.date || createdDate || new Date().toISOString().split('T')[0],
-    body,
-    filename
-  };
-}
-
-// Tags to hide from the sidebar (internal/system tags)
-const hiddenTags = ['status'];
-
-/**
- * Build tag navigation from posts with nested tag support
- */
-function buildTagNav() {
-  state.tags.clear();
-
-  // Count posts per tag (excluding hidden tags)
-  state.posts.forEach(post => {
-    post.tags.forEach(tag => {
-      // Skip hidden tags and their children
-      const rootTag = tag.split('/')[0];
-      if (hiddenTags.includes(rootTag)) return;
-      state.tags.set(tag, (state.tags.get(tag) || 0) + 1);
-    });
-  });
-
-  // Build hierarchical tag tree
-  const tagTree = {};
-  for (const [tag, count] of state.tags.entries()) {
-    const parts = tag.split('/');
-    let current = tagTree;
-    let path = '';
-
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      path = path ? `${path}/${part}` : part;
-
-      if (!current[part]) {
-        current[part] = {
-          _fullPath: path,
-          _count: 0,
-          _children: {}
-        };
-      }
-
-      // Only set count on the actual tag, not intermediate paths
-      if (i === parts.length - 1) {
-        current[part]._count = count;
-      }
-
-      current = current[part]._children;
-    }
-  }
-
-  // Render tag tree recursively
-  function renderTagTree(tree, depth = 0) {
-    const entries = Object.entries(tree)
-      .filter(([key]) => !key.startsWith('_'))
-      .sort((a, b) => a[0].localeCompare(b[0]));
-
-    return entries.map(([name, node]) => {
-      const hasChildren = Object.keys(node._children).length > 0;
-      const iconPath = tagIcons[node._fullPath] || tagIcons[name] || tagIcons.default;
-      const displayName = name.charAt(0).toUpperCase() + name.slice(1);
-      const isExpanded = state.expandedTags?.has(node._fullPath) ?? true;
-
-      let html = `
-        <li class="tag-tree-item" data-depth="${depth}">
-          <div class="tag-item-row">
-            ${hasChildren ? `
-              <button class="tag-toggle ${isExpanded ? 'expanded' : ''}" data-tag-path="${node._fullPath}" aria-label="Toggle ${displayName}">
-                <svg class="icon-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="9 18 15 12 9 6"/>
-                </svg>
-              </button>
-            ` : '<span class="tag-toggle-spacer"></span>'}
-            <button class="tag-item${depth > 0 ? ' nested' : ''}" data-tag="${node._fullPath}">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                ${iconPath}
-              </svg>
-              <span>${displayName}</span>
-            </button>
-          </div>
-          ${hasChildren ? `
-            <ul class="tag-children ${isExpanded ? '' : 'collapsed'}">
-              ${renderTagTree(node._children, depth + 1)}
-            </ul>
-          ` : ''}
-        </li>
-      `;
-      return html;
-    }).join('');
-  }
-
-  const tagButtons = renderTagTree(tagTree);
-
-  // Find Garden Readme post
-  const gardenReadme = state.posts.find(p => p.filename === 'Garden Readme.md');
-  const gardenReadmeButton = gardenReadme ? `
-    <li>
-      <button class="tag-item garden-readme-item" data-filename="${gardenReadme.filename}" aria-label="Open ${gardenReadme.title}">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <span>Readme</span>
-      </button>
-    </li>
-  ` : '';
-
-  // Count total notes (excluding Garden Readme)
-  const totalNotes = state.posts.filter(post => post.filename !== 'Garden Readme.md').length;
-
-  // Keep "All Notes", add Garden Readme, then add tags
-  elements.tagList.innerHTML = `
-    <li>
-      <button class="tag-item active" data-tag="all" aria-current="true">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        <span>All Notes</span>
-        <span class="tag-count" id="allNotesCount">${totalNotes}</span>
-      </button>
-    </li>
-    ${gardenReadmeButton}
-    ${tagButtons}
-  `;
-}
-
-/**
- * Render post list
- */
-function renderPosts(tag = 'all') {
-  // Include all posts (including Garden Readme)
-  const filtered = tag === 'all'
-    ? state.posts
-    : state.posts.filter(post =>
-        post.tags.some(t => t === tag || t.startsWith(tag + '/'))
-      );
-
-  // Update count in sidebar for "All Notes"
-  if (tag === 'all') {
-    const allNotesCount = document.getElementById('allNotesCount');
-    if (allNotesCount) {
-      allNotesCount.textContent = filtered.length;
-    }
-  }
-
-  // Update tag buttons
-  document.querySelectorAll('.tag-item').forEach(btn => {
-    const isActive = btn.dataset.tag === tag;
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-current', isActive ? 'true' : 'false');
-  });
-
-  // Clear Garden Readme active state when a tag is selected
-  const gardenReadmeBtn = document.querySelector('.garden-readme-item');
-  if (gardenReadmeBtn) {
-    gardenReadmeBtn.classList.remove('active');
-    gardenReadmeBtn.removeAttribute('aria-current');
-  }
-
-  if (filtered.length === 0) {
-    elements.postsList.innerHTML = `
-      <li class="empty-state">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-        </svg>
-        <p>No notes found</p>
-      </li>
-    `;
-    return;
-  }
-
-  // Sort by date (newest first)
-  const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  elements.postsList.innerHTML = sorted.map(post => `
-    <li class="post-item${state.currentPost?.filename === post.filename ? ' active' : ''}"
-        data-filename="${post.filename}"
-        tabindex="0"
-        role="button"
-        aria-label="Open ${post.title}">
-      <h3 class="post-item-title">${post.title}</h3>
-      <time class="post-item-date" datetime="${post.date}">${formatDate(post.date)}</time>
-    </li>
-  `).join('');
-}
-
-/**
- * Render note view
- */
-function renderNote(post, updateUrl = true) {
-  if (!post) {
-    elements.noteEmpty.classList.remove('hidden');
-    elements.noteContent.classList.add('hidden');
-    if (updateUrl) {
-      updateNoteUrl(null);
-    }
-    return;
-  }
-
-  elements.noteEmpty.classList.add('hidden');
-  elements.noteContent.classList.remove('hidden');
-
-  elements.noteTitle.textContent = post.title;
-  elements.noteDate.textContent = formatDate(post.date);
-  elements.noteDate.setAttribute('datetime', post.date);
-
-  // Filter out status/complete and other status/* tags from display
-  const visibleTags = post.tags.filter(tag => {
-    const rootTag = tag.split('/')[0];
-    return !hiddenTags.includes(rootTag);
-  });
-  
-  elements.noteTags.innerHTML = visibleTags
-    .map(tag => `<span class="note-tag">#${tag}</span>`)
-    .join('');
-
-  const parsedContent = parseMarkdown(post.body);
-  console.log('[NOTE] Post body length:', post.body.length);
-  console.log('[NOTE] Post body contains <iframe:', post.body.includes('<iframe'));
-  console.log('[NOTE] Parsed content length:', parsedContent.length);
-  console.log('[NOTE] Parsed content contains <iframe:', parsedContent.includes('<iframe'));
-  console.log('[NOTE] First 500 chars of parsed:', parsedContent.substring(0, 500));
-  elements.noteBody.innerHTML = parsedContent;
-
-  // Add back button for mobile
-  if (!document.querySelector('.note-back')) {
-    const backBtn = document.createElement('button');
-    backBtn.className = 'note-back';
-    backBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      <span>Back</span>
-    `;
-    
-    // Track if touch was used to prevent double-firing
-    let touchUsed = false;
-    
-    // Handle touch events for better mobile responsiveness
-    backBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      touchUsed = true;
-      closeNote();
-      // Reset flag after a short delay
-      setTimeout(() => { touchUsed = false; }, 300);
-    });
-    
-    // Handle click for desktop and as fallback
-    backBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      // Skip if touch already handled this
-      if (touchUsed) return;
-      closeNote();
-    });
-    
-    elements.noteView.insertBefore(backBtn, elements.noteView.firstChild);
-  }
-
-  // Show note view on mobile
-  elements.noteView.classList.add('active');
-
-  // Update post list active state
-  document.querySelectorAll('.post-item').forEach(item => {
-    item.classList.toggle('active', item.dataset.filename === post.filename);
-  });
-
-  // Update Garden Readme button active state
-  const gardenReadmeBtn = document.querySelector('.garden-readme-item');
-  if (gardenReadmeBtn) {
-    const isGardenReadme = post.filename === 'Garden Readme.md';
-    gardenReadmeBtn.classList.toggle('active', isGardenReadme);
-    gardenReadmeBtn.setAttribute('aria-current', isGardenReadme ? 'true' : 'false');
-    
-    // Also update tag buttons to remove active state when Garden Readme is open
-    if (isGardenReadme) {
-      document.querySelectorAll('.tag-item:not(.garden-readme-item)').forEach(btn => {
-        btn.classList.remove('active');
-        btn.removeAttribute('aria-current');
-      });
-    }
-  }
-
-  // Scroll to top of note
-  elements.noteView.scrollTop = 0;
-
-  // Update URL to reflect current note
-  if (updateUrl) {
-    updateNoteUrl(post);
-  }
-}
-
-/**
- * Close note view (mobile)
- */
-function closeNote() {
-  if (elements.noteView) {
-    elements.noteView.classList.remove('active');
-  }
-  state.currentPost = null;
-  document.querySelectorAll('.post-item').forEach(item => {
-    item.classList.remove('active');
-  });
-  // Update URL to clear note hash
-  updateNoteUrl(null);
-}
-
-/**
- * Format date for display
- */
-function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
-/**
- * Convert filename to URL-safe slug
- */
-function filenameToSlug(filename) {
-  if (!filename) return '';
-  // Remove .md extension
-  let slug = filename.replace(/\.md$/i, '');
-  // Replace spaces and special chars with hyphens
-  slug = slug.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-  return slug;
-}
 
 /**
  * Find post by slug
  */
 function findPostBySlug(slug) {
   return state.posts.find(post => filenameToSlug(post.filename) === slug);
-}
-
-/**
- * Get current note from URL hash
- * Expected format: #note/slug or #note/slug?tag=tagname
- */
-function getNoteFromUrl() {
-  const hash = window.location.hash;
-  if (!hash || !hash.startsWith('#note/')) return null;
-
-  // Extract slug (everything after #note/ until ? or end)
-  const match = hash.match(/#note\/([^?]+)/);
-  if (!match) return null;
-
-  const slug = match[1];
-  return findPostBySlug(slug);
-}
-
-/**
- * Update URL to reflect current note
- */
-function updateNoteUrl(post) {
-  if (!post) {
-    // Clear the note hash but keep the view
-    const hash = window.location.hash;
-    if (hash.startsWith('#note/')) {
-      window.history.pushState(null, '', '#notes');
-    }
-    return;
-  }
-
-  const slug = filenameToSlug(post.filename);
-  const newHash = `#note/${slug}`;
-
-  // Only update if different from current hash
-  if (window.location.hash !== newHash) {
-    window.history.pushState(null, '', newHash);
-  }
 }
 
 /**
@@ -1318,8 +277,8 @@ function setupEventListeners() {
       const post = state.posts.find(p => p.filename === filename);
       if (post) {
         state.currentPost = post;
-        renderNote(post);
-        
+        renderNote(post, elements, state);
+
         // Update active states
         document.querySelectorAll('.tag-item').forEach(btn => {
           btn.classList.remove('active');
@@ -1342,8 +301,24 @@ function setupEventListeners() {
     const tagBtn = e.target.closest('.tag-item');
     if (tagBtn) {
       e.preventDefault();
-      state.currentTag = tagBtn.dataset.tag;
-      renderPosts(state.currentTag);
+      const tagPath = tagBtn.dataset.tag;
+      state.currentTag = tagPath;
+
+      // If this is a parent tag with children, auto-expand it
+      const tagRow = tagBtn.closest('.tag-item-row');
+      if (tagRow) {
+        const toggleBtn = tagRow.querySelector('.tag-toggle');
+        if (toggleBtn && !state.expandedTags.has(tagPath)) {
+          state.expandedTags.add(tagPath);
+          toggleBtn.classList.add('expanded');
+          const childList = toggleBtn.closest('.tag-tree-item').querySelector('.tag-children');
+          if (childList) {
+            childList.classList.remove('collapsed');
+          }
+        }
+      }
+
+      renderPosts(state, elements.postsList, state.currentTag);
 
       // Update active states
       document.querySelectorAll('.tag-item').forEach(btn => {
@@ -1355,7 +330,7 @@ function setupEventListeners() {
 
       // Close note view if open on mobile
       if (window.innerWidth <= 1024 && elements.noteView && elements.noteView.classList.contains('active')) {
-        closeNote();
+        closeNote(elements, state);
       }
 
       // Close sidebar on mobile
@@ -1376,7 +351,7 @@ function setupEventListeners() {
       const post = state.posts.find(p => p.filename === postItem.dataset.filename);
       if (post) {
         state.currentPost = post;
-        renderNote(post);
+        renderNote(post, elements, state);
 
         // On mobile, close sidebar after selecting a post
         if (window.innerWidth <= 768) {
@@ -1402,7 +377,7 @@ function setupEventListeners() {
       if (tagBtn) {
         // Update state and filter posts
         state.currentTag = tagText;
-        renderPosts(tagText);
+        renderPosts(state, elements.postsList, tagText);
 
         // Update active states
         document.querySelectorAll('.tag-item').forEach(btn => {
@@ -1414,7 +389,7 @@ function setupEventListeners() {
 
         // Close note view if open on mobile
         if (window.innerWidth <= 1024 && elements.noteView && elements.noteView.classList.contains('active')) {
-          closeNote();
+          closeNote(elements, state);
         }
 
         // Close sidebar on mobile
@@ -1449,23 +424,53 @@ function setupEventListeners() {
       if (sidebar.classList.contains('open')) {
         toggleSidebar();
       } else if (elements.noteView.classList.contains('active') && window.innerWidth <= 1024) {
-        closeNote();
+        closeNote(elements, state);
       }
     }
   });
 
   // Handle browser back/forward navigation
   window.addEventListener('popstate', () => {
-    const noteFromUrl = getNoteFromUrl();
+    const viewFromUrl = getViewFromUrl();
+    const noteFromUrl = getNoteFromUrl(state.posts);
+    const albumId = getAlbumFromUrl();
+
     if (noteFromUrl) {
       state.currentPost = noteFromUrl;
-      renderNote(noteFromUrl, false); // Don't update URL since we're responding to URL change
+      renderNote(noteFromUrl, elements, state, false); // Don't update URL since we're responding to URL change
       // Switch to notes view if not already there
       if (state.currentView !== 'notes') {
-        performViewSwitch('notes');
+        performViewSwitch('notes', false);
+      }
+    } else if (albumId) {
+      // Handle gallery album deep links
+      // Switch to gallery view if not already there
+      if (state.currentView !== 'gallery') {
+        performViewSwitch('gallery', false);
+      }
+      // Expand the album (or collapse if going back to gallery grid)
+      const isCurrentlyExpanded = document.getElementById('galleryView')?.classList.contains('album-expanded');
+      if (isCurrentlyExpanded && !albumId) {
+        collapseAlbum();
+      } else if (albumId) {
+        expandAlbum(albumId);
+      }
+    } else if (viewFromUrl === 'gallery') {
+      // User navigated back to gallery grid (no album in URL)
+      if (state.currentView !== 'gallery') {
+        performViewSwitch('gallery', false);
+      }
+      // Collapse album if one is expanded
+      if (document.getElementById('galleryView')?.classList.contains('album-expanded')) {
+        collapseAlbum();
+      }
+    } else if (viewFromUrl) {
+      // Switch to the view from URL without updating URL (we're responding to URL change)
+      if (state.currentView !== viewFromUrl) {
+        performViewSwitch(viewFromUrl, false);
       }
     } else {
-      // No note in URL, close note view on mobile/tablet
+      // No view in URL, close note view on mobile/tablet
       // This handles the case where user presses browser back button
       if (elements.noteView && elements.noteView.classList.contains('active')) {
         elements.noteView.classList.remove('active');
@@ -1491,7 +496,7 @@ function setupEventListeners() {
 async function loadPosts() {
   try {
     // Load posts manifest
-    const postsModule = await import('./posts.js');
+    const postsModule = await import('../posts.js');
     const postFiles = postsModule.default || postsModule.posts || [];
 
     // Load each post
@@ -1513,28 +518,28 @@ async function loadPosts() {
     }
 
     // Build UI
-    buildTagNav();
-    renderPosts();
+    buildTagNav(state, elements.tagList);
+    renderPosts(state, elements.postsList);
 
-    // Always start on homepage - clear any stray hashes
-    if (window.location.hash && window.location.hash !== '#home') {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
+    // Check if there's a view or note in the URL
+    const viewFromUrl = getViewFromUrl();
+    const noteFromUrl = getNoteFromUrl(state.posts);
 
-    // If there's a note in the URL, prepare it for when user opens notes view
-    // but don't automatically open the notes window
-    const noteFromUrl = getNoteFromUrl();
     if (noteFromUrl) {
+      // Note URL found - open that note in notes view
       state.currentPost = noteFromUrl;
-      // Don't render or open anything - just prepare the state
+      performViewSwitch('notes', false);
+    } else if (viewFromUrl) {
+      // View URL found - switch to that view
+      performViewSwitch(viewFromUrl, false);
     } else {
-      // On desktop, preload Garden Readme for notes view but stay on home
+      // No URL hash - stay on homepage
+      // On desktop, preload Garden Readme for notes view
       if (window.innerWidth > 1024 && state.posts.length > 0) {
         const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
         const sorted = [...state.posts].sort((a, b) => new Date(b.date) - new Date(a.date));
         const postToOpen = defaultPost || sorted[0];
         state.currentPost = postToOpen;
-        // Don't render the note here - let it be opened when user clicks notes
       }
     }
   } catch (err) {
@@ -1557,7 +562,7 @@ async function loadPosts() {
  */
 async function loadThoughtTrains() {
   try {
-    const { default: manifest } = await import('./thought-trains.js');
+    const { default: manifest } = await import('../thought-trains.js');
 
     const trains = await Promise.all(
       manifest.map(async ({ file, created }) => {
@@ -1604,7 +609,7 @@ function buildTrainTagMap() {
  */
 async function loadLabs() {
   try {
-    const { default: manifest } = await import('./labs.js');
+    const { default: manifest } = await import('../labs.js');
 
     const labs = await Promise.all(
       manifest.map(async ({ file, created }) => {
@@ -1639,12 +644,15 @@ function renderLabsGrid() {
   const container = document.getElementById('labsGrid');
   if (!container) return;
 
-  if (state.labs.length === 0) {
+  // Filter out hidden labs
+  const visibleLabs = state.labs.filter(lab => lab.filename !== 'Project Shredder.md');
+
+  if (visibleLabs.length === 0) {
     container.innerHTML = '<div class="labs-empty">No labs yet</div>';
     return;
   }
 
-  container.innerHTML = state.labs.map(lab => `
+  container.innerHTML = visibleLabs.map(lab => `
     <div class="labs-card" data-lab="${lab.filename}" ${lab.url ? `data-url="${lab.url}"` : ''} ${lab.view ? `data-view="${lab.view}"` : ''}>
       <div class="labs-card-thumbnail">
         ${lab.thumbnail
@@ -1715,6 +723,735 @@ function openLabsModal(filename) {
  */
 function closeLabsModal() {
   document.getElementById('labsModal').setAttribute('aria-hidden', 'true');
+}
+
+// ==========================================
+// Gallery Functions
+// ==========================================
+
+/**
+ * Load gallery albums
+ */
+async function loadGallery() {
+  try {
+    const { default: manifest } = await import('../gallery.js');
+
+    state.gallery.albums = manifest
+      .map(parseAlbum)
+      .sort((a, b) => {
+        // Parse dates from the date field (extracted from folder name)
+        // Format can be "December 2025", "October 2025", or just "2024"
+        const parseAlbumDate = (album) => {
+          if (!album.date) return new Date(0); // Albums without dates go to end
+
+          // Match "Month Year" or just "Year"
+          const monthYear = album.date.match(/^([A-Za-z]+)\s+(\d{4})$/);
+          const yearOnly = album.date.match(/^(\d{4})$/);
+
+          if (monthYear) {
+            // Parse "December 2025" format
+            return new Date(`${monthYear[1]} 1, ${monthYear[2]}`);
+          } else if (yearOnly) {
+            // Parse "2024" format - assume January
+            return new Date(`January 1, ${yearOnly[1]}`);
+          }
+
+          return new Date(0);
+        };
+
+        return parseAlbumDate(b) - parseAlbumDate(a); // Reverse chronological
+      });
+
+    renderGalleryGrid();
+  } catch (err) {
+    console.warn('Gallery manifest not found:', err);
+    state.gallery.albums = [];
+  }
+}
+
+/**
+ * Render gallery grid (polaroid stack cards)
+ */
+function renderGalleryGrid() {
+  const container = document.getElementById('galleryGrid');
+  if (!container) return;
+
+  if (state.gallery.albums.length === 0) {
+    container.innerHTML = '<div class="gallery-empty">No albums yet</div>';
+    return;
+  }
+
+  // Render album stacks (each shows up to 3 images stacked like polaroids)
+  // First image (KEY) should be on top with the caption
+  // Use thumbnails for faster loading
+  container.innerHTML = state.gallery.albums.map(album => {
+    const previewThumbs = album.thumbs.slice(0, 3); // Top 3 thumbs for stack
+    // Reverse so first image (KEY) is rendered last (on top)
+    const stackThumbs = [...previewThumbs].reverse();
+
+    return `
+      <div class="gallery-album-card" data-album-id="${album.id}">
+        <div class="polaroid-stack">
+          ${stackThumbs.map((thumb, i) => `
+            <div class="polaroid" style="--stack-index: ${i}">
+              <div class="polaroid-photo">
+                <img src="${thumb}" alt="${album.title}" loading="lazy">
+              </div>
+              ${i === stackThumbs.length - 1 ? `
+                <div class="polaroid-caption">
+                  <div class="polaroid-title">${album.title}</div>
+                  ${album.date ? `<div class="polaroid-date">${album.date}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Expand album (transition to grid view)
+ */
+function expandAlbum(albumId) {
+  const album = state.gallery.albums.find(a => a.id === albumId);
+  if (!album) return;
+
+  state.gallery.activeAlbum = album;
+
+  const container = document.getElementById('galleryExpanded');
+  const title = document.getElementById('galleryExpandedTitle');
+  const subtitle = document.getElementById('galleryExpandedSubtitle');
+
+  title.textContent = album.title;
+  subtitle.textContent = album.date;
+
+  // Render the photo grid
+  renderExpandedAlbum();
+
+  // Show expanded view with transition
+  document.getElementById('galleryView').classList.add('album-expanded');
+  container.setAttribute('aria-hidden', 'false');
+
+  // Update URL to enable deep linking
+  updateAlbumUrl(albumId);
+}
+
+/**
+ * Collapse album (back to stack view)
+ */
+function collapseAlbum() {
+  state.gallery.activeAlbum = null;
+
+  document.getElementById('galleryView').classList.remove('album-expanded');
+  document.getElementById('galleryExpanded').setAttribute('aria-hidden', 'true');
+
+  // Clear album from URL
+  updateAlbumUrl(null);
+}
+
+/**
+ * Open lightbox
+ */
+function openLightbox(index) {
+  if (!state.gallery.activeAlbum) return;
+
+  state.gallery.lightboxIndex = index;
+  const img = state.gallery.activeAlbum.images[index];
+
+  const lightbox = document.getElementById('galleryLightbox');
+  const lightboxImg = document.getElementById('galleryLightboxImg');
+
+  lightboxImg.src = img;
+  lightbox.setAttribute('aria-hidden', 'false');
+}
+
+/**
+ * Close lightbox
+ */
+function closeLightbox() {
+  state.gallery.lightboxIndex = -1;
+  document.getElementById('galleryLightbox').setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Navigate lightbox (prev/next)
+ */
+function navigateLightbox(direction) {
+  if (!state.gallery.activeAlbum) return;
+
+  const newIndex = state.gallery.lightboxIndex + direction;
+  const maxIndex = state.gallery.activeAlbum.images.length - 1;
+
+  if (newIndex >= 0 && newIndex <= maxIndex) {
+    openLightbox(newIndex);
+  }
+}
+
+/**
+ * Extract EXIF data from an image
+ */
+async function extractExifData(imagePath) {
+  // Check cache first
+  if (state.gallery.exifCache.has(imagePath)) {
+    return state.gallery.exifCache.get(imagePath);
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    // Don't set crossOrigin for local files to avoid CORS issues
+    // img.crossOrigin = 'Anonymous';
+
+    img.onload = function() {
+      // Use EXIF.js library (loaded globally)
+      if (typeof EXIF !== 'undefined') {
+        EXIF.getData(img, function() {
+          const make = EXIF.getTag(this, 'Make');
+          const model = EXIF.getTag(this, 'Model');
+          const iso = EXIF.getTag(this, 'ISOSpeedRatings');
+          const aperture = EXIF.getTag(this, 'FNumber');
+          const shutterSpeed = EXIF.getTag(this, 'ExposureTime');
+          const focalLength = EXIF.getTag(this, 'FocalLength');
+
+          const exifData = {
+            make: make || null,
+            model: model || null,
+            iso: iso || null,
+            aperture: aperture || null,
+            shutterSpeed: shutterSpeed || null,
+            focalLength: focalLength || null
+          };
+
+          // Cache the result
+          state.gallery.exifCache.set(imagePath, exifData);
+          resolve(exifData);
+        });
+      } else {
+        console.warn('EXIF library not loaded');
+        resolve(null);
+      }
+    };
+
+    img.onerror = (e) => {
+      console.error('Failed to load image for EXIF:', imagePath, e);
+      resolve(null);
+    };
+
+    img.src = imagePath;
+  });
+}
+
+/**
+ * Format EXIF data for display
+ */
+function formatExifData(exif) {
+  if (!exif) return '';
+
+  const lines = [];
+
+  // Line 1: Camera make/model
+  if (exif.make && exif.model) {
+    lines.push(`${exif.make} ${exif.model}`);
+  } else if (exif.model) {
+    lines.push(exif.model);
+  }
+
+  // Line 2: Settings (ISO, aperture, shutter, focal length)
+  const settings = [];
+
+  if (exif.focalLength) {
+    settings.push(`${exif.focalLength}mm`);
+  }
+
+  if (exif.aperture) {
+    settings.push(`f/${exif.aperture}`);
+  }
+
+  if (exif.shutterSpeed) {
+    if (exif.shutterSpeed < 1) {
+      settings.push(`1/${Math.round(1 / exif.shutterSpeed)}s`);
+    } else {
+      settings.push(`${exif.shutterSpeed}s`);
+    }
+  }
+
+  if (exif.iso) {
+    settings.push(`ISO ${exif.iso}`);
+  }
+
+  if (settings.length > 0) {
+    lines.push(settings.join(' • '));
+  }
+
+  return lines.join('<br>');
+}
+
+/**
+ * Toggle nerd mode (EXIF display)
+ */
+function toggleNerdMode() {
+  state.gallery.nerdMode = !state.gallery.nerdMode;
+  console.log('Nerd mode toggled:', state.gallery.nerdMode);
+
+  // Update toggle button state
+  const toggleBtn = document.getElementById('galleryNerdModeToggle');
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('active', state.gallery.nerdMode);
+  }
+
+  // Save to localStorage
+  localStorage.setItem('galleryNerdMode', JSON.stringify(state.gallery.nerdMode));
+
+  // Re-render the current album if one is active
+  if (state.gallery.activeAlbum) {
+    console.log('Re-rendering album with nerd mode:', state.gallery.nerdMode);
+    renderExpandedAlbum();
+  }
+}
+
+/**
+ * Render the expanded album grid with EXIF support
+ */
+async function renderExpandedAlbum() {
+  const album = state.gallery.activeAlbum;
+  if (!album) return;
+
+  const grid = document.getElementById('galleryExpandedGrid');
+  console.log('Rendering album, nerd mode:', state.gallery.nerdMode);
+
+  // Render photo grid with random slight rotations
+  // Use thumbnails for faster loading in grid view
+  const photoCards = await Promise.all(album.thumbs.map(async (thumb, i) => {
+    const rotation = (Math.random() - 0.5) * 6; // -3 to +3 degrees
+    const fullImage = album.images[i];
+
+    // Extract EXIF if nerd mode is enabled
+    let exifHtml = '';
+    let hasExifClass = '';
+    if (state.gallery.nerdMode) {
+      console.log('Extracting EXIF for:', fullImage);
+      const exifData = await extractExifData(fullImage);
+      console.log('EXIF data:', exifData);
+      const formattedExif = formatExifData(exifData);
+      console.log('Formatted EXIF:', formattedExif);
+      if (formattedExif) {
+        exifHtml = `<div class="polaroid-exif">${formattedExif}</div>`;
+        hasExifClass = 'has-exif';
+      }
+    }
+
+    return `
+      <div class="gallery-photo-card"
+           data-index="${i}"
+           style="transform: rotate(${rotation}deg)">
+        <div class="polaroid ${hasExifClass}">
+          <div class="polaroid-photo">
+            <img src="${thumb}" alt="${album.title} photo ${i + 1}" loading="lazy">
+          </div>
+          ${exifHtml}
+        </div>
+      </div>
+    `;
+  }));
+
+  grid.innerHTML = photoCards.join('');
+  console.log('Album rendered');
+}
+
+/**
+ * Setup gallery interactions
+ */
+function setupGalleryInteractions() {
+  // Album card clicks
+  const grid = document.getElementById('galleryGrid');
+  grid?.addEventListener('click', (e) => {
+    const card = e.target.closest('.gallery-album-card');
+    if (card) {
+      expandAlbum(card.dataset.albumId);
+    }
+  });
+
+  // Photo clicks (open lightbox)
+  const expandedGrid = document.getElementById('galleryExpandedGrid');
+  expandedGrid?.addEventListener('click', (e) => {
+    const photoCard = e.target.closest('.gallery-photo-card');
+    if (photoCard) {
+      openLightbox(parseInt(photoCard.dataset.index));
+    }
+  });
+
+  // Back button
+  document.getElementById('galleryBackBtn')?.addEventListener('click', collapseAlbum);
+
+  // Nerd mode toggle
+  document.getElementById('galleryNerdModeToggle')?.addEventListener('click', toggleNerdMode);
+
+  // Lightbox controls
+  document.getElementById('galleryLightboxClose')?.addEventListener('click', closeLightbox);
+  document.getElementById('galleryLightboxPrev')?.addEventListener('click', () => navigateLightbox(-1));
+  document.getElementById('galleryLightboxNext')?.addEventListener('click', () => navigateLightbox(1));
+
+  // Lightbox overlay click to close
+  document.getElementById('galleryLightbox')?.querySelector('.gallery-lightbox-overlay')?.addEventListener('click', closeLightbox);
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const lightbox = document.getElementById('galleryLightbox');
+    if (lightbox?.getAttribute('aria-hidden') === 'false') {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') navigateLightbox(-1);
+      if (e.key === 'ArrowRight') navigateLightbox(1);
+    }
+  });
+}
+
+// ==========================================
+// Guestbook Functions
+// ==========================================
+
+/**
+ * Canvas drawing state
+ */
+const guestbookDrawing = {
+  isDrawing: false,
+  lastX: 0,
+  lastY: 0,
+  currentColor: '#ffffff',
+  lineWidth: 3
+};
+
+/**
+ * Initialize guestbook canvas
+ */
+function initGuestbookCanvas() {
+  const canvas = document.getElementById('guestbookCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+
+  // Set canvas display size (CSS pixels)
+  canvas.style.width = '800px';
+  canvas.style.height = '600px';
+
+  // Set actual canvas size (device pixels for retina support)
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 800 * dpr;
+  canvas.height = 600 * dpr;
+
+  // Scale context to match DPR
+  ctx.scale(dpr, dpr);
+
+  // Dark space background with stars
+  fillCanvasBackground(ctx, canvas);
+
+  state.guestbook.drawingCanvas = canvas;
+
+  // Mouse events
+  canvas.addEventListener('mousedown', startDrawing);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDrawing);
+  canvas.addEventListener('mouseout', stopDrawing);
+
+  // Touch events for mobile
+  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+  canvas.addEventListener('touchend', stopDrawing);
+}
+
+/**
+ * Fill canvas background (black)
+ */
+function fillCanvasBackground(ctx, canvas) {
+  const width = 800;
+  const height = 600;
+
+  // Fill with black background
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, width, height);
+}
+
+/**
+ * Drawing functions
+ */
+function startDrawing(e) {
+  guestbookDrawing.isDrawing = true;
+  const canvas = state.guestbook.drawingCanvas;
+  const rect = canvas.getBoundingClientRect();
+
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
+  guestbookDrawing.lastX = (e.clientX - rect.left) * scaleX;
+  guestbookDrawing.lastY = (e.clientY - rect.top) * scaleY;
+}
+
+function draw(e) {
+  if (!guestbookDrawing.isDrawing) return;
+
+  const canvas = state.guestbook.drawingCanvas;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  ctx.beginPath();
+  ctx.moveTo(guestbookDrawing.lastX, guestbookDrawing.lastY);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = guestbookDrawing.currentColor;
+  ctx.lineWidth = guestbookDrawing.lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  guestbookDrawing.lastX = x;
+  guestbookDrawing.lastY = y;
+}
+
+function stopDrawing() {
+  guestbookDrawing.isDrawing = false;
+}
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const canvas = state.guestbook.drawingCanvas;
+  const rect = canvas.getBoundingClientRect();
+
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
+  guestbookDrawing.isDrawing = true;
+  guestbookDrawing.lastX = (touch.clientX - rect.left) * scaleX;
+  guestbookDrawing.lastY = (touch.clientY - rect.top) * scaleY;
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (!guestbookDrawing.isDrawing) return;
+
+  const touch = e.touches[0];
+  const canvas = state.guestbook.drawingCanvas;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+
+  // Calculate coordinates with proper scaling
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+
+  const x = (touch.clientX - rect.left) * scaleX;
+  const y = (touch.clientY - rect.top) * scaleY;
+
+  ctx.beginPath();
+  ctx.moveTo(guestbookDrawing.lastX, guestbookDrawing.lastY);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = guestbookDrawing.currentColor;
+  ctx.lineWidth = guestbookDrawing.lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  guestbookDrawing.lastX = x;
+  guestbookDrawing.lastY = y;
+}
+
+/**
+ * Clear canvas
+ */
+function clearGuestbookCanvas() {
+  const canvas = state.guestbook.drawingCanvas;
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  fillCanvasBackground(ctx, canvas);
+}
+
+/**
+ * Save drawing to API
+ */
+async function saveGuestbookDrawing() {
+  const canvas = state.guestbook.drawingCanvas;
+  if (!canvas) return;
+
+  const saveBtn = document.getElementById('saveDrawing');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span>Saving...</span>';
+  }
+
+  try {
+    // Convert canvas to base64 PNG
+    const imageData = canvas.toDataURL('image/png');
+
+    // Save to API
+    const response = await fetch('/api/guestbook/stars', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        imageData,
+        width: canvas.width,
+        height: canvas.height
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save star');
+    }
+
+    // Success! Clear canvas and switch to gallery view
+    clearGuestbookCanvas();
+    switchGuestbookMode('gallery');
+
+    // Reload gallery to show new star
+    await loadGuestbookStars(1);
+
+  } catch (err) {
+    console.error('Error saving star:', err);
+    alert('Failed to save your star. Please try again.');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg><span>Save to Gallery</span>';
+    }
+  }
+}
+
+/**
+ * Load stars from API
+ */
+async function loadGuestbookStars(page = 1) {
+  try {
+    const response = await fetch(`/api/guestbook/stars?page=${page}`);
+    if (!response.ok) throw new Error('Failed to load stars');
+
+    const data = await response.json();
+
+    state.guestbook.stars = data.stars || [];
+    state.guestbook.currentPage = data.page || 1;
+    state.guestbook.totalPages = data.totalPages || 1;
+
+    renderGuestbookGallery();
+
+  } catch (err) {
+    console.error('Error loading stars:', err);
+    state.guestbook.stars = [];
+    renderGuestbookGallery();
+  }
+}
+
+/**
+ * Render gallery grid
+ */
+function renderGuestbookGallery() {
+  const grid = document.getElementById('guestbookGalleryGrid');
+  if (!grid) return;
+
+  if (state.guestbook.stars.length === 0) {
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 64px;">No stars yet. Be the first to draw one!</div>';
+    return;
+  }
+
+  grid.innerHTML = state.guestbook.stars.map(star => `
+    <div class="guestbook-star-card">
+      <img src="${star.imageData}" alt="Star drawing from ${new Date(star.createdAt).toLocaleDateString()}" loading="lazy">
+    </div>
+  `).join('');
+
+  // Update pagination
+  updateGuestbookPagination();
+}
+
+/**
+ * Update pagination controls
+ */
+function updateGuestbookPagination() {
+  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+
+  if (pageInfo) {
+    pageInfo.textContent = `Page ${state.guestbook.currentPage} of ${state.guestbook.totalPages}`;
+  }
+
+  if (prevBtn) {
+    prevBtn.disabled = state.guestbook.currentPage === 1;
+  }
+
+  if (nextBtn) {
+    nextBtn.disabled = state.guestbook.currentPage >= state.guestbook.totalPages;
+  }
+}
+
+/**
+ * Switch between draw and gallery modes
+ */
+function switchGuestbookMode(mode) {
+  state.guestbook.viewMode = mode;
+
+  const drawPanel = document.getElementById('guestbookDrawPanel');
+  const galleryPanel = document.getElementById('guestbookGalleryPanel');
+
+  document.querySelectorAll('.guestbook-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  if (mode === 'draw') {
+    drawPanel?.classList.remove('hidden');
+    galleryPanel?.classList.add('hidden');
+  } else {
+    drawPanel?.classList.add('hidden');
+    galleryPanel?.classList.remove('hidden');
+    loadGuestbookStars(state.guestbook.currentPage);
+  }
+}
+
+/**
+ * Setup guestbook interactions
+ */
+function setupGuestbookInteractions() {
+  // Mode toggle buttons
+  document.querySelectorAll('.guestbook-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchGuestbookMode(btn.dataset.mode);
+    });
+  });
+
+  // Color palette
+  document.querySelectorAll('.palette-color').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.palette-color').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      guestbookDrawing.currentColor = btn.dataset.color;
+    });
+  });
+
+  // Clear button
+  document.getElementById('clearCanvas')?.addEventListener('click', clearGuestbookCanvas);
+
+  // Save button
+  document.getElementById('saveDrawing')?.addEventListener('click', saveGuestbookDrawing);
+
+  // Pagination
+  document.getElementById('prevPage')?.addEventListener('click', () => {
+    if (state.guestbook.currentPage > 1) {
+      loadGuestbookStars(state.guestbook.currentPage - 1);
+    }
+  });
+
+  document.getElementById('nextPage')?.addEventListener('click', () => {
+    if (state.guestbook.currentPage < state.guestbook.totalPages) {
+      loadGuestbookStars(state.guestbook.currentPage + 1);
+    }
+  });
 }
 
 /**
@@ -2096,6 +1833,57 @@ function setupThoughtTrainInteractions() {
 }
 
 /**
+ * Update URL to reflect current view
+ * @param {string} viewName - Name of the view
+ */
+function updateViewUrl(viewName) {
+  // Special handling for notes view - preserve note hash if present
+  if (viewName === 'notes' && window.location.hash.startsWith('#note/')) {
+    // Don't change URL if we're already showing a specific note
+    return;
+  }
+
+  // Special handling for gallery view - preserve album hash if present
+  if (viewName === 'gallery' && window.location.hash.startsWith('#gallery/')) {
+    // Don't change URL if we're already showing a specific album
+    return;
+  }
+
+  const newHash = `#${viewName}`;
+
+  // Only update if different from current hash
+  if (window.location.hash !== newHash) {
+    window.history.pushState(null, '', newHash);
+  }
+}
+
+/**
+ * Get current view from URL hash
+ * @returns {string|null} - View name or null
+ */
+function getViewFromUrl() {
+  const hash = window.location.hash;
+  if (!hash || hash === '#') return null;
+
+  // Handle note URLs specially
+  if (hash.startsWith('#note/')) {
+    return 'notes';
+  }
+
+  // Handle gallery album URLs specially
+  if (hash.startsWith('#gallery/')) {
+    return 'gallery';
+  }
+
+  // Extract view name (remove # prefix)
+  const viewName = hash.substring(1);
+
+  // Validate it's a real view
+  const validViews = ['tasks', 'notes', 'music', 'labs', 'gallery'];
+  return validViews.includes(viewName) ? viewName : null;
+}
+
+/**
  * Switch between views (tasks, notes, music)
  * Uses CSS fade transition for smooth, mobile-friendly effect
  */
@@ -2109,7 +1897,9 @@ function switchView(viewName) {
 /**
  * Perform the actual view switch
  */
-function performViewSwitch(viewName) {
+function performViewSwitch(viewName, updateUrl = true) {
+  console.log('[performViewSwitch] Switching to view:', viewName);
+
   // Update view visibility and window tracking
   document.querySelectorAll('.view').forEach(view => {
     view.classList.remove('active');
@@ -2129,22 +1919,33 @@ function performViewSwitch(viewName) {
     btn.classList.toggle('active', btn.dataset.view === viewName);
   });
 
+  // Update top menu bar to solid state when app is active
+  const topMenuBar = document.getElementById('topMenuBar');
+  if (topMenuBar) {
+    topMenuBar.classList.add('app-active');
+  }
+
+  // Update URL to reflect current view
+  if (updateUrl) {
+    updateViewUrl(viewName);
+  }
+
   // When switching to notes view, check URL first, then default to Garden Readme
   if (viewName === 'notes' && state.posts.length > 0) {
-    const noteFromUrl = getNoteFromUrl();
+    const noteFromUrl = getNoteFromUrl(state.posts);
     if (noteFromUrl) {
       // If there's a note in the URL, open that
       state.currentPost = noteFromUrl;
-      renderNote(noteFromUrl, false);
+      renderNote(noteFromUrl, elements, state, false);
     } else {
       // If no note in URL, always default to Garden Readme first
       const defaultPost = state.posts.find(p => p.filename === 'Garden Readme.md');
       if (defaultPost) {
         state.currentPost = defaultPost;
-        renderNote(defaultPost);
+        renderNote(defaultPost, elements, state);
       } else if (state.currentPost) {
         // Fall back to current post if Garden Readme doesn't exist
-        renderNote(state.currentPost);
+        renderNote(state.currentPost, elements, state);
       }
     }
   }
@@ -2154,12 +1955,35 @@ function performViewSwitch(viewName) {
     initLifeStories();
   }
 
+  // Initialize project shredder when switching to it
+  if (viewName === 'projectShredder') {
+    console.log('[performViewSwitch] Initializing Project Shredder');
+    initProjectShredder();
+  }
+
   // Initialize thought train when switching to it
   if (viewName === 'thoughtTrain') {
     if (state.thoughtTrains.length === 0) {
       loadThoughtTrains().then(() => renderThoughtTrainCards());
     } else {
       renderThoughtTrainCards();
+    }
+  }
+
+  // Initialize guestbook when switching to it
+  if (viewName === 'guestbook') {
+    if (!state.guestbook.drawingCanvas) {
+      initGuestbookCanvas();
+    }
+    switchGuestbookMode(state.guestbook.viewMode || 'draw');
+  }
+
+  // When switching to gallery view, check URL for album deep link
+  if (viewName === 'gallery' && state.gallery.albums.length > 0) {
+    const albumId = getAlbumFromUrl();
+    if (albumId) {
+      // If there's an album in the URL, expand it
+      expandAlbum(albumId);
     }
   }
 
@@ -2503,15 +2327,73 @@ function setupVersionChangelog() {
 }
 
 /**
- * Load and render goals from goals.md
+ * Check if a year's goals file exists
  */
-async function loadGoals() {
+async function checkYearExists(year) {
+  try {
+    const filename = `${year} Goals.md`;
+    const response = await fetch(filename, { method: 'HEAD' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Discover available year tabs by checking for files
+ */
+async function discoverYearTabs() {
+  const yearsToCheck = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+  const availableYears = [];
+
+  for (const year of yearsToCheck) {
+    const exists = await checkYearExists(year);
+    if (exists) {
+      availableYears.push(year);
+    }
+  }
+
+  // Always include 2026 for loading state
+  if (!availableYears.includes(2026)) {
+    availableYears.unshift(2026);
+  }
+
+  return availableYears;
+}
+
+/**
+ * Render year tabs dynamically
+ */
+async function renderYearTabs() {
+  const header = document.querySelector('.tasks-header');
+  if (!header) return;
+
+  const years = await discoverYearTabs();
+
+  header.innerHTML = years.map((year, index) => {
+    const isActive = index === 0 ? 'active' : '';
+    return `<button class="tasks-year-btn ${isActive}" data-year="${year}">
+      <span>${year}</span>
+    </button>`;
+  }).join('');
+
+  // Re-initialize event listeners after rendering
+  initTasksYearTabs();
+
+  return years;
+}
+
+/**
+ * Load and render goals from year-specific markdown file
+ */
+async function loadGoals(year = '2025') {
   const container = document.getElementById('tasksContainer');
   if (!container) return;
 
   try {
-    const response = await fetch('goals.md');
-    if (!response.ok) throw new Error('Failed to load goals.md');
+    const filename = `${year} Goals.md`;
+    const response = await fetch(filename);
+    if (!response.ok) throw new Error(`Failed to load ${filename}`);
 
     const content = await response.text();
     const lines = content.split('\n');
@@ -2522,11 +2404,14 @@ async function loadGoals() {
 
     const flushList = () => {
       if (listItems.length > 0 && currentSection) {
-        html += `<section class="tasks-section">
+        const isHabitsSection = currentSection.toLowerCase() === 'habits';
+        const statusLabel = isHabitsSection ? 'Progress' : 'Status';
+
+        html += `<section class="tasks-section${isHabitsSection ? ' habits-section' : ''}">
           <div class="tasks-section-header">
             <span class="tasks-section-header-number">#</span>
             <h2 class="tasks-section-header-title">${currentSection}</h2>
-            <span class="tasks-section-header-status">Status</span>
+            <span class="tasks-section-header-status">${statusLabel}</span>
           </div>
           <ul class="tasks-list">
             ${listItems.join('')}
@@ -2539,10 +2424,13 @@ async function loadGoals() {
     for (const line of lines) {
       const trimmed = line.trim();
 
-      // H1 header = section title
-      if (trimmed.startsWith('# ')) {
+      // H2 header = section title (supports both # and ## for backwards compatibility)
+      if (trimmed.startsWith('## ') || (trimmed.startsWith('# ') && !trimmed.startsWith('## '))) {
         flushList();
-        currentSection = trimmed.slice(2);
+        let sectionTitle = trimmed.startsWith('## ') ? trimmed.slice(3) : trimmed.slice(2);
+        // Override year-based headings to just show the section name
+        sectionTitle = sectionTitle.replace(/^\d{4}\s+/, ''); // Remove "2024 " prefix
+        currentSection = sectionTitle;
         rowNumber = 0; // Reset row number for each section
       }
       // Checkbox list item: - [x] or - [ ]
@@ -2550,16 +2438,59 @@ async function loadGoals() {
         rowNumber++;
         const isChecked = trimmed.startsWith('- [x]');
         let text = trimmed.slice(6); // Remove "- [x] " or "- [ ] "
-        // Parse markdown links [text](url)
-        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-        const statusClass = isChecked ? 'completed' : 'pending';
-        listItems.push(`
-          <li class="task-item${isChecked ? ' completed' : ''}">
-            <span class="task-row-number">${rowNumber}</span>
-            <span class="task-text">${text}</span>
-            <span class="task-status-indicator ${statusClass}"></span>
-          </li>
-        `);
+
+        // Check if this is a habit item (has progress in parentheses)
+        const isHabit = currentSection && currentSection.toLowerCase() === 'habits';
+        const progressMatch = text.match(/^\((\d+(?:,\d+)*)\s*\/\s*(\d+(?:,\d+)*)\)\s*(.+)$/);
+
+        if (isHabit && progressMatch) {
+          // Parse habit with progress bar
+          const current = parseInt(progressMatch[1].replace(/,/g, ''));
+          const total = parseInt(progressMatch[2].replace(/,/g, ''));
+          const habitText = progressMatch[3];
+          const percentage = Math.min(100, Math.round((current / total) * 100));
+
+          // Format numbers with "k" suffix for thousands and "M" for millions
+          const formatNumber = (num) => {
+            if (num >= 1000000) {
+              return (num / 1000000).toFixed(num >= 10000000 ? 0 : 1).replace(/\.0$/, '') + 'M';
+            }
+            if (num >= 1000) {
+              return (num / 1000).toFixed(num >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k';
+            }
+            return num.toString();
+          };
+
+          const formattedCurrent = formatNumber(current);
+          const formattedTotal = formatNumber(total);
+
+          // Parse markdown links in habit text
+          const parsedText = habitText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+          listItems.push(`
+            <li class="task-item habit-item">
+              <span class="task-row-number">${rowNumber}</span>
+              <span class="task-text">${parsedText}</span>
+              <div class="habit-progress">
+                <div class="habit-progress-bar">
+                  <div class="habit-progress-fill" style="width: ${percentage}%"></div>
+                </div>
+                <span class="habit-progress-text">${formattedCurrent}/${formattedTotal}</span>
+              </div>
+            </li>
+          `);
+        } else {
+          // Regular task item
+          text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+          const statusClass = isChecked ? 'completed' : 'pending';
+          listItems.push(`
+            <li class="task-item${isChecked ? ' completed' : ''}">
+              <span class="task-row-number">${rowNumber}</span>
+              <span class="task-text">${text}</span>
+              <span class="task-status-indicator ${statusClass}"></span>
+            </li>
+          `);
+        }
       }
       // Regular list item: - text (active/in-progress items)
       else if (trimmed.startsWith('- ')) {
@@ -2580,9 +2511,56 @@ async function loadGoals() {
     flushList();
     container.innerHTML = html;
   } catch (err) {
-    console.warn('Could not load goals.md:', err);
-    container.innerHTML = '<p class="empty-state">Add goals to goals.md</p>';
+    console.warn(`Could not load ${year} Goals.md:`, err);
+    // Show loading bar for future years (2026+)
+    if (parseInt(year) >= 2026) {
+      container.innerHTML = `
+        <div class="tasks-loading-state">
+          <div class="loading-squares">
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+            <div class="loading-square"></div>
+          </div>
+          <p class="loading-text">Planning ${year}...</p>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `<p class="empty-state">Add goals to ${year} Goals.md</p>`;
+    }
   }
+}
+
+/**
+ * Switch between task years
+ */
+function switchTasksYear(year) {
+  // Update active button state
+  document.querySelectorAll('.tasks-year-btn').forEach(btn => {
+    if (btn.dataset.year === year) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Load goals for the selected year
+  loadGoals(year);
+}
+
+/**
+ * Initialize tasks year tabs
+ */
+function initTasksYearTabs() {
+  document.querySelectorAll('.tasks-year-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchTasksYear(btn.dataset.year);
+    });
+  });
 }
 
 /**
@@ -2606,17 +2584,6 @@ function updateMenuTime() {
     if (el) el.textContent = timeString;
   });
 }
-
-/**
- * Weather condition to SVG icon mapping
- * WMO Weather interpretation codes: https://open-meteo.com/en/docs
- */
-const weatherIcons = {
-  clear: '<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper"><path d="M3 7H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 11H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 15H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 19H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 23H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 27H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 7H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 11H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 15H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 19H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 23H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 27H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 7H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 11H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 15H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 19H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M11 23H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 27H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 7H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 11H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 19H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M15 15H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M15 23H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 27H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 7H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 11H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M19 15H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M19 19H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M19 23H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 27H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 7H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 11H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 3H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 3H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 3H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 3H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 3H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 3H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 3H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 15H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 19H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 23H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 27H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 27H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 7H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 11H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 15H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 19H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 23H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path></g></svg>',
-  partlyCloudy: '<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper"><path d="M3 7H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 11H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 15H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 19H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 23H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 27H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 7H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 11H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 15H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M7 19H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M7 23H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M7 27H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 7H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 11H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 15H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 19H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M11 23H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M11 27H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 7H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 11H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 19H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 15H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 23H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M15 27H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 7H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 11H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 15H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 19H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 23H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 27H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 7H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 11H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 3H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 3H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 3H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 3H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 3H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 3H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 3H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 15H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 19H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 23H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 27H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 27H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 7H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 11H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 15H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 19H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 23H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path></g></svg>',
-  rain: '<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper" stroke-linejoin="miter" stroke-linecap="butt"><path d="M3 3H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 7H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 11H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 15H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 19H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 3H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 7H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M7 11H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M7 15H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M7 19H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 3H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 7H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 11H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M11 15H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M11 19H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 3H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 11H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 7H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 15H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M15 19H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 3H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 7H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 11H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 15H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 19H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 3H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 7H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 11H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 15H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M27 19H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 19H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 3H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 7H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 11H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M27 15H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M3 27H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 27H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 27H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 27H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 27H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 27H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 23H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 23H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 23H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 23H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 23H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 23H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 23H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 27H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path></g></svg>',
-  thunderstorm: '<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg"><g fill="none" class="nc-icon-wrapper" stroke-linejoin="miter" stroke-linecap="butt"><path d="M3 7H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 11H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 15H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 19H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 23H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 27H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 7H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 11H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 15H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M7 19H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M10.99 19H11" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 23H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 27H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 7H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 11H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 15H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M11 23H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M11 27H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 7H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 11H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M15 19H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M15 15H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 23H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M15 27H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 7H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-2="on"></path><path d="M19 15H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 19H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M19 23H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 27H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 7H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 11H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M18.99 11H19" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M7 3H7.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M3 3H3.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M11 3H11.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M15 3H15.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M19 3H19.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 3H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 3H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 15H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-1="on"></path><path d="M23 19H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 23H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 27H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M23 27H23.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 7H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 11H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 15H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 19H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path><path d="M27 23H27.01" stroke="currentColor" stroke-width="4" stroke-linecap="square" data-arcade-3="on"></path></g></svg>'
-};
 
 /**
  * Get weather icon SVG based on weather code
@@ -2717,39 +2684,9 @@ function initMenuBar() {
 }
 
 /**
- * Music Player State
+ * Music Player State and Life Stories State
+ * Imported from config/state.js
  */
-const musicState = {
-  allTracks: [],
-  tracks: [],
-  folders: [...defaultMusicFolders],
-  activeFolder: 'Music',
-  currentIndex: -1,
-  isPlaying: false,
-  player: null, // YouTube player
-  apiReady: false,
-  pendingVideoId: null,
-  playlistCache: {}, // { playlistId: { tracks, fetchedAt } }
-  cacheExpiry: 1000 * 60 * 60 // 1 hour
-};
-
-
-/**
- * Life Stories State
- */
-const lifeStoriesState = {
-  floors: [], // Will be populated automatically from images folder
-  currentFloor: 0,
-  canvas: null,
-  ctx: null,
-  images: {},
-  initialized: false,
-  scrollPosition: 0, // Continuous scroll position (fractional floor number)
-  scrollVelocity: 0, // Scroll velocity for smooth deceleration
-  targetScrollPosition: null, // For smooth scrolling to specific floors
-  animationFrame: null, // For continuous animation loop
-  scrollAccumulator: 0 // Accumulate scroll delta before snapping to floor
-};
 
 /**
  * Discover available images in the life-stories folder
@@ -2770,7 +2707,7 @@ async function discoverLifeStoriesImages() {
 
   // Try to discover images by attempting to load them
   for (let i = 1; i <= maxFloorCheck; i++) {
-    const imagePath = `images/life-stories/${i}.png`;
+    const imagePath = `../images/life-stories/${i}.png`;
     checkPromises.push(
       new Promise((resolve) => {
         const img = new Image();
@@ -2814,7 +2751,7 @@ async function discoverLifeStoriesImages() {
 async function loadSounds() {
   try {
     console.log('Loading sounds from sounds.js...');
-    const soundsModule = await import('./sounds.js');
+    const soundsModule = await import('../sounds.js');
     const sounds = soundsModule.default || [];
     console.log(`Found ${sounds.length} sounds in manifest`);
     
@@ -2823,7 +2760,7 @@ async function loadSounds() {
       const filename = sound.file;
       // Remove file extension for display name
       const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
-      const audioUrl = `sounds/${filename}`;
+      const audioUrl = `../sounds/${filename}`;
       
       // Format date for display (e.g., "Jul 1, 2024")
       let formattedDate = 'Unknown date';
@@ -3511,16 +3448,6 @@ function setupMusicControls() {
 }
 
 /**
- * Play next track in playlist
- */
-function playNext() {
-  const nextIndex = musicState.currentIndex + 1;
-  if (nextIndex < musicState.tracks.length) {
-    playTrack(nextIndex);
-  }
-}
-
-/**
  * Load YouTube Iframe API
  */
 function loadYouTubeIframeAPI() {
@@ -3721,7 +3648,7 @@ async function initBackgroundImage() {
   // Use the existing bg.jpg file as the background
   // If you want dark/light mode specific images, add them to the images folder
   // and uncomment the code below
-  document.documentElement.style.setProperty('--bg-image', `url('images/bg.jpg')`);
+  document.documentElement.style.setProperty('--bg-image', `url('../images/bg.jpg')`);
 
   // Uncomment below to support dark/light mode specific images:
   /*
@@ -3731,7 +3658,7 @@ async function initBackgroundImage() {
   let imageFound = false;
 
   for (const ext of extensions) {
-    const url = `images/${baseName}.${ext}`;
+    const url = `../images/${baseName}.${ext}`;
     try {
       const response = await fetch(url, { method: 'HEAD' });
       if (response.ok) {
@@ -3746,7 +3673,7 @@ async function initBackgroundImage() {
 
   // Fallback to bg.jpg if no dark/light image found
   if (!imageFound) {
-    document.documentElement.style.setProperty('--bg-image', `url('images/bg.jpg')`);
+    document.documentElement.style.setProperty('--bg-image', `url('../images/bg.jpg')`);
   }
   */
 
@@ -4340,6 +4267,506 @@ function initLifeStories() {
 }
 
 /**
+ * Initialize Project Shredder
+ */
+function initProjectShredder() {
+  if (projectShredderState.initialized) {
+    console.log('[Project Shredder] Already initialized, skipping');
+    return; // Already initialized
+  }
+
+  console.log('[Project Shredder] Initializing...');
+
+  const container = document.querySelector('.project-shredder-container');
+  const dropzone = document.getElementById('shredderDropzone');
+  const fileBtn = document.getElementById('shredderFileBtn');
+  const fileInput = document.getElementById('shredderFileInput');
+  const message = document.getElementById('shredderMessage');
+  const capsule = document.getElementById('spaceCapsule');
+  const capsuleCanvas = document.getElementById('capsuleCanvas');
+  const capsuleFilename = document.getElementById('capsuleFilename');
+  const launchBtn = document.getElementById('launchButton');
+  const successMsg = document.getElementById('successMessage');
+
+  if (!container) {
+    console.error('[Project Shredder] Container not found!');
+    return;
+  }
+
+  console.log('[Project Shredder] All elements found:', {
+    container: !!container,
+    dropzone: !!dropzone,
+    fileBtn: !!fileBtn,
+    fileInput: !!fileInput,
+    capsuleCanvas: !!capsuleCanvas
+  });
+
+  const ctx = capsuleCanvas?.getContext('2d');
+
+  // File picker click handler
+  fileBtn?.addEventListener('click', () => {
+    console.log('[Project Shredder] File button clicked');
+    fileInput?.click();
+  });
+
+  // File input change handler
+  fileInput?.addEventListener('change', (e) => {
+    console.log('[Project Shredder] File input changed');
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log('[Project Shredder] File selected:', file.name);
+      stowFile(file.name);
+    }
+  });
+
+  // Drag-and-drop handlers on the container
+  const preventDefaults = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  // Add drag handlers to the container instead of body
+  if (container) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      container.addEventListener(eventName, preventDefaults, false);
+    });
+
+    container.addEventListener('dragenter', () => {
+      if (projectShredderState.phase === 'idle' && state.currentView === 'projectShredder') {
+        dropzone?.classList.add('active');
+      }
+    });
+
+    container.addEventListener('dragleave', (e) => {
+      // Only remove if leaving the container entirely
+      if (!container.contains(e.relatedTarget)) {
+        dropzone?.classList.remove('active');
+      }
+    });
+
+    container.addEventListener('drop', (e) => {
+      dropzone?.classList.remove('active');
+      if (state.currentView === 'projectShredder' && projectShredderState.phase === 'idle') {
+        const file = e.dataTransfer?.files?.[0];
+        if (file) {
+          stowFile(file.name);
+        }
+      }
+    });
+  }
+
+  // Launch button handler
+  launchBtn?.addEventListener('click', () => {
+    if (projectShredderState.phase === 'stowed') {
+      launchCapsule();
+    }
+  });
+
+  // Stow file in capsule
+  function stowFile(filename) {
+    console.log('[Project Shredder] Stowing file:', filename);
+    projectShredderState.filename = filename;
+    projectShredderState.phase = 'stowed';
+
+    // Draw capsule
+    drawCapsule(ctx, capsuleCanvas.width, capsuleCanvas.height);
+
+    // Update UI
+    capsuleFilename.textContent = filename;
+    capsule?.classList.add('visible');
+    message.textContent = 'File stowed. Ready for launch!';
+    launchBtn?.classList.remove('hidden');
+    console.log('[Project Shredder] File stowed successfully');
+  }
+
+  // Draw pixel art capsule
+  function drawCapsule(ctx, w, h) {
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Center the drawing
+    const cx = w / 2;
+    const cy = h / 2;
+    const s = 8; // Pixel size (doubled for larger canvas)
+
+    // Body (light gray)
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(cx - 2*s, cy - 8*s, 4*s, 16*s);
+
+    // Nose cone (red)
+    ctx.fillStyle = '#ff6666';
+    ctx.fillRect(cx - 3*s, cy - 10*s, 6*s, 3*s);
+    ctx.fillRect(cx - 2*s, cy - 12*s, 4*s, 2*s);
+    ctx.fillRect(cx - 1*s, cy - 14*s, 2*s, 2*s);
+
+    // Fins (dark gray)
+    ctx.fillStyle = '#999999';
+    ctx.fillRect(cx - 5*s, cy + 6*s, 3*s, 4*s); // Left fin
+    ctx.fillRect(cx + 2*s, cy + 6*s, 3*s, 4*s); // Right fin
+
+    // Window (dark blue)
+    ctx.fillStyle = '#3366cc';
+    ctx.fillRect(cx - 1*s, cy - 2*s, 2*s, 2*s);
+
+    // Exhaust (orange)
+    ctx.fillStyle = '#ff9933';
+    ctx.fillRect(cx - 1*s, cy + 8*s, 2*s, 2*s);
+  }
+
+  // Launch sequence
+  function launchCapsule() {
+    console.log('[Project Shredder] Launch sequence started');
+    projectShredderState.phase = 'launching';
+
+    // Hide launch button
+    launchBtn?.classList.add('hidden');
+
+    // Shake animation
+    capsule?.classList.add('launching');
+
+    // Get references to fade out the window
+    const viewWindow = document.getElementById('projectShredderView');
+    const osWindow = viewWindow?.querySelector('.os9-window');
+
+    // Phase 1: Shake (500ms)
+    setTimeout(() => {
+      capsule?.classList.remove('launching');
+
+      // Get capsule position BEFORE we start fading/transforming
+      const rect = capsule?.getBoundingClientRect();
+      if (!rect) {
+        console.error('[Project Shredder] Could not get capsule position');
+        return;
+      }
+
+      console.log('[Project Shredder] Capsule position:', {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      });
+
+      // Phase 2: Start transformation to star and fade UI
+      capsule?.classList.add('transforming');
+      osWindow?.classList.add('fading');
+      viewWindow?.classList.add('launching'); // Make entire view transparent
+
+      // Immediately launch the star into background.js so it's visible during fade
+      if (window.launchCapsule) {
+        console.log('[Project Shredder] Calling window.launchCapsule()');
+        window.launchCapsule({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+          filename: projectShredderState.filename,
+          isStar: true, // Flag to render as a star instead of capsule
+          startHidden: true // Start small and grow
+        });
+        console.log('[Project Shredder] Star launched into space!');
+      } else {
+        console.error('[Project Shredder] window.launchCapsule not available!');
+      }
+
+      // Phase 3: After transformation animation (1000ms), hide HTML capsule
+      setTimeout(() => {
+        projectShredderState.phase = 'flying';
+
+        // Hide HTML capsule
+        capsule?.classList.remove('visible');
+        capsule?.classList.remove('transforming');
+
+        // Setup capture callback
+        window.onCapsuleCaptured = (position) => {
+          console.log('[Project Shredder] Star captured at:', position);
+          handleCaptured(position);
+        };
+      }, 1000); // Wait for transform animation
+    }, 500); // Wait for shake animation
+  }
+
+  // Handle capsule capture
+  function handleCaptured(position) {
+    projectShredderState.phase = 'captured';
+
+    // Create particle burst
+    createParticleBurst(position.x, position.y);
+
+    // Show success message
+    successMsg?.classList.add('visible');
+
+    // Reset after 2 seconds
+    setTimeout(() => {
+      resetShredder();
+    }, 2000);
+  }
+
+  // Create particle burst effect
+  function createParticleBurst(x, y) {
+    const particleCount = 40;
+    const particles = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle-burst';
+      particle.style.left = `${x}px`;
+      particle.style.top = `${y}px`;
+
+      // Random direction
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const distance = 100 + Math.random() * 100;
+      const tx = Math.cos(angle) * distance;
+      const ty = Math.sin(angle) * distance;
+
+      particle.style.setProperty('--tx', `${tx}px`);
+      particle.style.setProperty('--ty', `${ty}px`);
+
+      document.body.appendChild(particle);
+      particles.push(particle);
+
+      // Remove after animation
+      setTimeout(() => {
+        particle.remove();
+      }, 800);
+    }
+  }
+
+  // Reset to idle state
+  function resetShredder() {
+    console.log('[Project Shredder] Resetting to idle state');
+    projectShredderState.phase = 'idle';
+    projectShredderState.filename = null;
+
+    successMsg?.classList.remove('visible');
+    message.textContent = 'Drop a file or click to select';
+
+    // Clear capsule canvas
+    if (ctx && capsuleCanvas) {
+      ctx.clearRect(0, 0, capsuleCanvas.width, capsuleCanvas.height);
+    }
+
+    // Reset file input
+    if (fileInput) fileInput.value = '';
+
+    // Restore window opacity and remove all animation classes
+    const viewWindow = document.getElementById('projectShredderView');
+    const osWindow = viewWindow?.querySelector('.os9-window');
+
+    if (viewWindow) {
+      viewWindow.classList.remove('launching');
+    }
+
+    if (osWindow) {
+      osWindow.classList.remove('fading');
+      osWindow.style.opacity = '1';
+    }
+
+    // Reset capsule element
+    if (capsule) {
+      capsule.classList.remove('visible', 'launching', 'transforming');
+    }
+
+    // Reset launch button
+    if (launchBtn) {
+      launchBtn.classList.add('hidden');
+    }
+
+    // Cleanup background canvas capsule
+    if (window.removeCapsule) {
+      window.removeCapsule();
+    }
+    window.onCapsuleCaptured = null;
+
+    console.log('[Project Shredder] Reset complete');
+  }
+
+  projectShredderState.initialized = true;
+  console.log('[Project Shredder] Initialization complete');
+}
+
+/* ============================================
+   LIBRARY & MOVIES FUNCTIONS
+   ============================================ */
+
+/**
+ * Load library data from covers.js manifest
+ */
+async function loadLibrary() {
+  try {
+    // Load covers manifest (contains book metadata and local cover paths)
+    const { default: coversManifest } = await import('../covers.js');
+
+    state.library.allBooks = coversManifest.map(book => ({
+      title: book.title,
+      author: book.author,
+      cover: book.cover,
+      noteLink: book.file,
+      hasNote: true
+    }));
+
+    // Sort alphabetically by title
+    state.library.allBooks.sort((a, b) => a.title.localeCompare(b.title));
+
+    renderLibraryShelves();
+    updateKindleTime();
+  } catch (err) {
+    console.warn('Failed to load library:', err);
+    state.library.allBooks = [];
+  }
+}
+
+/**
+ * Update Kindle status bar time display
+ */
+function updateKindleTime() {
+  const timeEl = document.querySelector('.kindle-time');
+  if (!timeEl) return;
+
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  timeEl.textContent = `${displayHours}:${minutes} ${ampm}`;
+}
+
+/**
+ * Render library as Kindle Paperwhite-style grid
+ */
+function renderLibraryShelves() {
+  const container = document.getElementById('libraryShelves');
+  if (!container) return;
+
+  if (state.library.allBooks.length === 0) {
+    container.innerHTML = '<div class="kindle-empty">No books yet. Add notes with "B." prefix to get started.</div>';
+    return;
+  }
+
+  container.innerHTML = state.library.allBooks.map(book => `
+    <div class="kindle-book" data-book-id="${filenameToSlug(book.title)}">
+      <div class="kindle-book-cover">
+        ${book.cover
+          ? `<img src="${book.cover}" alt="${book.title}" loading="lazy">`
+          : `<div class="kindle-book-cover-placeholder">${book.title}</div>`
+        }
+      </div>
+      <div class="kindle-book-info">
+        <div class="kindle-book-title">${book.title}</div>
+        <div class="kindle-book-author">${book.author}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/**
+ * Setup library interactions (click handlers)
+ */
+function setupLibraryInteractions() {
+  const container = document.getElementById('libraryShelves');
+  if (!container) return;
+
+  container.addEventListener('click', (e) => {
+    const bookCard = e.target.closest('.kindle-book');
+    if (!bookCard) return;
+
+    const bookId = bookCard.dataset.bookId;
+    const book = state.library.allBooks.find(b => filenameToSlug(b.title) === bookId);
+
+    if (book && book.noteLink) {
+      const post = state.posts.find(p => p.filename === book.noteLink);
+      if (post) {
+        state.currentPost = post;
+        performViewSwitch('notes');
+        renderNote(post, elements, state);
+      } else {
+        console.warn(`Note not found: ${book.noteLink}`);
+      }
+    }
+  });
+}
+
+/**
+ * Setup book suggestion modal
+ */
+function setupBookSuggestionModal() {
+  const modal = document.getElementById('suggestBookModal');
+  const openBtn = document.getElementById('suggestBookBtn');
+  const closeBtn = document.getElementById('suggestBookClose');
+  const form = document.getElementById('suggestBookForm');
+
+  if (!modal || !openBtn || !form) return;
+
+  // Open modal
+  openBtn.addEventListener('click', () => {
+    modal.classList.add('active');
+  });
+
+  // Close modal
+  closeBtn?.addEventListener('click', () => {
+    modal.classList.remove('active');
+    form.reset();
+  });
+
+  // Close on backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('active');
+      form.reset();
+    }
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      modal.classList.remove('active');
+      form.reset();
+    }
+  });
+
+  // Handle form submission via Formspree
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const submitBtn = form.querySelector('.suggest-book-submit');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Sending...';
+    submitBtn.disabled = true;
+
+    const formData = new FormData(form);
+
+    // Add a subject line for the email
+    const title = formData.get('title');
+    formData.append('_subject', `Book Suggestion: ${title}`);
+
+    try {
+      const response = await fetch('https://formspree.io/f/mwvqokky', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        submitBtn.textContent = 'Sent!';
+        setTimeout(() => {
+          modal.classList.remove('active');
+          form.reset();
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+        }, 1000);
+      } else {
+        throw new Error('Failed to send');
+      }
+    } catch (err) {
+      console.error('Form submission error:', err);
+      submitBtn.textContent = 'Error - Try Again';
+      submitBtn.disabled = false;
+      setTimeout(() => {
+        submitBtn.textContent = originalText;
+      }, 2000);
+    }
+  });
+}
+
+/**
  * Initialize app
  */
 async function init() {
@@ -4353,18 +4780,37 @@ async function init() {
   setupViewModeToggle(); // Setup view mode toggle for notes
   initMenuBar();
   await loadPosts();
-  await loadGoals();
+  await renderYearTabs(); // Discover and render year tabs dynamically
+  const currentYear = new Date().getFullYear();
+  await loadGoals(currentYear.toString());
   await loadMusic();
   setupMusicControls(); // Setup music player controls
   await loadThoughtTrains();
   setupThoughtTrainInteractions();
   await loadLabs();
   setupLabsInteractions();
+  await loadGallery();
+  setupGalleryInteractions();
+  await loadLibrary();
+  setupLibraryInteractions();
+  setupBookSuggestionModal();
 
-  // Restore last-open view after refresh
-  const lastOpenWindowId = getLastOpenWindowId();
-  if (lastOpenWindowId) {
-    await openWindow(lastOpenWindowId);
+  // Restore nerd mode state from localStorage
+  const savedNerdMode = localStorage.getItem('galleryNerdMode');
+  if (savedNerdMode !== null) {
+    state.gallery.nerdMode = JSON.parse(savedNerdMode);
+    const toggleBtn = document.getElementById('galleryNerdModeToggle');
+    if (toggleBtn && state.gallery.nerdMode) {
+      toggleBtn.classList.add('active');
+    }
+  }
+
+  setupGuestbookInteractions();
+
+  // Restore view from URL (if present)
+  const viewFromUrl = getViewFromUrl();
+  if (viewFromUrl) {
+    await openWindow(viewFromUrl);
   }
 
   // Initialize mini player state
