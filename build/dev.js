@@ -11,7 +11,7 @@ import { createServer } from 'http';
 import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import { URL } from 'url';
-import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest } from '../v1/js/build/manifest-builder.js';
+import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buildSoundsManifest, buildGalleryManifest, buildCoversManifest, buildFlightsManifest } from '../v1/js/build/manifest-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
@@ -22,6 +22,7 @@ const labsDir = join(v1Dir, 'labs');
 const soundsDir = join(v1Dir, 'sounds');
 const galleryDir = join(v1Dir, 'gallery');
 const coversDir = join(v1Dir, 'covers');
+const flightsPath = join(rootDir, 'flights.md');
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -156,6 +157,19 @@ export default ${JSON.stringify(covers, null, 2)};
   console.log(`\x1b[32m✓\x1b[0m Rebuilt covers.js (${covers.length} books)`);
 }
 
+function buildFlights() {
+  const flights = buildFlightsManifest(flightsPath);
+  const content = `/**
+ * Flights Manifest (auto-generated)
+ * Run 'node build/build.js' to regenerate after editing flights.md
+ */
+
+export default ${JSON.stringify(flights, null, 2)};
+`;
+  writeFileSync(join(rootDir, 'flights.js'), content);
+  console.log(`\x1b[32m✓\x1b[0m Rebuilt flights.js (${flights.length} flights)`);
+}
+
 const v1Mode = process.argv.includes('--v1');
 
 if (v1Mode) {
@@ -166,6 +180,7 @@ if (v1Mode) {
   buildSounds();
   buildGallery();
   buildCovers();
+  buildFlights();
 
   // Watch for changes in posts
   console.log(`\x1b[90m◉ Watching /posts for changes...\x1b[0m`);
@@ -223,6 +238,15 @@ if (v1Mode) {
       }
     });
   }
+}
+
+if (existsSync(flightsPath)) {
+  if (!v1Mode) buildFlights();
+  console.log(`\x1b[90m◉ Watching flights.md for changes...\x1b[0m`);
+  watch(flightsPath, () => {
+    console.log(`\x1b[90m  Changed: flights.md\x1b[0m`);
+    buildFlights();
+  });
 }
 
 // Load music config for API proxy (lazy load)
@@ -929,7 +953,8 @@ const server = createServer(async (req, res) => {
 
   const reqUrl = new URL(req.url, `http://${req.headers.host}`);
   const decodedPath = decodeURIComponent(reqUrl.pathname);
-  let filePath = join(rootDir, decodedPath === '/' ? 'index.html' : decodedPath);
+  const pathRel = decodedPath === '/' || decodedPath === '' ? 'index.html' : decodedPath.replace(/^\//, '');
+  let filePath = join(rootDir, pathRel);
   // Serve index.html for directory requests; try path.html for extensionless routes
   if (filePath.endsWith('/') || !extname(filePath)) {
     const indexPath = join(filePath.endsWith('/') ? filePath : filePath + '/', 'index.html');

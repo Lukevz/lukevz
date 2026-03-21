@@ -1,6 +1,12 @@
 {
   "buildCommand": "node build/build.js",
   "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/work", "destination": "/work.html" },
+    { "source": "/about", "destination": "/about.html" },
+    { "source": "/v1", "destination": "/v1/index.html" },
+    { "source": "/v1/", "destination": "/v1/index.html" }
+  ],
   "functions": {
     "api/**/*.js": {
       "memory": 1024,

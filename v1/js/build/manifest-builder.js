@@ -434,3 +434,70 @@ export async function buildCoversManifest(postsDir, coversDir, downloadCovers = 
 
   return manifest;
 }
+
+/**
+ * Build flights manifest from flights.md
+ * @param {string} flightsPath - Path to flights.md file
+ * @returns {Array} Array of flight objects {status, title, gate, url, description}
+ */
+export function buildFlightsManifest(flightsPath) {
+  if (!existsSync(flightsPath)) {
+    console.warn('flights.md not found, skipping flights manifest');
+    return [];
+  }
+
+  const content = readFileSync(flightsPath, 'utf-8');
+  const flights = [];
+  let currentStatus = null;
+
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Match status headers: ## IN FLIGHT, ## ARRIVED, ## CANCELLED
+    const statusMatch = trimmed.match(/^##\s+(IN FLIGHT|ARRIVED|CANCELLED)/i);
+    if (statusMatch) {
+      currentStatus = statusMatch[1].toUpperCase();
+      continue;
+    }
+
+    // Skip empty lines or non-list items
+    if (!trimmed || !trimmed.startsWith('-')) continue;
+    if (!currentStatus) continue;
+
+    // Parse flight entry: - [Title](url) | Gate | Date | Description
+    // or: - Title | Gate | Date | Description (Date optional; 4th part is description)
+    const listItem = trimmed.substring(1).trim();
+
+    const parseRest = (gate, ...rest) => {
+      if (rest.length >= 2) {
+        return { gate, date: rest[0], description: rest.slice(1).join(' | ') };
+      }
+      if (rest.length === 1) {
+        const d = rest[0];
+        const isDate = /^\d{4}-\d{2}-\d{2}$|^[A-Za-z]{3}\s+\d{4}$/.test(d);
+        return { gate, date: isDate ? d : '', description: isDate ? '' : d };
+      }
+      return { gate, date: '', description: '' };
+    };
+
+    // Try to match markdown link format: [Title](url) | Gate | Date? | Description
+    const linkMatch = listItem.match(/^\[([^\]]+)\]\(([^)]+)\)\s*\|\s*(.+)$/);
+    if (linkMatch) {
+      const rest = linkMatch[3].split(/\s*\|\s*/).map(p => p.trim());
+      const { gate, date, description } = parseRest(rest[0], ...rest.slice(1));
+      flights.push({ status: currentStatus, title: linkMatch[1].trim(), url: linkMatch[2].trim(), gate, date, description });
+      continue;
+    }
+
+    // Plain text format: Title | Gate | Date? | Description
+    const parts = listItem.split(/\s*\|\s*/).map(p => p.trim());
+    if (parts.length >= 2) {
+      const { gate, date, description } = parseRest(parts[1], ...parts.slice(2));
+      flights.push({ status: currentStatus, title: parts[0].trim(), url: null, gate, date, description });
+    }
+  }
+
+  return flights;
+}
+
