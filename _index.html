@@ -45,12 +45,8 @@
   <div id="customCursor" aria-hidden="true"></div>
   <div id="lens" aria-hidden="true"><canvas id="lensCanvas" width="128" height="128"></canvas></div>
 
-  <!-- Mode tab group -->
-  <div id="modeTab" role="group" aria-label="View mode">
-    <div class="tab-pill"></div>
-    <button class="tab-opt active" data-mode="life">Life</button>
-    <button class="tab-opt" data-mode="work">Work</button>
-  </div>
+  <!-- Top bar: social · mode tabs · theme -->
+  <div id="topBar">
 
   <!-- Social links button (top left) -->
   <button id="socialBtn" title="Social links" aria-label="Social links" aria-expanded="false">
@@ -59,6 +55,13 @@
       <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/>
     </svg>
   </button>
+
+  <!-- Mode tab group -->
+  <div id="modeTab" role="group" aria-label="View mode">
+    <div class="tab-pill"></div>
+    <button class="tab-opt active" data-mode="life">Life</button>
+    <button class="tab-opt" data-mode="work">Work</button>
+  </div>
 
   <!-- Theme toggle (top right): moon = switch to dark, sun = switch to light -->
   <button id="themeToggle" type="button" title="Dark mode" aria-label="Switch to dark mode" aria-pressed="false">
@@ -70,6 +73,8 @@
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
     </svg>
   </button>
+
+  </div><!-- /#topBar -->
 
   <!-- Social panel -->
   <div id="socialPanel" aria-hidden="true">

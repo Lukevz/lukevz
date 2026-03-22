@@ -80,6 +80,7 @@
     }
 
     html {
+      overflow-x: hidden;
       --theme-blend: 0;
       --bg: color-mix(in oklab, var(--bg-light) calc((1 - var(--theme-blend)) * 100%), var(--bg-dark) calc(var(--theme-blend) * 100%));
       --text-muted: color-mix(in oklab, var(--text-muted-light) calc((1 - var(--theme-blend)) * 100%), var(--text-muted-dark) calc(var(--theme-blend) * 100%));
@@ -155,19 +156,30 @@
       cursor: none;
     }
 
-    /* Mode tab group */
-    #modeTab {
+    /* Top bar: social · mode tabs · theme */
+    #topBar {
       position: fixed;
       top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 12px;
+      z-index: 11;
+      pointer-events: none;
+    }
+    #topBar > * { pointer-events: auto; }
+
+    /* Mode tab group */
+    #modeTab {
+      position: relative;
       background: var(--surface-raised);
       border-radius: 14px;
       padding: 6px;
       display: flex;
       align-items: center;
       gap: 0;
-      z-index: 10;
       box-shadow: var(--shadow-elevated);
     }
 
@@ -220,17 +232,13 @@
 
     /* Social button — top left, matches power button style */
     #socialBtn {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      right: auto;
+      justify-self: start;
       background: none;
       border: none;
       cursor: pointer;
       padding: 8px;
       opacity: 0.35;
       transition: opacity 0.2s ease;
-      z-index: 11;
       color: var(--text-primary);
     }
     #socialBtn:hover,
@@ -239,16 +247,13 @@
 
     /* Theme toggle — top right */
     #themeToggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
+      justify-self: end;
       background: none;
       border: none;
       cursor: pointer;
       padding: 8px;
       opacity: 0.35;
       transition: opacity 0.2s ease;
-      z-index: 11;
       color: var(--text-primary);
     }
     #themeToggle:hover { opacity: 0.7; }
@@ -349,7 +354,7 @@
     /* Social panel */
     #socialPanel {
       position: fixed;
-      top: 56px;
+      top: 74px;
       left: 12px;
       right: auto;
       background: var(--surface-raised);
@@ -673,7 +678,7 @@
     .outline-path { pointer-events: none; }
 
     .app-label {
-      font-size: 11px;
+      font-size: 13px;
       color: var(--text-primary);
       font-weight: 600;
       letter-spacing: -0.01em;
@@ -1917,26 +1922,23 @@
         height: 140px;
       }
 
-      /* App icons: 2×2 grid */
+      /* App icons: 2×2 grid, tighter rows, bottom clearance for now-strip */
       .launchpad {
         flex-wrap: wrap;
+        margin-bottom: 90px;
       }
       .app {
         flex: 1 1 calc(50% - 4px);
         max-width: calc(50% - 4px);
+        height: auto;
+        padding: 12px 0;
       }
 
       /* Cards: single column on mobile */
       .kpi-grid { grid-template-columns: 1fr; }
 
-      /* Text metadata: always to the right on small screens */
-      .app:nth-child(3) .app-card-right,
-      .app:nth-child(4) .app-card-right {
-        right: auto;
-        left: calc(100% + 16px);
-        text-align: left;
-        align-items: flex-start;
-      }
+      /* Hide hover tooltips on mobile — no hover, and they cause horizontal overflow */
+      .app-card-right { display: none; }
 
       /* Modal full-width on small screens */
       #panel {
