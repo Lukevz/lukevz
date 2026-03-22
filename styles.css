@@ -123,6 +123,19 @@
       --vet-underline: color-mix(in oklab, var(--vet-underline-light) calc((1 - var(--theme-blend)) * 100%), var(--vet-underline-dark) calc(var(--theme-blend) * 100%));
     }
 
+    /* System preference: when no explicit choice, follow prefers-color-scheme */
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) {
+        color-scheme: dark;
+        --theme-blend: 1;
+      }
+    }
+
+    [data-theme="light"] {
+      color-scheme: light;
+      --theme-blend: 0;
+    }
+
     [data-theme="dark"] {
       color-scheme: dark;
       --theme-blend: 1;

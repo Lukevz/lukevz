@@ -3,12 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>lukevz</title>
+  <meta name="color-scheme" content="light dark">
+  <title>Luke</title>
+  <link rel="icon" href="/v1/images/favicon.svg" type="image/svg+xml">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Luke">
+  <meta property="og:description" content="Designer, tinkerer, and passionate note-taker.">
+  <meta property="og:image" content="https://lukevz.com/images/og_light.png">
+  <meta property="og:url" content="https://lukevz.com">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Luke">
+  <meta name="twitter:description" content="Designer, tinkerer, and passionate note-taker.">
+  <meta name="twitter:image" content="https://lukevz.com/images/og_light.png">
+
   <script>
-    try {
-      var _t = localStorage.getItem('lukevz-theme');
-      if (_t === 'dark' || _t === 'light') document.documentElement.setAttribute('data-theme', _t);
-    } catch (e) {}
+    (function() {
+      try {
+        var _t = localStorage.getItem('lukevz-theme');
+        if (_t === 'dark' || _t === 'light') document.documentElement.setAttribute('data-theme', _t);
+        var dark = _t === 'dark' || (_t !== 'light' && typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches);
+        var img = 'https://lukevz.com/images/' + (dark ? 'og_dark' : 'og_light') + '.png';
+        var og = document.querySelector('meta[property="og:image"]');
+        var tw = document.querySelector('meta[name="twitter:image"]');
+        if (og) og.setAttribute('content', img);
+        if (tw) tw.setAttribute('content', img);
+      } catch (e) {}
+    })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

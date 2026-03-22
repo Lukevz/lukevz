@@ -501,7 +501,10 @@
     const themeSun  = themeToggle?.querySelector('.theme-icon-sun');
 
     function isDarkTheme() {
-      return document.documentElement.getAttribute('data-theme') === 'dark';
+      const t = document.documentElement.getAttribute('data-theme');
+      if (t === 'dark') return true;
+      if (t === 'light') return false;
+      return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
     }
 
     function updateThemeToggleUi(dark) {
@@ -515,12 +518,16 @@
 
     function applyThemeDom(dark, persist) {
       const root = document.documentElement;
-      if (dark) root.setAttribute('data-theme', 'dark');
-      else root.removeAttribute('data-theme');
+      root.setAttribute('data-theme', dark ? 'dark' : 'light');
       if (persist) {
         try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) { /* ignore */ }
       }
       updateThemeToggleUi(dark);
+      const ogImg = 'https://lukevz.com/images/' + (dark ? 'og_dark' : 'og_light') + '.png';
+      const og = document.querySelector('meta[property="og:image"]');
+      const tw = document.querySelector('meta[name="twitter:image"]');
+      if (og) og.setAttribute('content', ogImg);
+      if (tw) tw.setAttribute('content', ogImg);
     }
 
     const themeTransitionEl = document.getElementById('themeTransition');
@@ -582,6 +589,23 @@
         runThemeWipe(next, true);
       });
     }
+
+    try {
+      const stored = localStorage.getItem(THEME_KEY);
+      if ((stored !== 'dark' && stored !== 'light') && typeof matchMedia === 'function') {
+        matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (localStorage.getItem(THEME_KEY) === 'dark' || localStorage.getItem(THEME_KEY) === 'light') return;
+          const dark = e.matches;
+          updateThemeToggleUi(dark);
+          document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: dark ? 1 : 0 } }));
+          const ogImg = 'https://lukevz.com/images/' + (dark ? 'og_dark' : 'og_light') + '.png';
+          const og = document.querySelector('meta[property="og:image"]');
+          const tw = document.querySelector('meta[name="twitter:image"]');
+          if (og) og.setAttribute('content', ogImg);
+          if (tw) tw.setAttribute('content', ogImg);
+        });
+      }
+    } catch (err) { /* ignore */ }
 
     /** Time Machine (#versionScreen) — open without power animation (e.g. link from /v1/) */
     function showVersionScreenFromHash() {
