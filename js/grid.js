@@ -29,7 +29,11 @@
     }
 
     function readGridDotRgb() {
-      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const t = document.documentElement.getAttribute('data-theme');
+      let dark = t === 'dark';
+      if (t !== 'dark' && t !== 'light') {
+        dark = typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches;
+      }
       setGridDotBlend(dark ? 1 : 0);
     }
     readGridDotRgb();
