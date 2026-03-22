@@ -1664,22 +1664,23 @@
     }
     @media (max-width: 620px) {
       .now-modal-board {
-        padding: 16px 18px;
+        padding: 14px 16px;
         --nb-cell-w:    13px;
         --nb-cell-h:    22px;
         --nb-cell-gap:  1px;
         --nb-cell-font: 10px;
-        --nb-label-w:   72px;
+        /* READING / LISTENING / LOCATION — fixed 72px clipped labels */
+        --nb-label-w:   112px;
       }
     }
     @media (max-width: 420px) {
       .now-modal-board {
-        padding: 12px 14px;
+        padding: 12px 12px;
         --nb-cell-w:    9px;
         --nb-cell-h:    16px;
         --nb-cell-gap:  1px;
         --nb-cell-font: 7px;
-        --nb-label-w:   52px;
+        --nb-label-w:   92px;
       }
     }
     .now-board-head {
@@ -1861,9 +1862,10 @@
       background: transparent;
       box-shadow: none;
       border-radius: 0;
-      width: 68vw;
-      height: 85vh;
-      max-width: none;
+      /* Nearly full width so labels + split-flap cells aren’t crushed on phones */
+      width: min(720px, calc(100vw - 24px));
+      height: min(85vh, calc(100dvh - 24px));
+      max-width: calc(100vw - 24px);
       overflow: visible;
       position: relative;
       transition: none;
@@ -1890,7 +1892,11 @@
     }
     .sm-now .now-modal-board {
       border-radius: 20px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
       height: auto;
+      max-height: min(85vh, calc(100dvh - 32px));
       overflow-y: auto;
       box-shadow: var(--shadow-panel);
     }
@@ -1944,5 +1950,15 @@
       #panel {
         padding: 28px 24px;
         border-radius: 16px;
+      }
+
+      /* NOW board: edge-to-edge frame in the viewport */
+      .sm-now #sModalFrame {
+        width: calc(100vw - 16px);
+        max-width: none;
+        height: min(90vh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px));
+      }
+      .sm-now .now-modal-board {
+        max-height: min(90vh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px));
       }
     }
