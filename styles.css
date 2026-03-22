@@ -145,7 +145,7 @@
     body {
       min-height: 100vh;
       background: var(--bg);
-      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      font-family: 'Google Sans Flex', 'Google Sans', system-ui, -apple-system, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -406,7 +406,7 @@
     h1 {
       font-family: 'Chillax', system-ui, sans-serif;
       font-size: clamp(1.4rem, 3vw, 1.6rem);
-      font-weight: 700;
+      font-weight: 600;
       color: var(--text-primary);
       text-align: left;
       margin-bottom: 8px;
@@ -1117,7 +1117,7 @@
 
     #panelContent {
       color: var(--text-primary);
-      font-size: 0.95rem;
+      font-size: 16px;
       line-height: 1.7;
     }
     .cs-meta {
@@ -1136,7 +1136,7 @@
       border-radius: 12px;
       padding: 16px 20px;
       margin-bottom: 24px;
-      font-size: 0.9rem;
+      font-size: 1em;
       color: var(--cs-muted);
       line-height: 1.65;
     }
@@ -1144,15 +1144,15 @@
     .cs-section { margin-bottom: 20px; }
     .cs-section h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); font-weight: 500; margin-bottom: 10px; }
     .cs-impact { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-    .cs-impact li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9rem; color: var(--text-primary); }
+    .cs-impact li { display: flex; gap: 10px; align-items: flex-start; font-size: 1em; color: var(--text-primary); }
     .cs-impact li::before { content: '↗'; font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; flex-shrink: 0; }
 
     /* ── Case study panel rich content ── */
     .cs-hero { width: 100%; border-radius: 12px; margin-bottom: 28px; display: block; object-fit: cover; }
     .cs-h2 { font-size: 1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; margin: 28px 0 10px; }
     .cs-h3 { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); margin: 18px 0 8px; }
-    .cs-p { font-size: 0.9rem; color: var(--cs-muted); line-height: 1.7; margin-bottom: 14px; }
-    .cs-callout { border-radius: 10px; padding: 14px 18px; margin-bottom: 12px; font-size: 0.875rem; line-height: 1.65; }
+    .cs-p { font-size: 1em; color: var(--cs-muted); line-height: 1.7; margin-bottom: 14px; }
+    .cs-callout { border-radius: 10px; padding: 14px 18px; margin-bottom: 12px; font-size: 1em; line-height: 1.65; }
     .cs-callout strong { display: block; margin-bottom: 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
     .cs-callout p { margin: 0; color: var(--cs-muted); }
     .cs-callout-blue { background: #eef4fb; }
@@ -1168,21 +1168,24 @@
     .cs-img { width: 100%; border-radius: 10px; margin: 14px 0 4px; display: block; }
     .cs-img-caption { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 14px; }
     .cs-ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
-    .cs-ul li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9rem; color: var(--text-primary); line-height: 1.55; }
+    .cs-ul li { display: flex; gap: 10px; align-items: flex-start; font-size: 1em; color: var(--text-primary); line-height: 1.55; }
     .cs-ul li::before { content: '↗'; font-size: 0.75rem; color: var(--text-secondary); margin-top: 3px; flex-shrink: 0; }
     .cs-bul { padding-left: 18px; margin-bottom: 16px; }
-    .cs-bul li { font-size: 0.9rem; color: var(--cs-muted); line-height: 1.65; margin-bottom: 6px; }
+    .cs-bul li { font-size: 1em; color: var(--cs-muted); line-height: 1.65; margin-bottom: 6px; }
     .cs-mini-heading { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 32px 0 12px; padding-top: 24px; border-top: 1px solid var(--cs-border); }
-    .cs-video-link { display: inline-flex; align-items: center; gap: 8px; background: var(--cs-video-bg); border-radius: 8px; padding: 10px 16px; font-size: 0.85rem; color: var(--text-primary); text-decoration: none; margin: 8px 0 16px; transition: background 0.2s; }
+    .cs-video-link { display: inline-flex; align-items: center; gap: 8px; background: var(--cs-video-bg); border-radius: 8px; padding: 10px 16px; font-size: 1em; color: var(--text-primary); text-decoration: none; margin: 8px 0 16px; transition: background 0.2s; }
     .cs-video-link:hover { background: var(--cs-video-hover); }
     .cs-hr { border: none; border-top: 1px solid var(--cs-border); margin: 24px 0; }
 
     /* ── cs-body: scoped styles for markdown-rendered case study content ── */
+    .cs-body {
+      font-size: 16px;
+    }
     .cs-body h1 { font-size: 24px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; margin: 0 0 10px; }
     .cs-body h2 { font-size: 1rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; margin: 28px 0 10px; }
     .cs-body h3 { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); margin: 18px 0 8px; }
     .cs-body h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); font-weight: 500; margin: 14px 0 6px; }
-    .cs-body p { font-size: 0.9rem; color: var(--cs-muted); line-height: 1.7; margin-bottom: 14px; }
+    .cs-body p { font-size: 1em; color: var(--cs-muted); line-height: 1.7; margin-bottom: 14px; }
     .cs-body em { font-style: italic; }
     .cs-body strong { font-weight: 600; }
     .cs-body hr { border: none; border-top: 1px solid var(--cs-border); margin: 24px 0; }
@@ -1191,7 +1194,7 @@
     .cs-body a { color: var(--link); text-decoration: none; }
     .cs-body a:hover { text-decoration: underline; }
     .cs-body ul { padding-left: 18px; margin-bottom: 16px; }
-    .cs-body ul li { font-size: 0.9rem; color: var(--cs-muted); line-height: 1.65; margin-bottom: 6px; }
+    .cs-body ul li { font-size: 1em; color: var(--cs-muted); line-height: 1.65; margin-bottom: 6px; }
     .cs-body ul.task-list {
       list-style: none;
       padding-left: 0;
@@ -1203,7 +1206,7 @@
       align-items: flex-start;
       gap: 10px;
       margin-bottom: 8px;
-      font-size: 0.9rem;
+      font-size: 1em;
       color: var(--cs-muted);
       line-height: 1.65;
     }
@@ -1216,17 +1219,17 @@
       cursor: default;
     }
     .cs-body ol { padding-left: 20px; margin-bottom: 16px; }
-    .cs-body ol li { font-size: 0.9rem; color: var(--cs-muted); line-height: 1.65; margin-bottom: 6px; }
+    .cs-body ol li { font-size: 1em; color: var(--cs-muted); line-height: 1.65; margin-bottom: 6px; }
     .cs-body blockquote {
       background: var(--cs-tldr-bg);
       border-left: 3px solid var(--cs-callout-gray-border);
       border-radius: 0 8px 8px 0;
       padding: 12px 16px;
       margin: 0 0 12px;
-      font-size: 0.875rem;
+      font-size: 1em;
       line-height: 1.65;
     }
-    .cs-body blockquote p { margin: 0; color: var(--cs-muted); font-size: 0.875rem; }
+    .cs-body blockquote p { margin: 0; color: var(--cs-muted); font-size: 1em; }
     .cs-body blockquote strong { color: var(--text-primary); }
     .cs-body p > em:only-child { font-size: 0.78rem; color: var(--text-secondary); font-style: normal; display: block; margin-top: -10px; margin-bottom: 14px; }
 
@@ -1368,8 +1371,9 @@
     }
     .sm-row:hover { background: var(--hover-fill-soft); }
     .sm-row-title {
-      font-size: 0.92rem;
-      font-weight: 500;
+      font-family: 'Chillax', system-ui, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
       color: var(--text-primary);
       letter-spacing: -0.01em;
       line-height: 1.35;
@@ -1920,6 +1924,25 @@
       .avatar {
         width: 140px;
         height: 140px;
+      }
+
+      /* Now strip: reserve right margin so centered bar doesn’t run under #powerBtn (z-index 10) */
+      .now-strip {
+        max-width: calc(100vw - 40px - 60px);
+      }
+
+      /* Section modal — video list: hide thumbnails so titles use full width */
+      .sm-row--video .sm-row-thumb-wrap {
+        display: none;
+      }
+      .sm-row--video {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+      }
+      .sm-row--video .sm-row-info {
+        padding: 0;
+        width: 100%;
       }
 
       /* App icons: 2×2 grid, tighter rows, bottom clearance for now-strip */

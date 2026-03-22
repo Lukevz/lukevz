@@ -495,10 +495,20 @@
     });
 
     // ── Theme toggle (light / warm charcoal dark) ──
+    // Explicit choice is stored as lukevz-theme = light | dark. Absent key = follow system (not "cached" by reload).
     const THEME_KEY = 'lukevz-theme';
     const themeToggle = document.getElementById('themeToggle');
     const themeMoon = themeToggle?.querySelector('.theme-icon-moon');
     const themeSun  = themeToggle?.querySelector('.theme-icon-sun');
+
+    function themeIsExplicitOverride() {
+      try {
+        const s = localStorage.getItem(THEME_KEY);
+        return s === 'dark' || s === 'light';
+      } catch {
+        return false;
+      }
+    }
 
     function isDarkTheme() {
       const t = document.documentElement.getAttribute('data-theme');
@@ -510,10 +520,19 @@
     function updateThemeToggleUi(dark) {
       if (!themeToggle) return;
       themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
-      themeToggle.setAttribute('title', dark ? 'Light mode' : 'Dark mode');
+      const hint = ' Shift-click: use system appearance.';
+      themeToggle.setAttribute('title', (dark ? 'Light mode' : 'Dark mode') + hint);
       themeToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
       themeMoon?.toggleAttribute('hidden', dark);
       themeSun?.toggleAttribute('hidden', !dark);
+    }
+
+    function applyThemeSystem(persist) {
+      document.documentElement.removeAttribute('data-theme');
+      if (persist) {
+        try { localStorage.removeItem(THEME_KEY); } catch (err) { /* ignore */ }
+      }
+      updateThemeToggleUi(isDarkTheme());
     }
 
     function applyThemeDom(dark, persist) {
@@ -571,10 +590,61 @@
       });
     }
 
+    function runThemeWipeToSystem(targetDark) {
+      if (!themeTransitionEl || !themeArc || themeWipeBusy) return;
+      if (isDarkTheme() === targetDark) {
+        applyThemeSystem(true);
+        document.documentElement.style.removeProperty('--theme-blend');
+        document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: targetDark ? 1 : 0 } }));
+        return;
+      }
+      themeWipeBusy = true;
+      anime.remove(themeArc);
+      themeTransitionEl.classList.remove('theme-transition--to-dark', 'theme-transition--to-light');
+      themeTransitionEl.classList.add(targetDark ? 'theme-transition--to-dark' : 'theme-transition--to-light');
+      const rotFrom = targetDark ? '-90deg' : '90deg';
+      const rotTo   = targetDark ? '90deg' : '-90deg';
+      themeArc.style.transform = `rotate(${rotFrom})`;
+      themeTransitionEl.classList.add('is-active');
+      themeTransitionEl.setAttribute('aria-hidden', 'false');
+
+      anime({
+        targets: themeArc,
+        rotate: [rotFrom, rotTo],
+        duration: THEME_WIPE_MS,
+        easing: 'cubicBezier(0.38, 0.02, 0.22, 1)',
+        update(anim) {
+          const t = anim.progress / 100;
+          const blend = targetDark ? t : (1 - t);
+          document.documentElement.style.setProperty('--theme-blend', String(blend));
+          document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend } }));
+        },
+        complete() {
+          applyThemeSystem(true);
+          document.documentElement.style.removeProperty('--theme-blend');
+          document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: targetDark ? 1 : 0 } }));
+          themeArc.style.transform = '';
+          themeTransitionEl.classList.remove('is-active', 'theme-transition--to-dark', 'theme-transition--to-light');
+          themeTransitionEl.setAttribute('aria-hidden', 'true');
+          themeWipeBusy = false;
+        }
+      });
+    }
+
     if (themeToggle) {
       updateThemeToggleUi(isDarkTheme());
       themeToggle.addEventListener('click', e => {
         e.stopPropagation();
+        if (e.shiftKey) {
+          const sysDark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
+          if (themePrefersReducedMotion() || isDarkTheme() === sysDark) {
+            applyThemeSystem(true);
+            document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: sysDark ? 1 : 0 } }));
+          } else {
+            runThemeWipeToSystem(sysDark);
+          }
+          return;
+        }
         const next = !isDarkTheme();
         if (themePrefersReducedMotion()) {
           applyThemeDom(next, true);
@@ -586,12 +656,11 @@
     }
 
     try {
-      const stored = localStorage.getItem(THEME_KEY);
-      if ((stored !== 'dark' && stored !== 'light') && typeof matchMedia === 'function') {
-        matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-          if (localStorage.getItem(THEME_KEY) === 'dark' || localStorage.getItem(THEME_KEY) === 'light') return;
-          updateThemeToggleUi(e.matches);
-          document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: e.matches ? 1 : 0 } }));
+      if (typeof matchMedia === 'function') {
+        matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (ev) => {
+          if (themeIsExplicitOverride()) return;
+          updateThemeToggleUi(ev.matches);
+          document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: ev.matches ? 1 : 0 } }));
         });
       }
     } catch (err) { /* ignore */ }
@@ -903,7 +972,7 @@
         }
         const safeTitle = video.title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const desc = video.description
-          ? `<p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;white-space:pre-wrap">${video.description.replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 600)}${video.description.length > 600 ? '…' : ''}</p>`
+          ? `<p style="color:var(--text-secondary);font-size:16px;line-height:1.6;white-space:pre-wrap">${video.description.replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 600)}${video.description.length > 600 ? '…' : ''}</p>`
           : '';
         const iframe = `<div class="fn-video-wrap"><iframe src="https://www.youtube.com/embed/${videoId}" title="${video.title.replace(/"/g, '&quot;')}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
         fadeSwap(`<div class="sm-fade cs-body"><h1>${safeTitle}</h1>${iframe}${desc}</div>`);
