@@ -6,7 +6,12 @@
       font-style: normal;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; cursor: none !important; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @media (hover: hover) and (pointer: fine) {
+      *, *::before, *::after { cursor: none !important; }
+      body { cursor: none; }
+    }
 
     :root {
       --label-size: 11px;
@@ -153,7 +158,6 @@
       padding: 72px 20px 20px;
       overflow-x: hidden;
       overflow-y: auto;
-      cursor: none;
     }
 
     /* Top bar: social · mode tabs · theme */
@@ -862,14 +866,18 @@
       flex-shrink: 0;
     }
 
-    /* ── Custom cursor ── */
+    /* ── Custom cursor (desktop / fine pointer only) ── */
     #customCursor {
+      display: none;
       position: fixed;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-8px, -9px);
       top: -100px; left: -100px;
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+    }
+    @media (hover: hover) and (pointer: fine) {
+      #customCursor { display: block; }
     }
 
     /* ── Magnifying lens ── */
