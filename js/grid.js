@@ -14,6 +14,8 @@
     const canvas = document.getElementById('dotGrid');
     const ctx    = canvas.getContext('2d');
     const SP = 28;
+    const useFinePointer = typeof matchMedia !== 'undefined' &&
+      matchMedia('(hover: hover) and (pointer: fine)').matches;
     let cells = [];
 
     const GRID_RGB_LIGHT = [58, 61, 69];
@@ -138,12 +140,13 @@
 
     let cMode = '';
     function setCursor(mode) {
+      if (!useFinePointer || !cursorEl) return;
       if (mode === cMode) return;
       cMode = mode;
       cursorEl.innerHTML = mode === 'cross' ? CSVG : PSVG;
       cursorEl.style.transform = mode === 'cross' ? 'translate(-12px,-12px)' : 'translate(-8px,-9px)';
     }
-    setCursor('pointer');
+    if (useFinePointer) setCursor('pointer');
 
     /* ── State ── */
     let mx = -300, my = -300, animating = false;
@@ -161,19 +164,21 @@
       if (canvas.width) drawGrid(ctx, canvas.width, canvas.height, performance.now());
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-    /* ── Mouse ── */
-    document.addEventListener('mousemove', e => {
-      mx = e.clientX; my = e.clientY;
-      cursorEl.style.left = mx + 'px';
-      cursorEl.style.top  = my + 'px';
-      cursorEl.style.opacity = '1';
+    /* ── Mouse (custom cursor follows pointer on fine-pointer devices only) ── */
+    if (useFinePointer && cursorEl) {
+      document.addEventListener('mousemove', e => {
+        mx = e.clientX; my = e.clientY;
+        cursorEl.style.left = mx + 'px';
+        cursorEl.style.top  = my + 'px';
+        cursorEl.style.opacity = '1';
 
-      const inter = e.target.closest('button,a,input,select,[role=button]');
-      setCursor(inter ? 'cross' : 'pointer');
-    });
+        const inter = e.target.closest('button,a,input,select,[role=button]');
+        setCursor(inter ? 'cross' : 'pointer');
+      });
 
-    document.addEventListener('mouseleave', () => { cursorEl.style.opacity = '0'; });
-    document.addEventListener('mouseenter', () => { cursorEl.style.opacity = '1'; });
+      document.addEventListener('mouseleave', () => { cursorEl.style.opacity = '0'; });
+      document.addEventListener('mouseenter', () => { cursorEl.style.opacity = '1'; });
+    }
 
     /* ── Animation loop ── */
     function startAnim() {
