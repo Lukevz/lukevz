@@ -21,18 +21,10 @@
   <meta name="twitter:image" content="https://lukevz.com/images/og_light.png">
 
   <script>
-    (function() {
-      try {
-        var _t = localStorage.getItem('lukevz-theme');
-        if (_t === 'dark' || _t === 'light') document.documentElement.setAttribute('data-theme', _t);
-        var dark = _t === 'dark' || (_t !== 'light' && typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches);
-        var img = 'https://lukevz.com/images/' + (dark ? 'og_dark' : 'og_light') + '.png';
-        var og = document.querySelector('meta[property="og:image"]');
-        var tw = document.querySelector('meta[name="twitter:image"]');
-        if (og) og.setAttribute('content', img);
-        if (tw) tw.setAttribute('content', img);
-      } catch (e) {}
-    })();
+    try {
+      var _t = localStorage.getItem('lukevz-theme');
+      if (_t === 'dark' || _t === 'light') document.documentElement.setAttribute('data-theme', _t);
+    } catch (e) {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

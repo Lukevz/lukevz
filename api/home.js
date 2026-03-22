@@ -18,9 +18,17 @@ export default async function handler(req, res) {
   const host = req.headers['x-forwarded-host'] || req.headers['host'] || 'lukevz.com';
   const base = `https://${host}`;
 
-  // Infer theme from Sec-CH-Prefers-Color-Scheme (Chrome/Edge); default light
+  // Infer theme: prefer Sec-CH-Prefers-Color-Scheme if available,
+  // otherwise fall back to time-of-day in Eastern Time (dark 7pm–7am)
   const colorScheme = req.headers['sec-ch-prefers-color-scheme'];
-  const preferDark = colorScheme === 'dark';
+  let preferDark;
+  if (colorScheme === 'dark' || colorScheme === 'light') {
+    preferDark = colorScheme === 'dark';
+  } else {
+    const hourET = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false });
+    const h = parseInt(hourET, 10);
+    preferDark = h >= 19 || h < 7;
+  }
   const ogImage = `${base}/images/${preferDark ? 'og_dark' : 'og_light'}.png`;
 
   let html;
@@ -39,6 +47,7 @@ export default async function handler(req, res) {
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Accept-CH', 'Sec-CH-Prefers-Color-Scheme');
+  res.setHeader('Critical-CH', 'Sec-CH-Prefers-Color-Scheme');
   res.setHeader('Vary', 'Sec-CH-Prefers-Color-Scheme');
   res.send(html);
 }

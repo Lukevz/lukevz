@@ -523,11 +523,6 @@
         try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) { /* ignore */ }
       }
       updateThemeToggleUi(dark);
-      const ogImg = 'https://lukevz.com/images/' + (dark ? 'og_dark' : 'og_light') + '.png';
-      const og = document.querySelector('meta[property="og:image"]');
-      const tw = document.querySelector('meta[name="twitter:image"]');
-      if (og) og.setAttribute('content', ogImg);
-      if (tw) tw.setAttribute('content', ogImg);
     }
 
     const themeTransitionEl = document.getElementById('themeTransition');
@@ -595,14 +590,8 @@
       if ((stored !== 'dark' && stored !== 'light') && typeof matchMedia === 'function') {
         matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
           if (localStorage.getItem(THEME_KEY) === 'dark' || localStorage.getItem(THEME_KEY) === 'light') return;
-          const dark = e.matches;
-          updateThemeToggleUi(dark);
-          document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: dark ? 1 : 0 } }));
-          const ogImg = 'https://lukevz.com/images/' + (dark ? 'og_dark' : 'og_light') + '.png';
-          const og = document.querySelector('meta[property="og:image"]');
-          const tw = document.querySelector('meta[name="twitter:image"]');
-          if (og) og.setAttribute('content', ogImg);
-          if (tw) tw.setAttribute('content', ogImg);
+          updateThemeToggleUi(e.matches);
+          document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: e.matches ? 1 : 0 } }));
         });
       }
     } catch (err) { /* ignore */ }
