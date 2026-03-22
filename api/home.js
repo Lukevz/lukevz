@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
   let html;
   try {
-    html = readFileSync(join(__dirname, '..', 'index.html'), 'utf-8');
+    html = readFileSync(join(__dirname, '..', '_index.html'), 'utf-8');
   } catch (err) {
     res.status(500).send('Error loading page');
     return;
