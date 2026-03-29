@@ -311,6 +311,9 @@
     const modeTab      = document.getElementById('modeTab');
     const tabPill      = modeTab.querySelector('.tab-pill');
     const tabOpts      = modeTab.querySelectorAll('.tab-opt');
+    const overflowBtn  = document.getElementById('overflowBtn');
+    const overflowPanel = document.getElementById('overflowPanel');
+    const overflowItems = overflowPanel.querySelectorAll('.overflow-item');
     const avatarImg    = document.getElementById('avatarImg');
     const launchpad    = document.querySelector('.launchpad');
     const portfolioGrid = document.getElementById('portfolioGrid');
@@ -321,7 +324,7 @@
     const descEl          = document.querySelector('.description');
     const defaultDesc     = descEl.innerHTML;
     const workDesc        = `I think in systems, design in details, and am always chasing the pattern that makes something complicated feel completely obvious.`;
-    let portfolioMode  = false;
+    let currentMode    = 'life';
 
     const modeTabInset = 6; /* keep in sync with #modeTab padding in styles.css */
 
@@ -333,78 +336,280 @@
     // Init pill on the active tab
     requestAnimationFrame(() => positionTabPill(modeTab.querySelector('.tab-opt.active')));
 
-    function setMode(isWork) {
-      if (isWork === portfolioMode) return;
-      portfolioMode = isWork;
+    // ── Bookshelf ──
+    const bookshelfView = document.getElementById('bookshelfView');
+    const introEl = document.querySelector('.intro');
+
+    const BOOKS = [
+      { title: 'Atomic Habits', author: 'James Clear', desc: 'An easy and proven way to build good habits and break bad ones — tiny changes that compound into remarkable results.', rating: 5, bg: '#1a1a1c', fg: '#ffd60a' },
+      { title: 'Build', author: 'Tony Fadell', desc: 'The inside story of how Apple and Nest were built — honest lessons on product development, leadership, and the nature of creative work.', rating: 5, bg: '#0d2137', fg: '#4db8ff' },
+      { title: 'Building A Second Brain', author: 'Tiago Forte', desc: 'A method for capturing and organizing ideas so your past thinking becomes your greatest asset for future creativity.', rating: 4, bg: '#1e0d30', fg: '#b388ff' },
+      { title: 'Creativity, Inc.', author: 'Ed Catmull', desc: 'A handbook for anyone who strives for originality and the first book to describe Pixar\'s creative process.', rating: 5, bg: '#2b1c3a', fg: '#e8b4f8' },
+      { title: 'Designing for Emotion', author: 'Aarron Walter', desc: 'How to use personality, surprise, and joy to design products that users genuinely love rather than merely tolerate.', rating: 4, bg: '#2d1206', fg: '#ff8a50' },
+      { title: 'Emotional Design', author: 'Don Norman', desc: 'Why attractive things work better — how aesthetics and feeling shape our emotional and behavioral responses to objects.', rating: 4, bg: '#0a1f3c', fg: '#90caf9' },
+      { title: 'Feel-Good Productivity', author: 'Ali Abdaal', desc: 'How energizing your work through play, power, and people unlocks a more sustainable and joyful path to getting things done.', rating: 4, bg: '#0d2a1a', fg: '#69f0ae' },
+      { title: 'Money for Couples', author: 'Ramit Sethi', desc: 'A practical guide for partners to align on money, break financial taboos, and build a rich life together without resentment.', rating: 4, bg: '#1a2a1a', fg: '#a5d6a7' },
+      { title: 'Show Your Work', author: 'Austin Kleon', desc: 'Ten ways to share your creativity without selling out — how to get discovered doing the work you love.', rating: 5, bg: '#111111', fg: '#f5f5f5' },
+      { title: 'Steal Like An Artist', author: 'Austin Kleon', desc: 'Creative work builds on what came before — why the best artists are skilled remixers with original voices.', rating: 5, bg: '#1c1c1c', fg: '#e0e0e0' },
+      { title: 'The Design of Everyday Things', author: 'Don Norman', desc: 'A powerful primer on human-centered design that explains why some products delight while others only frustrate.', rating: 5, bg: '#bf3b28', fg: '#fdf0e0' },
+      { title: 'The Product Minded Engineer', author: 'Gergely Orosz', desc: 'How the best engineers think beyond code — deeply understanding products and working cross-functionally to drive real outcomes.', rating: 4, bg: '#0f1b2d', fg: '#64b5f6' },
+      { title: 'The Ride of a Lifetime', author: 'Robert Iger', desc: 'Leadership lessons from twenty years running Disney — how optimism, courage, and decisiveness can reshape an iconic company.', rating: 5, bg: '#1a1a2e', fg: '#c0c0d8' },
+      { title: 'The Speed of Trust', author: 'Stephen M.R. Covey', desc: 'How trust — far more than ethics — is a practical, learnable business skill that changes everything when it increases.', rating: 4, bg: '#1a2744', fg: '#82b1ff' },
+    ];
+
+    function buildCoverHTML(book, large) {
+      const size = large ? 'large' : '';
+      return `
+        <div class="book-cover-author">${book.author}</div>
+        <div class="book-cover-deco">
+          <div class="book-cover-deco-line"></div>
+          <div class="book-cover-deco-line" style="width:60%;opacity:0.2"></div>
+        </div>
+        <div class="book-cover-title">${book.title}</div>
+      `;
+    }
+
+    function starsHTML(rating) {
+      return Array.from({ length: 5 }, (_, i) => {
+        const filled = i < rating;
+        return `<svg viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:${filled ? '#f59e0b' : 'var(--text-muted)'}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+      }).join('');
+    }
+
+    let bookshelfRendered = false;
+    function renderBookshelf() {
+      if (bookshelfRendered) return;
+      bookshelfRendered = true;
+      const grid = document.createElement('div');
+      grid.className = 'bookshelf-grid';
+      BOOKS.forEach((book, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'book-card';
+        btn.dataset.bookIdx = i;
+        const cover = document.createElement('div');
+        cover.className = 'book-cover';
+        cover.style.setProperty('--bc', book.bg);
+        cover.style.setProperty('--ba', book.fg);
+        cover.innerHTML = buildCoverHTML(book);
+        btn.appendChild(cover);
+        btn.addEventListener('click', () => openBookModal(i));
+        grid.appendChild(btn);
+      });
+      bookshelfView.appendChild(grid);
+    }
+
+    // Book modal
+    const bookModal = document.getElementById('bookModal');
+    const bookModalClose = document.getElementById('bookModalClose');
+    const bookModalCover = document.getElementById('bookModalCover');
+    const bookModalStars = document.getElementById('bookModalStars');
+    const bookModalTitle = document.getElementById('bookModalTitle');
+    const bookModalDesc  = document.getElementById('bookModalDesc');
+    let bookModalOpen = false;
+
+    function openBookModal(idx) {
+      if (bookModalOpen) return;
+      bookModalOpen = true;
+      const book = BOOKS[idx];
+      bookModalCover.style.setProperty('--bc', book.bg);
+      bookModalCover.style.setProperty('--ba', book.fg);
+      bookModalCover.innerHTML = buildCoverHTML(book, true);
+      bookModalStars.innerHTML = starsHTML(book.rating);
+      bookModalTitle.textContent = book.title;
+      bookModalDesc.textContent  = book.desc;
+      bookModal.style.pointerEvents = 'all';
+      bookModal.classList.add('bm-open');
+    }
+
+    function closeBookModal() {
+      if (!bookModalOpen) return;
+      bookModalOpen = false;
+      bookModal.classList.remove('bm-open');
+      bookModal.style.pointerEvents = 'none';
+    }
+
+    bookModalClose.addEventListener('click', closeBookModal);
+    bookModal.addEventListener('click', e => { if (e.target === bookModal) closeBookModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && bookModalOpen) closeBookModal(); });
+
+    function setMode(mode) {
+      if (mode === currentMode) return;
+      const prevMode = currentMode;
+      currentMode = mode;
+
+      const isBookshelfMode = mode === 'bookshelf';
+      tabPill.style.opacity = isBookshelfMode ? '0' : '1';
+      overflowBtn.classList.toggle('active', isBookshelfMode);
+      overflowItems.forEach(item => item.classList.toggle('active', item.dataset.mode === mode));
+      closeOverflowPanel();
 
       tabOpts.forEach(btn => {
-        const active = btn.dataset.mode === (isWork ? 'work' : 'life');
+        const active = btn.dataset.mode === mode;
         btn.classList.toggle('active', active);
         if (active) positionTabPill(btn);
       });
 
-      history.pushState(null, '', isWork ? '?work' : location.pathname);
+      const isWork = mode === 'work';
+      const isBookshelf = mode === 'bookshelf';
+      const urlSuffix = mode === 'work' ? '?work' : mode === 'bookshelf' ? '?bookshelf' : location.pathname;
+      history.pushState(null, '', urlSuffix);
       document.body.classList.toggle('work-mode', isWork);
-      if (!isWork) window.scrollTo({ top: 0 });
+      if (!isWork && !isBookshelf) window.scrollTo({ top: 0 });
 
-      // Swap headshot
-      if (avatarImg) {
-        avatarImg.src = isWork ? '/src/img/headshot-work.jpg' : '/src/img/headshot-personal.jpg';
-      }
-
-      // Swap headline + description
-      animateHeadingOut(heading, () => {
-        heading.innerHTML = isWork ? workHeadline : defaultHeadline;
-        animateHeadingIn(heading);
-      });
-      anime({
-        targets: descEl,
-        opacity: 0,
-        duration: 180,
-        easing: 'easeInQuad',
-        complete: () => {
-          descEl.innerHTML = isWork ? workDesc : defaultDesc;
-          anime({ targets: descEl, opacity: 1, duration: 350, easing: 'easeOutQuad' });
+      // Headshot + headline only swap between life ↔ work
+      if (!isBookshelf && prevMode !== 'bookshelf') {
+        if (avatarImg) {
+          avatarImg.src = isWork ? '/src/img/headshot-work.jpg' : '/src/img/headshot-personal.jpg';
         }
-      });
+        animateHeadingOut(heading, () => {
+          heading.innerHTML = isWork ? workHeadline : defaultHeadline;
+          animateHeadingIn(heading);
+        });
+        anime({
+          targets: descEl,
+          opacity: 0,
+          duration: 180,
+          easing: 'easeInQuad',
+          complete: () => {
+            descEl.innerHTML = isWork ? workDesc : defaultDesc;
+            anime({ targets: descEl, opacity: 1, duration: 350, easing: 'easeOutQuad' });
+          }
+        });
+      }
 
       // Show/hide now strip
       const nowStripEl = document.getElementById('nowStrip');
-      if (nowStripEl) nowStripEl.style.display = isWork ? 'none' : '';
+      if (nowStripEl) nowStripEl.style.display = (isWork || isBookshelf) ? 'none' : '';
 
-      if (isWork) {
+      if (isBookshelf) {
+        const fadeOut = prevMode === 'work' ? portfolioGrid : launchpad;
         anime({
-          targets: launchpad,
-          opacity: 0, scale: 0.95,
-          duration: 280, easing: 'easeInQuad',
+          targets: [fadeOut, introEl].filter(Boolean),
+          opacity: 0, scale: 0.97,
+          duration: 220, easing: 'easeInQuad',
           complete: () => {
             launchpad.style.display = 'none';
-            portfolioGrid.style.opacity = '';
-            portfolioGrid.style.transform = '';
-            portfolioGrid.style.display = 'grid';
-            anime({ targets: '.study, .kpi', opacity: [0, 1], translateY: [14, 0], duration: 600,
-              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(40) });
-          }
-        });
-      } else {
-        anime({
-          targets: portfolioGrid,
-          opacity: 0, scale: 0.95,
-          duration: 280, easing: 'easeInQuad',
-          complete: () => {
             portfolioGrid.style.display = 'none';
-            launchpad.style.opacity = '';
-            launchpad.style.transform = '';
-            launchpad.style.display = 'flex';
-            anime({ targets: '.app', opacity: [0, 1], translateY: [14, 0], duration: 600,
-              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(55) });
+            if (introEl) introEl.style.display = 'none';
+            renderBookshelf();
+            bookshelfView.style.opacity = '0';
+            bookshelfView.style.display = 'flex';
+            anime({ targets: '.book-card', opacity: [0, 1], translateY: [14, 0], duration: 500,
+              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(30) });
+            anime({ targets: bookshelfView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
           }
         });
+      } else if (isWork) {
+        if (prevMode === 'bookshelf') {
+          // restore headshot/heading to work state
+          if (avatarImg) avatarImg.src = '/src/img/headshot-work.jpg';
+          heading.innerHTML = workHeadline;
+          descEl.innerHTML  = workDesc;
+          anime({
+            targets: bookshelfView,
+            opacity: 0, scale: 0.97,
+            duration: 220, easing: 'easeInQuad',
+            complete: () => {
+              bookshelfView.style.display = 'none';
+              if (introEl) { introEl.style.removeProperty('display'); introEl.style.opacity = ''; introEl.style.transform = ''; }
+              portfolioGrid.style.opacity = '';
+              portfolioGrid.style.transform = '';
+              portfolioGrid.style.display = 'grid';
+              anime({ targets: '.study, .kpi', opacity: [0, 1], translateY: [14, 0], duration: 600,
+                easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(40) });
+            }
+          });
+        } else {
+          anime({
+            targets: launchpad,
+            opacity: 0, scale: 0.95,
+            duration: 280, easing: 'easeInQuad',
+            complete: () => {
+              launchpad.style.display = 'none';
+              portfolioGrid.style.opacity = '';
+              portfolioGrid.style.transform = '';
+              portfolioGrid.style.display = 'grid';
+              anime({ targets: '.study, .kpi', opacity: [0, 1], translateY: [14, 0], duration: 600,
+                easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(40) });
+            }
+          });
+        }
+      } else {
+        // life mode
+        if (prevMode === 'bookshelf') {
+          // restore headshot/heading to life state
+          if (avatarImg) avatarImg.src = '/src/img/headshot-personal.jpg';
+          heading.innerHTML = defaultHeadline;
+          descEl.innerHTML  = defaultDesc;
+          anime({
+            targets: bookshelfView,
+            opacity: 0, scale: 0.97,
+            duration: 220, easing: 'easeInQuad',
+            complete: () => {
+              bookshelfView.style.display = 'none';
+              if (introEl) { introEl.style.removeProperty('display'); introEl.style.opacity = ''; introEl.style.transform = ''; }
+              launchpad.style.opacity = '';
+              launchpad.style.transform = '';
+              launchpad.style.display = 'flex';
+              anime({ targets: '.app', opacity: [0, 1], translateY: [14, 0], duration: 600,
+                easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(55) });
+            }
+          });
+        } else {
+          anime({
+            targets: portfolioGrid,
+            opacity: 0, scale: 0.95,
+            duration: 280, easing: 'easeInQuad',
+            complete: () => {
+              portfolioGrid.style.display = 'none';
+              launchpad.style.opacity = '';
+              launchpad.style.transform = '';
+              launchpad.style.display = 'flex';
+              anime({ targets: '.app', opacity: [0, 1], translateY: [14, 0], duration: 600,
+                easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(55) });
+            }
+          });
+        }
       }
     }
 
     tabOpts.forEach(btn => {
-      btn.addEventListener('click', () => setMode(btn.dataset.mode === 'work'));
+      btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    });
+
+    // ── Overflow panel ──
+    let overflowOpen = false;
+
+    function closeOverflowPanel() {
+      if (!overflowOpen) return;
+      overflowOpen = false;
+      overflowPanel.classList.remove('open');
+      overflowBtn.setAttribute('aria-expanded', 'false');
+      overflowPanel.setAttribute('aria-hidden', 'true');
+    }
+
+    overflowBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (overflowOpen) {
+        closeOverflowPanel();
+      } else {
+        overflowOpen = true;
+        overflowPanel.classList.add('open');
+        overflowBtn.setAttribute('aria-expanded', 'true');
+        overflowPanel.setAttribute('aria-hidden', 'false');
+      }
+    });
+
+    overflowItems.forEach(item => {
+      item.addEventListener('click', () => setMode(item.dataset.mode));
+    });
+
+    document.addEventListener('click', e => {
+      if (overflowOpen && !overflowPanel.contains(e.target)) closeOverflowPanel();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && overflowOpen) closeOverflowPanel();
     });
 
     // ── Power → fade to black → version ──
@@ -1411,7 +1616,8 @@
     window.addEventListener('hashchange', handleHash);
 
     // Restore work mode from ?work query param
-    if (location.search === '?work') setMode(true);
+    if (location.search === '?work') setMode('work');
+    else if (location.search === '?bookshelf') setMode('bookshelf');
 
     // Deep link on load
     handleHash();

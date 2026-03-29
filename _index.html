@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
@@ -62,6 +63,12 @@
     <div class="tab-pill"></div>
     <button class="tab-opt active" data-mode="life">Life</button>
     <button class="tab-opt" data-mode="work">Work</button>
+    <div class="tab-separator" aria-hidden="true"></div>
+    <button id="overflowBtn" aria-label="More" aria-expanded="false" aria-haspopup="true" title="More">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+      </svg>
+    </button>
   </div>
 
   <!-- Theme toggle (top right): moon = switch to dark, sun = switch to light -->
@@ -76,6 +83,16 @@
   </button>
 
   </div><!-- /#topBar -->
+
+  <!-- Overflow panel (more options) -->
+  <div id="overflowPanel" aria-hidden="true">
+    <button class="overflow-item" data-mode="bookshelf">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      Bookshelf
+    </button>
+  </div>
 
   <!-- Social panel -->
   <div id="socialPanel" aria-hidden="true">
@@ -222,6 +239,9 @@
 
   </div>
 
+  <!-- Bookshelf view (populated by JS) -->
+  <div id="bookshelfView" style="display:none"></div>
+
   </div><!-- /#mainPanel -->
 
   <!-- Now strip -->
@@ -239,6 +259,25 @@
       </button>
       <h2 id="panelTitle"></h2>
       <div id="panelContent"></div>
+    </div>
+  </div>
+
+  <!-- Book detail modal -->
+  <div id="bookModal" role="dialog" aria-modal="true" aria-label="Book detail">
+    <div id="bookModalFrame">
+      <button id="bookModalClose" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <div id="bookModalContent">
+        <div id="bookModalCover"></div>
+        <div id="bookModalInfo">
+          <div id="bookModalStars"></div>
+          <h2 id="bookModalTitle"></h2>
+          <p id="bookModalDesc"></p>
+        </div>
+      </div>
     </div>
   </div>
 
