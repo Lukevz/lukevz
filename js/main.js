@@ -338,6 +338,7 @@
 
     // ── Bookshelf ──
     const bookshelfView = document.getElementById('bookshelfView');
+    const gearView      = document.getElementById('gearView');
     const introEl = document.querySelector('.intro');
 
     const BOOKS = [
@@ -398,6 +399,51 @@
       bookshelfView.appendChild(grid);
     }
 
+    // ── Gear ──
+    const GEAR = [
+      { name: 'BenQ MA270S',           detail: '27" 5K Monitor',         img: 'https://img.benq.com/is/image/ptl/ma270s-feature-desktop-main1?wid=880&fmt=png-alpha' },
+      { name: 'MacBook Pro 14"',        detail: 'M3 Pro · Space Black',   img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mbp-14-spblk-select-202310?wid=904&hei=840&fmt=jpeg&qlt=95' },
+      { name: 'Fujifilm X-S20',         detail: 'Mirrorless Camera',      img: 'https://fujifilm-x.com/global/products/cameras/x-s20/assets/img/top/section01_img01.png' },
+      { name: 'XF 18–55mm f/2.8–4',    detail: 'Fujifilm Lens',          img: 'https://fujifilm-x.com/global/products/lenses/xf18-55mmf2-8-4-r-lm-ois/assets/img/top/photo01.png' },
+      { name: 'XF 70–300mm f/4.5–5.6', detail: 'Fujifilm Lens',          img: 'https://fujifilm-x.com/global/products/lenses/xf70-300mmf4-5-6-3-r-lm-ois-wr/assets/img/top/photo01.png' },
+      { name: 'Shure MV7',              detail: 'USB Microphone',         img: 'https://pubs.shure.com/guide/MV7/en-US/content/images/MV7_USB_Black_angle.png' },
+      { name: 'Bose QC Ultra',          detail: 'Headphones · Blue',      img: 'https://assets.bose.com/content/dam/cloudassets/Bose_DAM/Web/consumer_electronics/global/products/headphones/qc_ultra_headphones/product_silo_images/QC_Ultra_Headphones_Blue_EC_Hero.png' },
+      { name: 'MX Master 4',            detail: 'Wireless Mouse',         img: 'https://resource.logitech.com/content/dam/logitech/en/products/mice/mx-master-4/gallery/mx-master-4-top-view-graphite.png' },
+      { name: 'iPad mini',              detail: '7th Gen',                img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/ipad-mini-select-202411?wid=904&hei=840&fmt=jpeg&qlt=95' },
+      { name: 'iPhone 17 Pro',          detail: 'Natural Titanium',       img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-17-pro-select-natural-202509?wid=940&hei=1112&fmt=jpeg&qlt=95' },
+      { name: 'Kindle Paperwhite',      detail: 'E-Reader',               img: 'https://m.media-amazon.com/images/I/71wqicS1lOS._AC_SL1500_.jpg' },
+      { name: 'Sonos Beam',             detail: 'Gen 2 · Soundbar',       img: 'https://www.sonos.com/on/demandware.static/-/Sites-sonos-master-catalog/default/dw8e3a5a1c/images/hi-res/Beam_Black_Angle-Front.png' },
+      { name: 'Dreame H12 Pro',         detail: 'Wet & Dry Vacuum',       img: 'https://www.dreametech.com/cdn/shop/products/H12_Pro_1.png' },
+      { name: 'Philips Wake-Up Light',  detail: 'HF3520',                 img: 'https://images.philips.com/is/image/PhilipsConsumer/HF3520_00-IMS-en_US?wid=1250&hei=1250&$pngTransparent$' },
+    ];
+
+    let gearRendered = false;
+    function renderGear() {
+      if (gearRendered) return;
+      gearRendered = true;
+      const grid = document.createElement('div');
+      grid.className = 'gear-grid';
+      GEAR.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'gear-card';
+        const img = document.createElement('img');
+        img.className = 'gear-img';
+        img.alt = item.name;
+        img.loading = 'lazy';
+        img.src = item.img;
+        img.onerror = () => { img.style.display = 'none'; };
+        const name = document.createElement('div');
+        name.className = 'gear-name';
+        name.textContent = item.name;
+        const detail = document.createElement('div');
+        detail.className = 'gear-detail';
+        detail.textContent = item.detail;
+        card.append(img, name, detail);
+        grid.appendChild(card);
+      });
+      gearView.appendChild(grid);
+    }
+
     // Book modal
     const bookModal = document.getElementById('bookModal');
     const bookModalClose = document.getElementById('bookModalClose');
@@ -438,8 +484,10 @@
       currentMode = mode;
 
       const isBookshelfMode = mode === 'bookshelf';
-      tabPill.style.opacity = isBookshelfMode ? '0' : '1';
-      overflowBtn.classList.toggle('active', isBookshelfMode);
+      const isGearMode      = mode === 'gear';
+      const isSpecialMode   = isBookshelfMode || isGearMode;
+      tabPill.style.opacity = isSpecialMode ? '0' : '1';
+      overflowBtn.classList.toggle('active', isSpecialMode);
       overflowItems.forEach(item => item.classList.toggle('active', item.dataset.mode === mode));
       closeOverflowPanel();
 
@@ -451,13 +499,14 @@
 
       const isWork = mode === 'work';
       const isBookshelf = mode === 'bookshelf';
-      const urlSuffix = mode === 'work' ? '?work' : mode === 'bookshelf' ? '?bookshelf' : location.pathname;
+      const isGear = mode === 'gear';
+      const urlSuffix = mode === 'work' ? '?work' : isBookshelf ? '?bookshelf' : isGear ? '?gear' : location.pathname;
       history.pushState(null, '', urlSuffix);
       document.body.classList.toggle('work-mode', isWork);
-      if (!isWork && !isBookshelf) window.scrollTo({ top: 0 });
+      if (!isWork && !isBookshelf && !isGear) window.scrollTo({ top: 0 });
 
       // Headshot + headline only swap between life ↔ work
-      if (!isBookshelf && prevMode !== 'bookshelf') {
+      if (!isBookshelf && !isGear && prevMode !== 'bookshelf' && prevMode !== 'gear') {
         if (avatarImg) {
           avatarImg.src = isWork ? '/src/img/headshot-work.jpg' : '/src/img/headshot-personal.jpg';
         }
@@ -479,17 +528,24 @@
 
       // Show/hide now strip
       const nowStripEl = document.getElementById('nowStrip');
-      if (nowStripEl) nowStripEl.style.display = (isWork || isBookshelf) ? 'none' : '';
+      if (nowStripEl) nowStripEl.style.display = (isWork || isBookshelf || isGear) ? 'none' : '';
+
+      // Helper: fade out a "special" view (bookshelf or gear) then run callback
+      function fadeOutSpecial(view, cb) {
+        anime({ targets: view, opacity: 0, scale: 0.97, duration: 220, easing: 'easeInQuad',
+          complete: () => { view.style.display = 'none'; cb(); } });
+      }
 
       if (isBookshelf) {
-        const fadeOut = prevMode === 'work' ? portfolioGrid : launchpad;
+        const fadeOut = prevMode === 'work' ? portfolioGrid : (prevMode === 'gear' ? gearView : launchpad);
         anime({
-          targets: [fadeOut, introEl].filter(Boolean),
+          targets: [prevMode === 'gear' ? gearView : fadeOut, introEl].filter(Boolean),
           opacity: 0, scale: 0.97,
           duration: 220, easing: 'easeInQuad',
           complete: () => {
             launchpad.style.display = 'none';
             portfolioGrid.style.display = 'none';
+            gearView.style.display = 'none';
             if (introEl) introEl.style.display = 'none';
             renderBookshelf();
             bookshelfView.style.opacity = '0';
@@ -499,25 +555,38 @@
             anime({ targets: bookshelfView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
           }
         });
+      } else if (isGear) {
+        const fadeOut = prevMode === 'work' ? portfolioGrid : (prevMode === 'bookshelf' ? bookshelfView : launchpad);
+        anime({
+          targets: [fadeOut, introEl].filter(Boolean),
+          opacity: 0, scale: 0.97,
+          duration: 220, easing: 'easeInQuad',
+          complete: () => {
+            launchpad.style.display = 'none';
+            portfolioGrid.style.display = 'none';
+            bookshelfView.style.display = 'none';
+            if (introEl) introEl.style.display = 'none';
+            renderGear();
+            gearView.style.opacity = '0';
+            gearView.style.display = 'flex';
+            anime({ targets: '.gear-card', opacity: [0, 1], translateY: [14, 0], duration: 500,
+              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(25) });
+            anime({ targets: gearView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
+          }
+        });
       } else if (isWork) {
-        if (prevMode === 'bookshelf') {
-          // restore headshot/heading to work state
+        if (prevMode === 'bookshelf' || prevMode === 'gear') {
+          const prevSpecial = prevMode === 'bookshelf' ? bookshelfView : gearView;
           if (avatarImg) avatarImg.src = '/src/img/headshot-work.jpg';
           heading.innerHTML = workHeadline;
           descEl.innerHTML  = workDesc;
-          anime({
-            targets: bookshelfView,
-            opacity: 0, scale: 0.97,
-            duration: 220, easing: 'easeInQuad',
-            complete: () => {
-              bookshelfView.style.display = 'none';
-              if (introEl) { introEl.style.removeProperty('display'); introEl.style.opacity = ''; introEl.style.transform = ''; }
-              portfolioGrid.style.opacity = '';
-              portfolioGrid.style.transform = '';
-              portfolioGrid.style.display = 'grid';
-              anime({ targets: '.study, .kpi', opacity: [0, 1], translateY: [14, 0], duration: 600,
-                easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(40) });
-            }
+          fadeOutSpecial(prevSpecial, () => {
+            if (introEl) { introEl.style.removeProperty('display'); introEl.style.opacity = ''; introEl.style.transform = ''; }
+            portfolioGrid.style.opacity = '';
+            portfolioGrid.style.transform = '';
+            portfolioGrid.style.display = 'grid';
+            anime({ targets: '.study, .kpi', opacity: [0, 1], translateY: [14, 0], duration: 600,
+              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(40) });
           });
         } else {
           anime({
@@ -536,24 +605,18 @@
         }
       } else {
         // life mode
-        if (prevMode === 'bookshelf') {
-          // restore headshot/heading to life state
+        if (prevMode === 'bookshelf' || prevMode === 'gear') {
+          const prevSpecial = prevMode === 'bookshelf' ? bookshelfView : gearView;
           if (avatarImg) avatarImg.src = '/src/img/headshot-personal.jpg';
           heading.innerHTML = defaultHeadline;
           descEl.innerHTML  = defaultDesc;
-          anime({
-            targets: bookshelfView,
-            opacity: 0, scale: 0.97,
-            duration: 220, easing: 'easeInQuad',
-            complete: () => {
-              bookshelfView.style.display = 'none';
-              if (introEl) { introEl.style.removeProperty('display'); introEl.style.opacity = ''; introEl.style.transform = ''; }
-              launchpad.style.opacity = '';
-              launchpad.style.transform = '';
-              launchpad.style.display = 'flex';
-              anime({ targets: '.app', opacity: [0, 1], translateY: [14, 0], duration: 600,
-                easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(55) });
-            }
+          fadeOutSpecial(prevSpecial, () => {
+            if (introEl) { introEl.style.removeProperty('display'); introEl.style.opacity = ''; introEl.style.transform = ''; }
+            launchpad.style.opacity = '';
+            launchpad.style.transform = '';
+            launchpad.style.display = 'flex';
+            anime({ targets: '.app', opacity: [0, 1], translateY: [14, 0], duration: 600,
+              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(55) });
           });
         } else {
           anime({
@@ -1618,6 +1681,7 @@
     // Restore work mode from ?work query param
     if (location.search === '?work') setMode('work');
     else if (location.search === '?bookshelf') setMode('bookshelf');
+    else if (location.search === '?gear') setMode('gear');
 
     // Deep link on load
     handleHash();

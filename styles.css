@@ -2279,6 +2279,104 @@
       #bookModalCover { width: 140px; height: 212px; }
     }
 
+    /* ── Gear ── */
+    #gearView {
+      display: flex;
+      justify-content: center;
+      padding: 40px 24px 80px;
+      min-height: calc(100vh - 80px);
+      align-items: flex-start;
+    }
+
+    .gear-grid {
+      columns: 4;
+      column-gap: 14px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .gear-card {
+      break-inside: avoid;
+      margin-bottom: 14px;
+      border-radius: 16px;
+      padding: 20px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      transition: transform 0.22s cubic-bezier(0.16,1,0.3,1);
+      cursor: default;
+    }
+
+    .gear-card:hover { transform: translateY(-5px); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .gear-card { cursor: none !important; }
+    }
+
+    .gear-img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      display: block;
+      border-radius: 6px;
+    }
+
+    .gear-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: center;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+
+    .gear-detail {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Light mode: images blend into page background */
+    [data-theme="light"] .gear-img {
+      mix-blend-mode: multiply;
+    }
+
+    @media (prefers-color-scheme: light) {
+      html:not([data-theme]) .gear-img { mix-blend-mode: multiply; }
+    }
+
+    /* Dark mode: white card so product images read cleanly */
+    [data-theme="dark"] .gear-card {
+      background: rgba(255,255,255,0.92);
+      box-shadow: 0 2px 16px rgba(0,0,0,0.28);
+    }
+
+    [data-theme="dark"] .gear-name { color: #1c1c1e; }
+    [data-theme="dark"] .gear-detail { color: rgba(0,0,0,0.44); }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) .gear-card {
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 2px 16px rgba(0,0,0,0.28);
+      }
+      html:not([data-theme]) .gear-name { color: #1c1c1e; }
+      html:not([data-theme]) .gear-detail { color: rgba(0,0,0,0.44); }
+    }
+
+    @media (max-width: 860px) {
+      .gear-grid { columns: 3; }
+    }
+
+    @media (max-width: 600px) {
+      .gear-grid { columns: 2; column-gap: 10px; }
+      .gear-card { padding: 14px 12px 10px; margin-bottom: 10px; border-radius: 12px; }
+      #gearView { padding: 28px 16px 60px; }
+    }
+
     /* ── Responsive layout ── */
     @media (max-width: 640px) {
       /* Switch from vertically-centered flex to top-aligned so content can scroll.
