@@ -401,20 +401,21 @@
 
     // ── Gear ──
     const GEAR = [
-      { name: 'BenQ MA270S',           detail: '27" 5K Monitor',         img: 'https://img.benq.com/is/image/ptl/ma270s-feature-desktop-main1?wid=880&fmt=png-alpha' },
-      { name: 'MacBook Pro 14"',        detail: 'M3 Pro · Space Black',   img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mbp-14-spblk-select-202310?wid=904&hei=840&fmt=jpeg&qlt=95' },
-      { name: 'Fujifilm X-S20',         detail: 'Mirrorless Camera',      img: 'https://fujifilm-x.com/global/products/cameras/x-s20/assets/img/top/section01_img01.png' },
-      { name: 'XF 18–55mm f/2.8–4',    detail: 'Fujifilm Lens',          img: 'https://fujifilm-x.com/global/products/lenses/xf18-55mmf2-8-4-r-lm-ois/assets/img/top/photo01.png' },
-      { name: 'XF 70–300mm f/4.5–5.6', detail: 'Fujifilm Lens',          img: 'https://fujifilm-x.com/global/products/lenses/xf70-300mmf4-5-6-3-r-lm-ois-wr/assets/img/top/photo01.png' },
-      { name: 'Shure MV7',              detail: 'USB Microphone',         img: 'https://pubs.shure.com/guide/MV7/en-US/content/images/MV7_USB_Black_angle.png' },
-      { name: 'Bose QC Ultra',          detail: 'Headphones · Blue',      img: 'https://assets.bose.com/content/dam/cloudassets/Bose_DAM/Web/consumer_electronics/global/products/headphones/qc_ultra_headphones/product_silo_images/QC_Ultra_Headphones_Blue_EC_Hero.png' },
-      { name: 'MX Master 4',            detail: 'Wireless Mouse',         img: 'https://resource.logitech.com/content/dam/logitech/en/products/mice/mx-master-4/gallery/mx-master-4-top-view-graphite.png' },
-      { name: 'iPad mini',              detail: '7th Gen',                img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/ipad-mini-select-202411?wid=904&hei=840&fmt=jpeg&qlt=95' },
-      { name: 'iPhone 17 Pro',          detail: 'Natural Titanium',       img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-17-pro-select-natural-202509?wid=940&hei=1112&fmt=jpeg&qlt=95' },
-      { name: 'Kindle Paperwhite',      detail: 'E-Reader',               img: 'https://m.media-amazon.com/images/I/71wqicS1lOS._AC_SL1500_.jpg' },
-      { name: 'Sonos Beam',             detail: 'Gen 2 · Soundbar',       img: 'https://www.sonos.com/on/demandware.static/-/Sites-sonos-master-catalog/default/dw8e3a5a1c/images/hi-res/Beam_Black_Angle-Front.png' },
-      { name: 'Dreame H12 Pro',         detail: 'Wet & Dry Vacuum',       img: 'https://www.dreametech.com/cdn/shop/products/H12_Pro_1.png' },
-      { name: 'Philips Wake-Up Light',  detail: 'HF3520',                 img: 'https://images.philips.com/is/image/PhilipsConsumer/HF3520_00-IMS-en_US?wid=1250&hei=1250&$pngTransparent$' },
+      // Image URLs: manufacturer CDNs (white-bg JPEGs use mix-blend-mode:multiply in CSS) or confirmed transparent PNGs from pngimg.com
+      { name: 'BenQ MA270S',           detail: '27" 5K Monitor',            img: 'https://img.benq.com/is/image/ptl/ma270s-feature-desktop-main1?wid=880&fmt=png-alpha' },
+      { name: 'MacBook Pro 14"',        detail: 'M3 Pro · Space Black',      img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mbp-14-spblk-select-202310?wid=904&hei=840&fmt=jpeg&qlt=95' },
+      { name: 'Fujifilm X-S20',         detail: 'Mirrorless Camera',         img: 'https://fujifilm-x.com/global/products/cameras/x-s20/assets/img/top/section01_img01.png' },
+      { name: 'XF 18–55mm f/2.8–4',    detail: 'Fujifilm Lens',             img: 'https://fujifilm-x.com/global/products/lenses/xf18-55mmf2-8-4-r-lm-ois/assets/img/top/photo01.png' },
+      { name: 'XF 70–300mm f/4.5–5.6', detail: 'Fujifilm Lens',             img: 'https://fujifilm-x.com/global/products/lenses/xf70-300mmf4-5-6-3-r-lm-ois-wr/assets/img/top/photo01.png' },
+      { name: 'Shure MV7',              detail: 'USB Microphone',            img: 'https://pubs.shure.com/guide/MV7/en-US/content/images/MV7_USB_Black_angle.png' },
+      { name: 'Bose QC Ultra',          detail: 'Headphones · Lunar Blue',   img: 'https://assets.bose.com/content/dam/cloudassets/Bose_DAM/Web/consumer_electronics/global/products/headphones/qc_ultra_headphones/product_silo_images/QC_Ultra_Headphones_Blue_EC_Hero.png' },
+      { name: 'MX Master 4',            detail: 'Wireless Mouse',            img: 'https://resource.logitech.com/content/dam/logitech/en/products/mice/mx-master-4/gallery/mx-master-4-top-view-graphite.png' },
+      { name: 'iPad mini',              detail: '7th Gen',                   img: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/ipad-mini-select-202411?wid=904&hei=840&fmt=jpeg&qlt=95' },
+      { name: 'iPhone 17 Pro',          detail: 'Silver',                    img: 'https://pngimg.com/uploads/iphone17/iphone17_PNG11.png' },
+      { name: 'Kindle Paperwhite',      detail: 'E-Reader',                  img: 'https://m.media-amazon.com/images/I/71wqicS1lOS._AC_SL1500_.jpg' },
+      { name: 'Sonos Beam',             detail: 'Gen 2 · Soundbar',          img: 'https://www.sonos.com/on/demandware.static/-/Sites-sonos-master-catalog/default/dw8e3a5a1c/images/hi-res/Beam_Black_Angle-Front.png' },
+      { name: 'Dreame H12 Pro',         detail: 'Wet & Dry Vacuum',          img: 'https://www.dreametech.com/cdn/shop/products/H12_Pro_1.png' },
+      { name: 'Philips Wake-Up Light',  detail: 'HF3520',                    img: 'https://images.philips.com/is/image/PhilipsConsumer/HF3520_00-IMS-en_US?wid=1250&hei=1250&$pngTransparent$' },
     ];
 
     let gearRendered = false;
