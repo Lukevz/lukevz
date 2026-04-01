@@ -806,7 +806,7 @@
     });
 
     // ── Theme toggle (light / warm charcoal dark) ──
-    // Explicit choice is stored as lukevz-theme = light | dark. Absent key = follow system (not "cached" by reload).
+    // Theme always re-syncs to the system preference on page load.
     const THEME_KEY = 'lukevz-theme';
     const themeToggle = document.getElementById('themeToggle');
     const themeMoon = themeToggle?.querySelector('.theme-icon-moon');
@@ -853,6 +853,11 @@
         try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) { /* ignore */ }
       }
       updateThemeToggleUi(dark);
+    }
+
+    function syncThemeToSystemOnLoad() {
+      applyThemeSystem(true);
+      document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: isDarkTheme() ? 1 : 0 } }));
     }
 
     const themeTransitionEl = document.getElementById('themeTransition');
@@ -941,6 +946,8 @@
         }
       });
     }
+
+    syncThemeToSystemOnLoad();
 
     if (themeToggle) {
       updateThemeToggleUi(isDarkTheme());
@@ -1070,21 +1077,6 @@
       'Northstar':   'northstar'
     };
 
-    // Fetch post counts and populate .app-count spans
-    Object.entries(SECTION_SLUGS).forEach(([appName, slug]) => {
-      fetch(`/api/content/list?category=${slug}`)
-        .then(r => r.json())
-        .then(data => {
-          const n = (data.items || data.files || []).length;
-          const btn = document.querySelector(`.app[data-app="${appName}"]`);
-          if (btn) {
-            const el = btn.querySelector('.app-count');
-            if (el) el.textContent = `${n} post${n !== 1 ? 's' : ''}`;
-          }
-        })
-        .catch(() => {});
-    });
-
     const SECTIONS = {
       'studio':      { label: 'Studio' },
       'field-notes': { label: 'Field Notes' },
@@ -1199,6 +1191,13 @@
       'studio': 'uxwithluke'
     };
 
+    function fetchSectionMarkdownItems(section) {
+      return fetch(`/api/content/list?category=${section}`)
+        .then(r => r.json())
+        .then(({ items, files }) => items || (files || []).map(file => ({ file })))
+        .catch(() => []);
+    }
+
     function fetchChannelVideos(handle) {
       if (videoCache[handle]) return Promise.resolve(videoCache[handle]);
       return fetch(`/api/youtube/channel-videos?handle=${handle}`)
@@ -1206,6 +1205,36 @@
         .then(({ videos }) => { videoCache[handle] = videos || []; return videoCache[handle]; })
         .catch(() => []);
     }
+
+    function setSectionCount(appName, count, label) {
+      const btn = document.querySelector(`.app[data-app="${appName}"]`);
+      if (!btn) return;
+      const el = btn.querySelector('.app-count');
+      if (!el) return;
+      el.textContent = `${count} ${label}${count !== 1 ? 's' : ''}`;
+    }
+
+    function populateSectionCounts() {
+      Object.entries(SECTION_SLUGS).forEach(([appName, slug]) => {
+        const ytHandle = SECTION_YT_HANDLES[slug];
+        const mdFetch = fetchSectionMarkdownItems(slug);
+        const videosFetch = ytHandle ? fetchChannelVideos(ytHandle) : Promise.resolve([]);
+
+        Promise.allSettled([mdFetch, videosFetch]).then(([mdResult, videosResult]) => {
+          const hasData = mdResult.status === 'fulfilled' || videosResult.status === 'fulfilled';
+          if (!hasData) return;
+
+          const mdCount = mdResult.status === 'fulfilled' ? mdResult.value.length : 0;
+          const videoCount = videosResult.status === 'fulfilled' ? videosResult.value.length : 0;
+          const total = mdCount + videoCount;
+          const label = ytHandle ? 'item' : 'post';
+
+          setSectionCount(appName, total, label);
+        });
+      });
+    }
+
+    populateSectionCounts();
 
     function attachRowClicks() {
       setTimeout(() => {
