@@ -130,8 +130,11 @@
       });
 
       strip.appendChild(wrap);
-      // Don't show if we're on the Work tab (may have loaded after setMode ran)
-      if (!document.body.classList.contains('work-mode')) {
+      // Only show on the Life tab (may have loaded after setMode ran)
+      const search = location.search;
+      const isLife = !search.includes('work') && !search.includes('bookshelf')
+        && !search.includes('gear') && !search.includes('places');
+      if (isLife) {
         strip.style.display = 'inline-flex';
       }
 

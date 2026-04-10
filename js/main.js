@@ -381,23 +381,24 @@
     // ── Bookshelf ──
     const bookshelfView = document.getElementById('bookshelfView');
     const gearView      = document.getElementById('gearView');
+    const placesView    = document.getElementById('placesView');
     const introEl = document.querySelector('.intro');
 
     const BOOKS = [
-      { title: 'Atomic Habits', author: 'James Clear', desc: 'An easy and proven way to build good habits and break bad ones — tiny changes that compound into remarkable results.', rating: 5, bg: '#1a1a1c', fg: '#ffd60a' },
-      { title: 'Build', author: 'Tony Fadell', desc: 'The inside story of how Apple and Nest were built — honest lessons on product development, leadership, and the nature of creative work.', rating: 5, bg: '#0d2137', fg: '#4db8ff' },
-      { title: 'Building A Second Brain', author: 'Tiago Forte', desc: 'A method for capturing and organizing ideas so your past thinking becomes your greatest asset for future creativity.', rating: 4, bg: '#1e0d30', fg: '#b388ff' },
-      { title: 'Creativity, Inc.', author: 'Ed Catmull', desc: 'A handbook for anyone who strives for originality and the first book to describe Pixar\'s creative process.', rating: 5, bg: '#2b1c3a', fg: '#e8b4f8' },
-      { title: 'Designing for Emotion', author: 'Aarron Walter', desc: 'How to use personality, surprise, and joy to design products that users genuinely love rather than merely tolerate.', rating: 4, bg: '#2d1206', fg: '#ff8a50' },
-      { title: 'Emotional Design', author: 'Don Norman', desc: 'Why attractive things work better — how aesthetics and feeling shape our emotional and behavioral responses to objects.', rating: 4, bg: '#0a1f3c', fg: '#90caf9' },
-      { title: 'Feel-Good Productivity', author: 'Ali Abdaal', desc: 'How energizing your work through play, power, and people unlocks a more sustainable and joyful path to getting things done.', rating: 4, bg: '#0d2a1a', fg: '#69f0ae' },
-      { title: 'Money for Couples', author: 'Ramit Sethi', desc: 'A practical guide for partners to align on money, break financial taboos, and build a rich life together without resentment.', rating: 4, bg: '#1a2a1a', fg: '#a5d6a7' },
-      { title: 'Show Your Work', author: 'Austin Kleon', desc: 'Ten ways to share your creativity without selling out — how to get discovered doing the work you love.', rating: 5, bg: '#111111', fg: '#f5f5f5' },
-      { title: 'Steal Like An Artist', author: 'Austin Kleon', desc: 'Creative work builds on what came before — why the best artists are skilled remixers with original voices.', rating: 5, bg: '#1c1c1c', fg: '#e0e0e0' },
-      { title: 'The Design of Everyday Things', author: 'Don Norman', desc: 'A powerful primer on human-centered design that explains why some products delight while others only frustrate.', rating: 5, bg: '#bf3b28', fg: '#fdf0e0' },
-      { title: 'The Product Minded Engineer', author: 'Gergely Orosz', desc: 'How the best engineers think beyond code — deeply understanding products and working cross-functionally to drive real outcomes.', rating: 4, bg: '#0f1b2d', fg: '#64b5f6' },
-      { title: 'The Ride of a Lifetime', author: 'Robert Iger', desc: 'Leadership lessons from twenty years running Disney — how optimism, courage, and decisiveness can reshape an iconic company.', rating: 5, bg: '#1a1a2e', fg: '#c0c0d8' },
-      { title: 'The Speed of Trust', author: 'Stephen M.R. Covey', desc: 'How trust — far more than ethics — is a practical, learnable business skill that changes everything when it increases.', rating: 4, bg: '#1a2744', fg: '#82b1ff' },
+      { title: 'Atomic Habits', author: 'James Clear', desc: 'An easy and proven way to build good habits and break bad ones — tiny changes that compound into remarkable results.', rating: 5, bg: '#1a1a1c', fg: '#ffd60a', lightBg: '#fffceb', lightFg: '#8a6800', amazon: 'https://www.amazon.com/dp/0735211299' },
+      { title: 'Build', author: 'Tony Fadell', desc: 'The inside story of how Apple and Nest were built — honest lessons on product development, leadership, and the nature of creative work.', rating: 5, bg: '#0d2137', fg: '#4db8ff', lightBg: '#eaf4ff', lightFg: '#0055a5', amazon: 'https://www.amazon.com/dp/0063046067' },
+      { title: 'Building A Second Brain', author: 'Tiago Forte', desc: 'A method for capturing and organizing ideas so your past thinking becomes your greatest asset for future creativity.', rating: 4, bg: '#1e0d30', fg: '#b388ff', lightBg: '#f0e8ff', lightFg: '#5b21b6', amazon: 'https://www.amazon.com/dp/1982167386' },
+      { title: 'Creativity, Inc.', author: 'Ed Catmull', desc: 'A handbook for anyone who strives for originality and the first book to describe Pixar\'s creative process.', rating: 5, bg: '#2b1c3a', fg: '#e8b4f8', lightBg: '#fbe8ff', lightFg: '#7e22ce', amazon: 'https://www.amazon.com/dp/0812998960' },
+      { title: 'Designing for Emotion', author: 'Aarron Walter', desc: 'How to use personality, surprise, and joy to design products that users genuinely love rather than merely tolerate.', rating: 4, bg: '#2d1206', fg: '#ff8a50', lightBg: '#fff4ed', lightFg: '#c2390a', amazon: 'https://www.amazon.com/dp/0321789355' },
+      { title: 'Emotional Design', author: 'Don Norman', desc: 'Why attractive things work better — how aesthetics and feeling shape our emotional and behavioral responses to objects.', rating: 4, bg: '#0a1f3c', fg: '#90caf9', lightBg: '#e9f2ff', lightFg: '#1347a0', amazon: 'https://www.amazon.com/dp/0465051367' },
+      { title: 'Feel-Good Productivity', author: 'Ali Abdaal', desc: 'How energizing your work through play, power, and people unlocks a more sustainable and joyful path to getting things done.', rating: 4, bg: '#0d2a1a', fg: '#69f0ae', lightBg: '#e8f8f0', lightFg: '#1a6b3c', amazon: 'https://www.amazon.com/dp/0063349336' },
+      { title: 'Money for Couples', author: 'Ramit Sethi', desc: 'A practical guide for partners to align on money, break financial taboos, and build a rich life together without resentment.', rating: 4, bg: '#1a2a1a', fg: '#a5d6a7', lightBg: '#ecf7ed', lightFg: '#2d6a31', amazon: 'https://www.amazon.com/dp/1523523689' },
+      { title: 'Show Your Work', author: 'Austin Kleon', desc: 'Ten ways to share your creativity without selling out — how to get discovered doing the work you love.', rating: 5, bg: '#111111', fg: '#f5f5f5', lightBg: '#f5f5f5', lightFg: '#111111', amazon: 'https://www.amazon.com/dp/0761162599' },
+      { title: 'Steal Like An Artist', author: 'Austin Kleon', desc: 'Creative work builds on what came before — why the best artists are skilled remixers with original voices.', rating: 5, bg: '#1c1c1c', fg: '#e0e0e0', lightBg: '#ebebeb', lightFg: '#242424', amazon: 'https://www.amazon.com/dp/0761169253' },
+      { title: 'The Design of Everyday Things', author: 'Don Norman', desc: 'A powerful primer on human-centered design that explains why some products delight while others only frustrate.', rating: 5, bg: '#bf3b28', fg: '#fdf0e0', lightBg: '#fdf0e0', lightFg: '#9b2d1d', amazon: 'https://www.amazon.com/dp/0465050654' },
+      { title: 'The Product Minded Engineer', author: 'Gergely Orosz', desc: 'How the best engineers think beyond code — deeply understanding products and working cross-functionally to drive real outcomes.', rating: 4, bg: '#0f1b2d', fg: '#64b5f6', lightBg: '#eaf2fc', lightFg: '#1255a0', amazon: 'https://www.amazon.com/s?k=Gergely+Orosz+product-minded+engineer&i=stripbooks' },
+      { title: 'The Ride of a Lifetime', author: 'Robert Iger', desc: 'Leadership lessons from twenty years running Disney — how optimism, courage, and decisiveness can reshape an iconic company.', rating: 5, bg: '#1a1a2e', fg: '#c0c0d8', lightBg: '#eeeef8', lightFg: '#2e2e54', amazon: 'https://www.amazon.com/dp/0399592091' },
+      { title: 'The Speed of Trust', author: 'Stephen M.R. Covey', desc: 'How trust — far more than ethics — is a practical, learnable business skill that changes everything when it increases.', rating: 4, bg: '#1a2744', fg: '#82b1ff', lightBg: '#eaeff9', lightFg: '#1a3d8a', amazon: 'https://www.amazon.com/dp/1982141066' },
     ];
 
     function buildCoverHTML(book, large) {
@@ -423,6 +424,7 @@
     function renderBookshelf() {
       if (bookshelfRendered) return;
       bookshelfRendered = true;
+      ensureGardenSlugSet();
       const grid = document.createElement('div');
       grid.className = 'bookshelf-grid';
       BOOKS.forEach((book, i) => {
@@ -431,8 +433,10 @@
         btn.dataset.bookIdx = i;
         const cover = document.createElement('div');
         cover.className = 'book-cover';
-        cover.style.setProperty('--bc', book.bg);
-        cover.style.setProperty('--ba', book.fg);
+        cover.style.setProperty('--bc-dark', book.bg);
+        cover.style.setProperty('--ba-dark', book.fg);
+        cover.style.setProperty('--bc-light', book.lightBg);
+        cover.style.setProperty('--ba-light', book.lightFg);
         cover.innerHTML = buildCoverHTML(book);
         btn.appendChild(cover);
         btn.addEventListener('click', () => openBookModal(i));
@@ -445,15 +449,17 @@
     const GEAR = [
       // Prefer model-specific vendor/retailer images over generic product silhouettes.
       { name: 'BenQ MA270S',           detail: '27" 5K Monitor',            img: 'https://image.benq.com/is/image/benqco/ma270s-thumbnail-right45?$ResponsivePreset$' },
-      { name: 'MacBook Pro 14"',       detail: 'M3 Pro · Space Black',      img: 'https://www.apple.com/v/macbook-pro/ax/images/overview/product-viewer/pv_hero_endframe__gc89p7dw1syi_large.jpg' },
+      { name: 'MacBook Pro 14"',       detail: 'M3 Pro · Space Black',      img: '/images/gear-macbook-pro-14.png' },
       { name: 'Fujifilm X-S20',        detail: 'Mirrorless Camera',         img: 'https://fujifilm-x.b-cdn.net/wp-content/uploads/2023/05/dwga_x-s20_thum.jpg?resize=150,150&width=150&height=150' },
-      { name: 'XF 18–55mm f/2.8–4',    detail: 'Fujifilm Lens',             img: 'https://fujifilm-x.b-cdn.net/wp-content/uploads/2019/10/xf18-55mmf28-4-r-lm-ois_main-1.png?width=1024&height=572' },
+      { name: 'XF 18–55mm f/2.8–4',    detail: 'Fujifilm Lens',             img: '/images/gear-xf-18-55mm.png' },
       { name: 'XF 70–300mm f/4.5–5.6', detail: 'Fujifilm Lens',             img: 'https://fujifilm-x.b-cdn.net/wp-content/uploads/2021/01/xf70-300mmf45-56-r-lm-ois-wr_anim_11.png?width=1000&height=563' },
-      { name: 'Shure MV7',             detail: 'USB Microphone',            img: 'https://products.shureweb.eu/shure_product_db/product_main_images/files/0a5/4f1/be-/setcard/fe71d068e73acc951e1c9a0458a7093c.jpeg' },
+      { name: 'Shure MV7',             detail: 'USB Microphone',            img: '/images/gear-shure-mv7.png' },
       { name: 'Bose QC Ultra',         detail: 'Headphones · Lunar Blue',   img: 'https://www.worldwidestereo.com/cdn/shop/files/1_0df5c049-5361-4790-bd0e-5f5400a3351b.jpg?v=1742307135' },
       { name: 'MX Master 4',           detail: 'Wireless Mouse',            img: 'https://resource.logitech.com/c_fill,q_auto,f_auto,dpr_1.0/d_transparent.gif/content/dam/logitech/en/products/mice/mx-master-4/gallery/mx-master-4-graphite-front-3qtr-angle-gallery-10.png' },
       { name: 'iPad mini',             detail: '7th Gen · Space Gray',      img: 'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-mini-select-wifi-spacegray-202410?wid=940&hei=1112&fmt=png-alpha&.v=NmJhVkxMSzd4RmRrSjJwN2s4VWJVKzlBaHA1THNMUXlDa1dRMU1wTGcxYlRKc3dEODNneTBSZFNTOGZoVVpTaURPUU9BWmJWRXFZMEJicERYSS9tMXZ3UU5uUUpBVE5PT3lEMWJHa3h5c29tYUg4SmtKcW5xSGI3YTdpRVdNejg' },
-      { name: 'iPhone 17 Pro',         detail: 'Silver',                    img: 'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-17-pro-finish-select-silver-202509_AV2?wid=724&hei=540&fmt=jpeg&qlt=90&.v=NUNzdzNKR0FJbmhKWm5YamRHb05tVGJOdEdsYjE3KzExOGFjT0NXdW5CR0ZuR0xSWXBlNjhaVFk2ZGJNSGE3NEVrYzZ4aGx2Q085bnhRaVROeFdKVDdrNkxqcEdrM2x6OUZ3Z2JnTllhUVBsaDdVbyt6ZHpBMTRqaGk0VVUxTnE' },
+      { name: 'iPhone 17 Pro',         detail: 'Silver',                    img: '/images/gear-iphone-17-pro-silver.png' },
+      { name: 'Apple Watch Series 11', detail: '42mm · Silver',              img: 'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-case-42-aluminum-silver-nc-s11_VW_PF?wid=752&hei=752&fmt=png-alpha&qlt=90' },
+      { name: 'Oura Ring 4',           detail: 'Silver',                    img: '/images/gear-oura-ring-4-silver.png' },
       { name: 'Kindle Paperwhite',     detail: 'E-Reader',                  img: 'https://target.scene7.com/is/image/Target/GUEST_8608ea59-7cd0-4700-9575-7624d4dc5a89?wid=1200&hei=1200&qlt=80' },
       { name: 'Sonos Beam',            detail: 'Gen 2 · Soundbar',          img: 'https://media.sonos.com/images/znqtjj88/production/c79156fe93547d1b0a993dc1fb7b381d8773737a-3000x1834.png?q=75&fit=clip&auto=format' },
       { name: 'Dreame H12 Pro',        detail: 'Wet & Dry Vacuum',          img: 'https://global.dreametech.com/cdn/shop/products/20220815140236_6fe97919-7f6d-4448-b2d8-855328f93a99_600x.png?v=1663898275' },
@@ -468,7 +474,7 @@
       grid.className = 'gear-grid';
       GEAR.forEach(item => {
         const card = document.createElement('div');
-        card.className = 'gear-card';
+        card.className = 'gear-card' + (item.darkBg ? ' gear-card--dark-bg' : '');
         const img = document.createElement('img');
         img.className = 'gear-img';
         img.alt = item.name;
@@ -487,6 +493,296 @@
       gearView.appendChild(grid);
     }
 
+    // ── Places (Mapbox) ──
+    let placesMapInstance = null;
+    let placesRendered    = false;
+    let placesGeojson     = null;
+    let placesMarkers     = [];
+    // Mapbox style URLs. Defaults use Mapbox's built-in minimal styles (free).
+    // Replace with your own Mapbox Studio style URLs for full custom basemap control:
+    //   mapbox://styles/YOUR_USERNAME/YOUR_STYLE_ID
+    const MAPBOX_STYLE_DARK  = 'mapbox://styles/mapbox/navigation-night-v1';
+    const MAPBOX_STYLE_LIGHT = 'mapbox://styles/mapbox/light-v11';
+
+    function placesCurrentStyle() {
+      return isDarkTheme() ? MAPBOX_STYLE_DARK : MAPBOX_STYLE_LIGHT;
+    }
+
+    function placesAddLayers(map) {
+      if (!placesGeojson) return;
+
+      // Clean up any legacy DOM markers
+      placesMarkers.forEach(m => m.remove());
+      placesMarkers = [];
+
+      // Remove existing cluster layers/source if present (e.g. after a style reload)
+      ['unclustered-point', 'cluster-count', 'clusters'].forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id);
+      });
+      if (map.getSource('places-source')) map.removeSource('places-source');
+
+      const dark          = isDarkTheme();
+      const pinColor      = dark ? 'rgba(255,255,255,0.92)' : 'rgba(25,25,25,0.88)';
+      const clusterFill   = dark ? 'rgba(255,255,255,0.10)' : 'rgba(20,20,20,0.07)';
+      const clusterStroke = dark ? 'rgba(255,255,255,0.45)' : 'rgba(20,20,20,0.30)';
+      const textColor     = dark ? '#ffffff'                : '#1a1a1a';
+
+      map.addSource('places-source', {
+        type: 'geojson',
+        data: placesGeojson,
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 40,
+      });
+
+      map.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'places-source',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': clusterFill,
+          'circle-radius': ['step', ['get', 'point_count'], 18, 5, 24, 15, 30],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': clusterStroke,
+        },
+      });
+
+      map.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'places-source',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+          'text-size': 12,
+        },
+        paint: { 'text-color': textColor },
+      });
+
+      map.addLayer({
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'places-source',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': pinColor,
+          'circle-radius': 5,
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)',
+        },
+      });
+
+      // Register map event handlers once per map instance
+      if (!map._placesEventsAttached) {
+        map._placesEventsAttached = true;
+
+        map.on('click', 'clusters', e => {
+          const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+          if (!features.length) return;
+          const clusterId = features[0].properties.cluster_id;
+          map.getSource('places-source').getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err) return;
+            map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom + 0.5 });
+          });
+        });
+
+        map.on('click', 'unclustered-point', async e => {
+          const feature = e.features[0];
+          const props   = feature.properties;
+          const coords  = feature.geometry.coordinates.slice();
+          while (Math.abs(e.lngLat.lng - coords[0]) > 180) {
+            coords[0] += e.lngLat.lng > coords[0] ? 360 : -360;
+          }
+
+          function buildPopupHTML(locationLine) {
+            let photosHTML = '';
+            try {
+              const photos = JSON.parse(props.photos || '[]');
+              if (photos.length) {
+                photosHTML = `<div class="places-popup__photos">${photos.map(src =>
+                  `<img class="places-popup__photo" src="${src}" alt="" loading="lazy">`
+                ).join('')}</div>`;
+              }
+            } catch (_) {}
+            const locText  = locationLine      ? `<p class="places-popup__location">${locationLine}</p>` : '';
+            const dateText = props.date        ? `<p class="places-popup__date">${props.date}</p>` : '';
+            const descText = props.description ? `<p class="places-popup__desc">${props.description}</p>` : '';
+            return `<div class="places-popup">
+              <p class="places-popup__name">${props.name || 'Place'}</p>
+              ${locText}${dateText}${descText}${photosHTML}
+            </div>`;
+          }
+
+          const popup = new mapboxgl.Popup({ offset: [0, -8], closeButton: true, maxWidth: '300px' })
+            .setLngLat(coords)
+            .setHTML(buildPopupHTML(null))
+            .addTo(map);
+
+          try {
+            const gc = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${coords[0]},${coords[1]}.json?types=place&access_token=${mapboxgl.accessToken}`
+            );
+            if (gc.ok) {
+              const data = await gc.json();
+              const context = data.features?.[0]?.context || [];
+              let region = null, country = null, countryCode = null;
+              for (const ctx of context) {
+                if (ctx.id.startsWith('region.'))  region = ctx.text;
+                if (ctx.id.startsWith('country.')) { country = ctx.text; countryCode = ctx.short_code?.toUpperCase(); }
+              }
+              const locationLine = countryCode === 'US' ? region : country;
+              if (locationLine && popup.isOpen()) popup.setHTML(buildPopupHTML(locationLine));
+            }
+          } catch (_) {}
+        });
+
+        map.on('mouseenter', 'clusters',          () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'clusters',          () => { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', 'unclustered-point', () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'unclustered-point', () => { map.getCanvas().style.cursor = ''; });
+      }
+    }
+
+    async function fetchPlacesData() {
+      try {
+        const res = await fetch('/api/places');
+        if (!res.ok) throw new Error(`places API ${res.status}`);
+        placesGeojson = await res.json();
+      } catch (err) {
+        console.warn('Places: failed to fetch pins', err);
+        placesGeojson = { type: 'FeatureCollection', features: [] };
+      }
+    }
+
+    function loadMapboxScript() {
+      return new Promise((resolve, reject) => {
+        if (window.mapboxgl) { resolve(); return; }
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.css';
+        document.head.appendChild(css);
+        const script = document.createElement('script');
+        script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.js';
+        script.onload  = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const OPAQUE_BASE_LAYERS = [
+      'background', 'land', 'landcover', 'landuse', 'land-structure-polygon',
+      'national-park',
+    ];
+
+    const WATER_TINT_LAYERS  = ['water', 'waterway', 'water-shadow'];
+    const WATER_COLOR_LIGHT  = '#cce8f2';
+    const WATER_COLOR_DARK   = '#1a3d4c';
+
+    function stripMapBackground(map) {
+      for (const id of OPAQUE_BASE_LAYERS) {
+        if (!map.getLayer(id)) continue;
+        const type = map.getLayer(id).type;
+        if (type === 'background') {
+          map.setPaintProperty(id, 'background-color', 'rgba(0,0,0,0)');
+          map.setPaintProperty(id, 'background-opacity', 0);
+        } else if (type === 'fill') {
+          map.setPaintProperty(id, 'fill-opacity', 0);
+        }
+      }
+      // Water layers: soft teal tint instead of transparent
+      const waterColor = isDarkTheme() ? WATER_COLOR_DARK : WATER_COLOR_LIGHT;
+      for (const id of WATER_TINT_LAYERS) {
+        if (!map.getLayer(id)) continue;
+        try {
+          const type = map.getLayer(id).type;
+          if (type === 'fill') {
+            map.setPaintProperty(id, 'fill-color', waterColor);
+            map.setPaintProperty(id, 'fill-opacity', 1);
+          } else if (type === 'line') {
+            map.setPaintProperty(id, 'line-color', waterColor);
+            map.setPaintProperty(id, 'line-opacity', 0.8);
+          }
+        } catch (_) {}
+      }
+    }
+
+    async function renderPlaces() {
+      if (placesRendered) {
+        // Trigger a resize in case the container was hidden and resized
+        if (placesMapInstance) placesMapInstance.resize();
+        return;
+      }
+      placesRendered = true;
+
+      await loadMapboxScript();
+
+      // Token: prefer window.MAPBOX_TOKEN (set by local gitignored mapbox-config.js),
+      // then fall back to fetching from /api/mapbox-token (reads Vercel env var in production).
+      let mapboxToken = window.MAPBOX_TOKEN;
+      if (!mapboxToken || mapboxToken === 'pk.your_public_token_here') {
+        try {
+          const tr = await fetch('/api/mapbox-token');
+          if (tr.ok) { const td = await tr.json(); mapboxToken = td.token; }
+        } catch (_) { /* ignore */ }
+      }
+      if (!mapboxToken) {
+        console.warn('Places: no Mapbox token found. Set MAPBOX_PUBLIC_TOKEN in Vercel env vars.');
+        placesRendered = false; // allow retry
+        return;
+      }
+      mapboxgl.accessToken = mapboxToken;
+
+      const mapContainer = document.getElementById('placesMap');
+      mapContainer.style.opacity = '0';
+
+      placesMapInstance = new mapboxgl.Map({
+        container: 'placesMap',
+        style: placesCurrentStyle(),
+        center: [-83.5, 32.7],
+        zoom: 3,
+        projection: 'equirectangular',
+        cooperativeGestures: true,
+        attributionControl: false,
+        logoPosition: 'bottom-right',
+      });
+
+      placesMapInstance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+      placesMapInstance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-left');
+
+      placesMapInstance.on('load', async () => {
+        stripMapBackground(placesMapInstance);
+        await fetchPlacesData();
+        placesAddLayers(placesMapInstance);
+        requestAnimationFrame(() => {
+          mapContainer.style.transition = 'opacity 0.4s ease';
+          mapContainer.style.opacity = '1';
+        });
+      });
+
+      // Swap style on theme change, then re-add layers
+      let placesIsDark = isDarkTheme();
+      document.addEventListener('themeblend', e => {
+        if (!placesMapInstance) return;
+        const dark = e.detail.blend > 0.5;
+        if (dark === placesIsDark) return;
+        placesIsDark = dark;
+        mapContainer.style.transition = 'opacity 0.15s ease';
+        mapContainer.style.opacity = '0';
+        placesMapInstance.setStyle(dark ? MAPBOX_STYLE_DARK : MAPBOX_STYLE_LIGHT);
+        placesMapInstance.once('style.load', () => {
+          stripMapBackground(placesMapInstance);
+          placesAddLayers(placesMapInstance);
+          requestAnimationFrame(() => {
+            mapContainer.style.transition = 'opacity 0.4s ease';
+            mapContainer.style.opacity = '1';
+          });
+        });
+      });
+
+    }
+
     // Book modal
     const bookModal = document.getElementById('bookModal');
     const bookModalClose = document.getElementById('bookModalClose');
@@ -494,20 +790,43 @@
     const bookModalStars = document.getElementById('bookModalStars');
     const bookModalTitle = document.getElementById('bookModalTitle');
     const bookModalDesc  = document.getElementById('bookModalDesc');
+    const bookModalActions = document.getElementById('bookModalActions');
+    const bookModalNotes = document.getElementById('bookModalNotes');
+    const bookModalAmazon = document.getElementById('bookModalAmazon');
     let bookModalOpen = false;
 
-    function openBookModal(idx) {
+    async function openBookModal(idx) {
       if (bookModalOpen) return;
       bookModalOpen = true;
       const book = BOOKS[idx];
-      bookModalCover.style.setProperty('--bc', book.bg);
-      bookModalCover.style.setProperty('--ba', book.fg);
+      bookModalCover.style.setProperty('--bc-dark', book.bg);
+      bookModalCover.style.setProperty('--ba-dark', book.fg);
+      bookModalCover.style.setProperty('--bc-light', book.lightBg);
+      bookModalCover.style.setProperty('--ba-light', book.lightFg);
       bookModalCover.innerHTML = buildCoverHTML(book, true);
       bookModalStars.innerHTML = starsHTML(book.rating);
       bookModalTitle.textContent = book.title;
       bookModalDesc.textContent  = book.desc;
+      if (bookModalAmazon) bookModalAmazon.href = book.amazon || '#';
+      if (bookModalNotes) {
+        bookModalNotes.hidden = true;
+        bookModalNotes.removeAttribute('data-garden-slug');
+      }
+      if (bookModalActions) bookModalActions.classList.add('book-modal-actions--solo');
       bookModal.style.pointerEvents = 'all';
       bookModal.classList.add('bm-open');
+
+      try {
+        const slugSet = await ensureGardenSlugSet();
+        if (!bookModalOpen || !bookModalNotes || !bookModalActions) return;
+        const gardenSlug = filenameToSlug(`B. ${book.title}`);
+        const hasNote = slugSet.has(gardenSlug);
+        bookModalNotes.hidden = !hasNote;
+        if (hasNote) bookModalNotes.dataset.gardenSlug = gardenSlug;
+        bookModalActions.classList.toggle('book-modal-actions--solo', !hasNote);
+      } catch (_) {
+        if (bookModalOpen && bookModalActions) bookModalActions.classList.add('book-modal-actions--solo');
+      }
     }
 
     function closeBookModal() {
@@ -521,6 +840,15 @@
     bookModal.addEventListener('click', e => { if (e.target === bookModal) closeBookModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && bookModalOpen) closeBookModal(); });
 
+    bookModalNotes?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const slug = bookModalNotes.dataset.gardenSlug;
+      if (!slug) return;
+      closeBookModal();
+      setMode('life');
+      location.hash = `#garden/${slug}`;
+    });
+
     function setMode(mode) {
       if (mode === currentMode) return;
       const prevMode = currentMode;
@@ -528,7 +856,8 @@
 
       const isBookshelfMode = mode === 'bookshelf';
       const isGearMode      = mode === 'gear';
-      const isSpecialMode   = isBookshelfMode || isGearMode;
+      const isPlacesMode    = mode === 'places';
+      const isSpecialMode   = isBookshelfMode || isGearMode || isPlacesMode;
       tabPill.style.opacity = isSpecialMode ? '0' : '1';
       overflowBtn.classList.toggle('active', isSpecialMode);
       overflowItems.forEach(item => item.classList.toggle('active', item.dataset.mode === mode));
@@ -540,16 +869,21 @@
         if (active) positionTabPill(btn);
       });
 
-      const isWork = mode === 'work';
+      const isWork      = mode === 'work';
       const isBookshelf = mode === 'bookshelf';
-      const isGear = mode === 'gear';
-      const urlSuffix = mode === 'work' ? '?work' : isBookshelf ? '?bookshelf' : isGear ? '?gear' : location.pathname;
+      const isGear      = mode === 'gear';
+      const isPlaces    = mode === 'places';
+      const isSpecial   = isBookshelf || isGear || isPlaces;
+      const urlSuffix   = isWork ? '?work' : isBookshelf ? '?bookshelf' : isGear ? '?gear' : isPlaces ? '?places' : location.pathname;
       history.pushState(null, '', urlSuffix);
       document.body.classList.toggle('work-mode', isWork);
-      if (!isWork && !isBookshelf && !isGear) window.scrollTo({ top: 0 });
+      document.body.classList.toggle('places-mode', isPlaces);
+      if (!isWork && !isSpecial) window.scrollTo({ top: 0 });
+
+      const prevIsSpecial = prevMode === 'bookshelf' || prevMode === 'gear' || prevMode === 'places';
 
       // Headshot + headline only swap between life ↔ work
-      if (!isBookshelf && !isGear && prevMode !== 'bookshelf' && prevMode !== 'gear') {
+      if (!isSpecial && !prevIsSpecial) {
         if (avatarImg) {
           avatarImg.src = isWork ? '/src/img/headshot-work.jpg' : '/src/img/headshot-personal.jpg';
         }
@@ -571,25 +905,41 @@
 
       // Show/hide now strip
       const nowStripEl = document.getElementById('nowStrip');
-      if (nowStripEl) nowStripEl.style.display = (isWork || isBookshelf || isGear) ? 'none' : '';
+      if (nowStripEl) nowStripEl.style.display = (isWork || isSpecial) ? 'none' : '';
 
-      // Helper: fade out a "special" view (bookshelf or gear) then run callback
+      // Helper: get the currently-visible special view element
+      function prevSpecialView() {
+        if (prevMode === 'bookshelf') return bookshelfView;
+        if (prevMode === 'gear')      return gearView;
+        if (prevMode === 'places')    return placesView;
+        return null;
+      }
+
+      // Helper: fade out any view then run callback
       function fadeOutSpecial(view, cb) {
         anime({ targets: view, opacity: 0, scale: 0.97, duration: 220, easing: 'easeInQuad',
           complete: () => { view.style.display = 'none'; cb(); } });
       }
 
+      // Helper: hide all views except the one about to be shown
+      function hideAllViews(except) {
+        if (except !== launchpad)    launchpad.style.display = 'none';
+        if (except !== portfolioGrid) portfolioGrid.style.display = 'none';
+        if (except !== bookshelfView) bookshelfView.style.display = 'none';
+        if (except !== gearView)     gearView.style.display = 'none';
+        if (except !== placesView)   placesView.style.display = 'none';
+        if (introEl && except !== introEl) introEl.style.display = 'none';
+      }
+
       if (isBookshelf) {
-        const fadeOut = prevMode === 'work' ? portfolioGrid : (prevMode === 'gear' ? gearView : launchpad);
+        const prevView = prevIsSpecial ? prevSpecialView() : (isWork ? portfolioGrid : launchpad);
+        const targets  = [prevIsSpecial ? prevSpecialView() : prevView, introEl].filter(Boolean);
         anime({
-          targets: [prevMode === 'gear' ? gearView : fadeOut, introEl].filter(Boolean),
+          targets,
           opacity: 0, scale: 0.97,
           duration: 220, easing: 'easeInQuad',
           complete: () => {
-            launchpad.style.display = 'none';
-            portfolioGrid.style.display = 'none';
-            gearView.style.display = 'none';
-            if (introEl) introEl.style.display = 'none';
+            hideAllViews(bookshelfView);
             renderBookshelf();
             bookshelfView.style.opacity = '0';
             bookshelfView.style.display = 'flex';
@@ -599,16 +949,13 @@
           }
         });
       } else if (isGear) {
-        const fadeOut = prevMode === 'work' ? portfolioGrid : (prevMode === 'bookshelf' ? bookshelfView : launchpad);
+        const prevView = prevIsSpecial ? prevSpecialView() : (prevMode === 'work' ? portfolioGrid : launchpad);
         anime({
-          targets: [fadeOut, introEl].filter(Boolean),
+          targets: [prevView, introEl].filter(Boolean),
           opacity: 0, scale: 0.97,
           duration: 220, easing: 'easeInQuad',
           complete: () => {
-            launchpad.style.display = 'none';
-            portfolioGrid.style.display = 'none';
-            bookshelfView.style.display = 'none';
-            if (introEl) introEl.style.display = 'none';
+            hideAllViews(gearView);
             renderGear();
             gearView.style.opacity = '0';
             gearView.style.display = 'flex';
@@ -617,9 +964,23 @@
             anime({ targets: gearView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
           }
         });
+      } else if (isPlaces) {
+        const prevView = prevIsSpecial ? prevSpecialView() : (prevMode === 'work' ? portfolioGrid : launchpad);
+        anime({
+          targets: [prevView, introEl].filter(Boolean),
+          opacity: 0, scale: 0.97,
+          duration: 220, easing: 'easeInQuad',
+          complete: () => {
+            hideAllViews(placesView);
+            renderPlaces();
+            placesView.style.opacity = '0';
+            placesView.style.display = 'flex';
+            anime({ targets: placesView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
+          }
+        });
       } else if (isWork) {
-        if (prevMode === 'bookshelf' || prevMode === 'gear') {
-          const prevSpecial = prevMode === 'bookshelf' ? bookshelfView : gearView;
+        if (prevIsSpecial) {
+          const prevSpecial = prevSpecialView();
           if (avatarImg) avatarImg.src = '/src/img/headshot-work.jpg';
           heading.innerHTML = workHeadline;
           descEl.innerHTML  = workDesc;
@@ -648,8 +1009,8 @@
         }
       } else {
         // life mode
-        if (prevMode === 'bookshelf' || prevMode === 'gear') {
-          const prevSpecial = prevMode === 'bookshelf' ? bookshelfView : gearView;
+        if (prevIsSpecial) {
+          const prevSpecial = prevSpecialView();
           if (avatarImg) avatarImg.src = '/src/img/headshot-personal.jpg';
           heading.innerHTML = defaultHeadline;
           descEl.innerHTML  = defaultDesc;
@@ -798,7 +1159,13 @@
     });
 
     document.addEventListener('click', e => {
-      if (socialOpen && !socialPanel.contains(e.target)) closeSocialPanel();
+      if (
+        socialOpen &&
+        !socialPanel.contains(e.target) &&
+        !socialBtn.contains(e.target)
+      ) {
+        closeSocialPanel();
+      }
     });
 
     document.addEventListener('keydown', e => {
@@ -1153,6 +1520,20 @@
     // Map filename (without .md) to URL-safe slug
     function filenameToSlug(name) {
       return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    }
+
+    let gardenSlugSetPromise = null;
+    function ensureGardenSlugSet() {
+      if (!gardenSlugSetPromise) {
+        gardenSlugSetPromise = fetch('/api/content/list?category=garden')
+          .then(r => r.json())
+          .then(({ items, files }) => {
+            const list = items || (files || []).map(file => ({ file }));
+            return new Set(list.map(({ file }) => filenameToSlug(file.replace(/\.md$/, ''))));
+          })
+          .catch(() => new Set());
+      }
+      return gardenSlugSetPromise;
     }
 
     // Reverse: find the matching filename from slug in a list of files
@@ -1750,10 +2131,11 @@
 
     window.addEventListener('hashchange', handleHash);
 
-    // Restore work mode from ?work query param
+    // Restore mode from URL query param
     if (location.search === '?work') setMode('work');
     else if (location.search === '?bookshelf') setMode('bookshelf');
     else if (location.search === '?gear') setMode('gear');
+    else if (location.search === '?places') setMode('places');
 
     // Deep link on load
     handleHash();

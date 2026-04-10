@@ -3,6 +3,7 @@
 music-config.js
 books-config.js
 movies-config.js
+mapbox-config.js
 
 # Node modules
 node_modules/
