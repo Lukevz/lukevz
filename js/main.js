@@ -671,6 +671,10 @@
       });
     }
 
+    /* Basemap tuning: keep in sync with styles.css :root --bg-dark (#13141a) for dark land */
+    const PLACES_LAND_DARK   = '#13141a';
+    const PLACES_OCEAN_DARK  = '#000000';
+
     const OPAQUE_BASE_LAYERS = [
       'background', 'land', 'landcover', 'landuse', 'land-structure-polygon',
       'national-park',
@@ -678,21 +682,32 @@
 
     const WATER_TINT_LAYERS  = ['water', 'waterway', 'water-shadow'];
     const WATER_COLOR_LIGHT  = '#cce8f2';
-    const WATER_COLOR_DARK   = '#1a3d4c';
 
     function stripMapBackground(map) {
+      const dark = isDarkTheme();
+
       for (const id of OPAQUE_BASE_LAYERS) {
         if (!map.getLayer(id)) continue;
         const type = map.getLayer(id).type;
         if (type === 'background') {
-          map.setPaintProperty(id, 'background-color', 'rgba(0,0,0,0)');
-          map.setPaintProperty(id, 'background-opacity', 0);
+          if (dark) {
+            map.setPaintProperty(id, 'background-color', PLACES_OCEAN_DARK);
+            map.setPaintProperty(id, 'background-opacity', 1);
+          } else {
+            map.setPaintProperty(id, 'background-color', 'rgba(0,0,0,0)');
+            map.setPaintProperty(id, 'background-opacity', 0);
+          }
         } else if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-opacity', 0);
+          if (dark) {
+            map.setPaintProperty(id, 'fill-color', PLACES_LAND_DARK);
+            map.setPaintProperty(id, 'fill-opacity', 1);
+          } else {
+            map.setPaintProperty(id, 'fill-opacity', 0);
+          }
         }
       }
-      // Water layers: soft teal tint instead of transparent
-      const waterColor = isDarkTheme() ? WATER_COLOR_DARK : WATER_COLOR_LIGHT;
+      // Water: light = soft tint; dark = deep black ocean (contrast with navy land)
+      const waterColor = dark ? PLACES_OCEAN_DARK : WATER_COLOR_LIGHT;
       for (const id of WATER_TINT_LAYERS) {
         if (!map.getLayer(id)) continue;
         try {
@@ -702,7 +717,7 @@
             map.setPaintProperty(id, 'fill-opacity', 1);
           } else if (type === 'line') {
             map.setPaintProperty(id, 'line-color', waterColor);
-            map.setPaintProperty(id, 'line-opacity', 0.8);
+            map.setPaintProperty(id, 'line-opacity', dark ? 0.65 : 0.8);
           }
         } catch (_) {}
       }
@@ -1173,7 +1188,8 @@
     });
 
     // ── Theme toggle (light / warm charcoal dark) ──
-    // Theme always re-syncs to the system preference on page load.
+    // Explicit choice is stored in localStorage (see head script in _index.html).
+    // On load: keep override if present; otherwise follow prefers-color-scheme.
     const THEME_KEY = 'lukevz-theme';
     const themeToggle = document.getElementById('themeToggle');
     const themeMoon = themeToggle?.querySelector('.theme-icon-moon');
@@ -1222,8 +1238,18 @@
       updateThemeToggleUi(dark);
     }
 
-    function syncThemeToSystemOnLoad() {
-      applyThemeSystem(true);
+    function initThemeOnLoad() {
+      if (themeIsExplicitOverride()) {
+        try {
+          const s = localStorage.getItem(THEME_KEY);
+          if (s === 'dark' || s === 'light') {
+            document.documentElement.setAttribute('data-theme', s);
+          }
+        } catch (err) { /* ignore */ }
+        updateThemeToggleUi(isDarkTheme());
+      } else {
+        applyThemeSystem(false);
+      }
       document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: isDarkTheme() ? 1 : 0 } }));
     }
 
@@ -1314,7 +1340,7 @@
       });
     }
 
-    syncThemeToSystemOnLoad();
+    initThemeOnLoad();
 
     if (themeToggle) {
       updateThemeToggleUi(isDarkTheme());
