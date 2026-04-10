@@ -16,6 +16,15 @@ import { buildPostsManifest, buildThoughtTrainsManifest, buildLabsManifest, buil
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 const v1Dir = join(rootDir, 'v1');
+
+// Load .env.local if it exists (gitignored local overrides, no package needed)
+const envLocalPath = join(rootDir, '.env.local');
+if (existsSync(envLocalPath)) {
+  for (const line of readFileSync(envLocalPath, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([^#\s=][^=]*?)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+}
 const postsDir = join(v1Dir, 'posts');
 const thoughtTrainDir = join(v1Dir, 'thought-train');
 const labsDir = join(v1Dir, 'labs');
@@ -315,6 +324,58 @@ function parseDuration(iso) {
   return (parseInt(m[1] || 0) * 3600) + (parseInt(m[2] || 0) * 60) + parseInt(m[3] || 0);
 }
 
+// ── KML → GeoJSON parser (mirrors api/places.js for local dev) ──
+function parseKmlToGeoJSON(kml) {
+  const features = [];
+  const placemarkRe = /<Placemark\b[^>]*>([\s\S]*?)<\/Placemark>/gi;
+  let m;
+  while ((m = placemarkRe.exec(kml)) !== null) {
+    const block = m[1];
+    const coordsMatch = block.match(/<coordinates>\s*([\-\d.]+),([\-\d.]+)(?:,[\-\d.]*)?\s*<\/coordinates>/);
+    if (!coordsMatch) continue;
+    const lng = parseFloat(coordsMatch[1]), lat = parseFloat(coordsMatch[2]);
+    if (isNaN(lng) || isNaN(lat)) continue;
+    const name = extractKmlText(block, 'name') || 'Unnamed place';
+    const rawDesc = extractKmlCdata(block, 'description') || extractKmlText(block, 'description') || '';
+    const cleanDesc = stripKmlHtml(rawDesc).trim();
+    const photos = extractKmlPhotos(block, rawDesc);
+    const date = extractKmlDate(cleanDesc);
+    const displayDesc = cleanDesc.replace(date || '', '').replace(/^\s*\n/, '').trim();
+    features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: { name, description: displayDesc || null, photos: JSON.stringify(photos), date: date || null } });
+  }
+  return { type: 'FeatureCollection', features };
+}
+function extractKmlText(block, tag) {
+  const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+  return m ? m[1].trim() : null;
+}
+function extractKmlCdata(block, tag) {
+  const m = block.match(new RegExp(`<${tag}[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>\\s*<\\/${tag}>`, 'i'));
+  return m ? m[1] : null;
+}
+function stripKmlHtml(html) {
+  return html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').trim();
+}
+function extractKmlPhotos(block, rawDesc) {
+  const photos = [];
+  const ml = block.match(/<Data\s+name=["']gx_media_links["'][^>]*>[\s\S]*?<value>([\s\S]*?)<\/value>/i);
+  if (ml) { ml[1].split(/\s+/).filter(u => u.startsWith('http')).forEach(u => photos.push(u)); }
+  if (!photos.length) {
+    const imgRe = /<img[^>]+src=["']([^"']+)["']/gi; let im;
+    while ((im = imgRe.exec(rawDesc)) !== null) photos.push(im[1]);
+  }
+  return photos;
+}
+function extractKmlDate(text) {
+  const iso = text.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+  if (iso) return iso[1];
+  const months = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
+  const my = text.match(new RegExp(`\\b(${months})\\s+(\\d{4})\\b`, 'i'));
+  return my ? `${my[1]} ${my[2]}` : null;
+}
+
 // In-memory storage for guestbook (development only)
 const guestbookStars = [];
 
@@ -373,6 +434,47 @@ async function handleAPIProxy(req, res) {
       .sort((a, b) => b.date.localeCompare(a.date));
     res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ items, files: items.map(i => i.file) }));
+    return true;
+  }
+
+  // Mapbox public token endpoint
+  if (path === '/api/mapbox-token' && req.method === 'GET') {
+    const token = process.env.MAPBOX_PUBLIC_TOKEN;
+    if (!token) {
+      // Token is likely already set via mapbox-config.js — return empty so browser uses that
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ token: null }));
+    } else {
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ token }));
+    }
+    return true;
+  }
+
+  // Places endpoint — proxy Google My Maps KML and convert to GeoJSON
+  if (path === '/api/places' && req.method === 'GET') {
+    const mapId = process.env.GOOGLE_MY_MAPS_ID;
+    if (!mapId) {
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ type: 'FeatureCollection', features: [] }));
+      console.log('\x1b[90m  Note: GOOGLE_MY_MAPS_ID env var not set — returning empty places\x1b[0m');
+      return true;
+    }
+    try {
+      const kmlUrl = `https://www.google.com/maps/d/kml?forcekml=1&mid=${encodeURIComponent(mapId)}`;
+      const kmlRes = await fetch(kmlUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; lukevz-places/1.0)' }
+      });
+      if (!kmlRes.ok) throw new Error(`KML fetch failed: ${kmlRes.status}`);
+      const kml = await kmlRes.text();
+      const geojson = parseKmlToGeoJSON(kml);
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(geojson));
+    } catch (err) {
+      console.error('Places proxy error:', err.message);
+      res.writeHead(500, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
     return true;
   }
 
