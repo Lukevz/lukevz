@@ -501,7 +501,7 @@
     // Mapbox style URLs. Defaults use Mapbox's built-in minimal styles (free).
     // Replace with your own Mapbox Studio style URLs for full custom basemap control:
     //   mapbox://styles/YOUR_USERNAME/YOUR_STYLE_ID
-    const MAPBOX_STYLE_DARK  = 'mapbox://styles/mapbox/navigation-night-v1';
+    const MAPBOX_STYLE_DARK  = 'mapbox://styles/mapbox/dark-v11';
     const MAPBOX_STYLE_LIGHT = 'mapbox://styles/mapbox/light-v11';
 
     function placesCurrentStyle() {
@@ -723,6 +723,41 @@
       }
     }
 
+    // Road/highway layer ID patterns to hide — covers motorways, trunks, primary/secondary
+    // roads, shields, and road labels from both dark-v11 and light-v11 styles.
+    const ROAD_LAYER_PATTERNS = [
+      /^road/,
+      /^highway/,
+      /^motorway/,
+      /^trunk/,
+      /^tunnel/,
+      /^bridge/,
+      /^turning/,
+      /^path/,
+      /^ferry/,
+      /^aerialway/,
+      /^airport/,
+    ];
+
+    function hideRoadLayers(map) {
+      const style = map.getStyle();
+      if (!style || !style.layers) return;
+      for (const layer of style.layers) {
+        const id = layer.id;
+        if (ROAD_LAYER_PATTERNS.some(re => re.test(id))) {
+          try {
+            if (layer.type === 'line') {
+              map.setPaintProperty(id, 'line-opacity', 0);
+            } else if (layer.type === 'symbol') {
+              map.setLayoutProperty(id, 'visibility', 'none');
+            } else if (layer.type === 'fill') {
+              map.setPaintProperty(id, 'fill-opacity', 0);
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
     async function renderPlaces() {
       if (placesRendered) {
         // Trigger a resize in case the container was hidden and resized
@@ -768,6 +803,7 @@
 
       placesMapInstance.on('load', async () => {
         stripMapBackground(placesMapInstance);
+        hideRoadLayers(placesMapInstance);
         await fetchPlacesData();
         placesAddLayers(placesMapInstance);
         requestAnimationFrame(() => {
@@ -788,6 +824,7 @@
         placesMapInstance.setStyle(dark ? MAPBOX_STYLE_DARK : MAPBOX_STYLE_LIGHT);
         placesMapInstance.once('style.load', () => {
           stripMapBackground(placesMapInstance);
+          hideRoadLayers(placesMapInstance);
           placesAddLayers(placesMapInstance);
           requestAnimationFrame(() => {
             mapContainer.style.transition = 'opacity 0.4s ease';
