@@ -34,6 +34,8 @@ const coversDir = join(v1Dir, 'covers');
 const flightsPath = join(rootDir, 'flights.md');
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT) || 3000;
+const devPublicHost = HOST === '127.0.0.1' || HOST === '0.0.0.0' ? 'localhost' : HOST;
+const DEV_ORIGIN = `http://${devPublicHost}:${PORT}`;
 
 // MIME types
 const mimeTypes = {
@@ -693,7 +695,7 @@ async function handleAPIProxy(req, res) {
 
       const response = await fetch(youtubeUrl, {
         headers: {
-          'Referer': 'http://localhost:3000/'
+          'Referer': `${DEV_ORIGIN}/`
         }
       });
       const data = await response.json();
@@ -775,7 +777,7 @@ async function handleAPIProxy(req, res) {
 
         const response = await fetch(playlistUrl, {
           headers: {
-            'Referer': 'http://localhost:3000/'
+            'Referer': `${DEV_ORIGIN}/`
           }
         });
         const data = await response.json();
@@ -1128,9 +1130,8 @@ function ensureFrontmatterDates() {
 ensureFrontmatterDates();
 
 server.listen(PORT, HOST, () => {
-  const displayHost = HOST === '0.0.0.0' || HOST === '127.0.0.1' ? 'localhost' : HOST;
   console.log(`\n\x1b[1m  Digital Garden\x1b[0m`);
   console.log(`\x1b[90m  ─────────────────────────\x1b[0m`);
-  console.log(`  \x1b[36m➜\x1b[0m  http://${displayHost}:${PORT}`);
+  console.log(`  \x1b[36m➜\x1b[0m  ${DEV_ORIGIN}`);
   console.log(`\x1b[90m  ─────────────────────────\x1b[0m\n`);
 });

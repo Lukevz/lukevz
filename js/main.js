@@ -379,9 +379,10 @@
     requestAnimationFrame(() => positionTabPill(modeTab.querySelector('.tab-opt.active')));
 
     // ── Bookshelf ──
-    const bookshelfView = document.getElementById('bookshelfView');
-    const gearView      = document.getElementById('gearView');
-    const placesView    = document.getElementById('placesView');
+    const bookshelfView  = document.getElementById('bookshelfView');
+    const gearView       = document.getElementById('gearView');
+    const appStackView   = document.getElementById('appStackView');
+    const placesView     = document.getElementById('placesView');
     const introEl = document.querySelector('.intro');
 
     const BOOKS = [
@@ -491,6 +492,48 @@
         grid.appendChild(card);
       });
       gearView.appendChild(grid);
+    }
+
+    // ── App Stack ──
+    const APP_STACK = [
+      { name: 'Cursor',        detail: 'AI Code Editor',          img: '/images/app-stack-cursor.png',                                                                                                                                   url: 'https://cursor.com' },
+      { name: 'CleanShot X',   detail: 'Screenshot & Recording',  img: '/images/app-stack-cleanshotx.png',                                                                                                                               url: 'https://cleanshot.com' },
+      { name: 'Raycast',       detail: 'Launcher & Productivity', img: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/85/69/31/8569314a-3114-1691-d952-7b950c41a9ca/AppIcon-Release-0-0-1x_U007epad-0-0-0-1-0-0-sRGB-85-220.png/512x512bb.jpg', url: 'https://raycast.com' },
+      { name: 'MyMind',        detail: 'Visual Bookmarking',      img: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/2e/57/10/2e571035-f756-32fb-d29d-52f9f40f84be/AppIcon-Release-1x_U007epad-0-1-sRGB-85-220-0.png/512x512bb.jpg',     url: 'https://mymind.com' },
+      { name: 'Bear',          detail: 'Notes & Writing',         img: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/7a/25/bb/7a25bb6c-49d8-e236-86e5-ccad3a5bf8c2/AppIcon-26-0-0-1x_U007epad-0-0-0-1-0-0-sRGB-85-220.png/512x512bb.jpg', url: 'https://bear.app' },
+      { name: 'Things 3',      detail: 'Task Manager',            img: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d0/1e/fe/d01efe6f-a09d-713e-0b02-b75c2865c215/AppIcon-0-0-1x_U007ephone-0-0-0-1-0-0-85-220.png/512x512bb.jpg',      url: 'https://culturedcode.com/things' },
+      { name: 'Claude',        detail: 'AI Assistant',            img: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/82/9a/02/829a027f-3afc-0b36-a50a-d58dfc38d49b/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg',                  url: 'https://claude.ai' },
+      { name: 'Apple Journal', detail: 'Daily Journaling',        img: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/dc/8d/af/dc8daf9c-9da1-03f3-c341-c6c3eccd817e/journal-0-0-1x_U007epad-0-1-sRGB-85-220.png/512x512bb.jpg',             url: 'https://apps.apple.com/app/id6447391597' },
+    ];
+
+    let appStackRendered = false;
+    function renderAppStack() {
+      if (appStackRendered) return;
+      appStackRendered = true;
+      const grid = document.createElement('div');
+      grid.className = 'app-stack-grid';
+      APP_STACK.forEach(item => {
+        const card = document.createElement('a');
+        card.className = 'app-stack-card';
+        card.href = item.url;
+        card.target = '_blank';
+        card.rel = 'noopener';
+        const img = document.createElement('img');
+        img.className = 'app-stack-img';
+        img.alt = item.name;
+        img.loading = 'lazy';
+        img.src = item.img;
+        img.onerror = () => { img.style.display = 'none'; };
+        const name = document.createElement('div');
+        name.className = 'gear-name';
+        name.textContent = item.name;
+        const detail = document.createElement('div');
+        detail.className = 'gear-detail';
+        detail.textContent = item.detail;
+        card.append(img, name, detail);
+        grid.appendChild(card);
+      });
+      appStackView.appendChild(grid);
     }
 
     // ── Places (Mapbox) ──
@@ -906,10 +949,11 @@
       const prevMode = currentMode;
       currentMode = mode;
 
-      const isBookshelfMode = mode === 'bookshelf';
-      const isGearMode      = mode === 'gear';
-      const isPlacesMode    = mode === 'places';
-      const isSpecialMode   = isBookshelfMode || isGearMode || isPlacesMode;
+      const isBookshelfMode  = mode === 'bookshelf';
+      const isGearMode       = mode === 'gear';
+      const isAppStackMode   = mode === 'appstack';
+      const isPlacesMode     = mode === 'places';
+      const isSpecialMode    = isBookshelfMode || isGearMode || isAppStackMode || isPlacesMode;
       tabPill.style.opacity = isSpecialMode ? '0' : '1';
       overflowBtn.classList.toggle('active', isSpecialMode);
       overflowItems.forEach(item => item.classList.toggle('active', item.dataset.mode === mode));
@@ -924,15 +968,16 @@
       const isWork      = mode === 'work';
       const isBookshelf = mode === 'bookshelf';
       const isGear      = mode === 'gear';
+      const isAppStack  = mode === 'appstack';
       const isPlaces    = mode === 'places';
-      const isSpecial   = isBookshelf || isGear || isPlaces;
-      const urlSuffix   = isWork ? '?work' : isBookshelf ? '?bookshelf' : isGear ? '?gear' : isPlaces ? '?places' : location.pathname;
+      const isSpecial   = isBookshelf || isGear || isAppStack || isPlaces;
+      const urlSuffix   = isWork ? '?work' : isBookshelf ? '?bookshelf' : isGear ? '?gear' : isAppStack ? '?appstack' : isPlaces ? '?places' : location.pathname;
       history.pushState(null, '', urlSuffix);
       document.body.classList.toggle('work-mode', isWork);
       document.body.classList.toggle('places-mode', isPlaces);
       if (!isWork && !isSpecial) window.scrollTo({ top: 0 });
 
-      const prevIsSpecial = prevMode === 'bookshelf' || prevMode === 'gear' || prevMode === 'places';
+      const prevIsSpecial = prevMode === 'bookshelf' || prevMode === 'gear' || prevMode === 'appstack' || prevMode === 'places';
 
       // Headshot + headline only swap between life ↔ work
       if (!isSpecial && !prevIsSpecial) {
@@ -963,6 +1008,7 @@
       function prevSpecialView() {
         if (prevMode === 'bookshelf') return bookshelfView;
         if (prevMode === 'gear')      return gearView;
+        if (prevMode === 'appstack')  return appStackView;
         if (prevMode === 'places')    return placesView;
         return null;
       }
@@ -975,11 +1021,12 @@
 
       // Helper: hide all views except the one about to be shown
       function hideAllViews(except) {
-        if (except !== launchpad)    launchpad.style.display = 'none';
+        if (except !== launchpad)     launchpad.style.display = 'none';
         if (except !== portfolioGrid) portfolioGrid.style.display = 'none';
         if (except !== bookshelfView) bookshelfView.style.display = 'none';
-        if (except !== gearView)     gearView.style.display = 'none';
-        if (except !== placesView)   placesView.style.display = 'none';
+        if (except !== gearView)      gearView.style.display = 'none';
+        if (except !== appStackView)  appStackView.style.display = 'none';
+        if (except !== placesView)    placesView.style.display = 'none';
         if (introEl && except !== introEl) introEl.style.display = 'none';
       }
 
@@ -1014,6 +1061,22 @@
             anime({ targets: '.gear-card', opacity: [0, 1], translateY: [14, 0], duration: 500,
               easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(25) });
             anime({ targets: gearView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
+          }
+        });
+      } else if (isAppStack) {
+        const prevView = prevIsSpecial ? prevSpecialView() : (prevMode === 'work' ? portfolioGrid : launchpad);
+        anime({
+          targets: [prevView, introEl].filter(Boolean),
+          opacity: 0, scale: 0.97,
+          duration: 220, easing: 'easeInQuad',
+          complete: () => {
+            hideAllViews(appStackView);
+            renderAppStack();
+            appStackView.style.opacity = '0';
+            appStackView.style.display = 'flex';
+            anime({ targets: '.app-stack-card', opacity: [0, 1], translateY: [14, 0], duration: 500,
+              easing: 'cubicBezier(0.16,1,0.3,1)', delay: anime.stagger(25) });
+            anime({ targets: appStackView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
           }
         });
       } else if (isPlaces) {
@@ -2198,6 +2261,7 @@
     if (location.search === '?work') setMode('work');
     else if (location.search === '?bookshelf') setMode('bookshelf');
     else if (location.search === '?gear') setMode('gear');
+    else if (location.search === '?appstack') setMode('appstack');
     else if (location.search === '?places') setMode('places');
 
     // Deep link on load
