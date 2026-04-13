@@ -714,13 +714,12 @@
       });
     }
 
-    /* Basemap tuning: keep in sync with styles.css :root --bg-dark (#13141a) for dark land */
-    const PLACES_LAND_DARK   = '#13141a';
+    /* Basemap tuning — background layer = ocean base, land layers drawn on top */
+    const PLACES_LAND_DARK   = '#191c28';
     const PLACES_OCEAN_DARK  = '#000000';
 
-    const OPAQUE_BASE_LAYERS = [
-      'background', 'land', 'landcover', 'landuse', 'land-structure-polygon',
-      'national-park',
+    const LAND_LAYERS = [
+      'land', 'landcover', 'landuse', 'land-structure-polygon', 'national-park',
     ];
 
     const WATER_COLOR_LIGHT  = '#cce8f2';
@@ -728,18 +727,22 @@
     function stripMapBackground(map) {
       const dark = isDarkTheme();
 
-      for (const id of OPAQUE_BASE_LAYERS) {
+      // Background layer = canvas base = ocean color
+      if (map.getLayer('background')) {
+        if (dark) {
+          map.setPaintProperty('background', 'background-color', PLACES_OCEAN_DARK);
+          map.setPaintProperty('background', 'background-opacity', 1);
+        } else {
+          map.setPaintProperty('background', 'background-color', 'rgba(0,0,0,0)');
+          map.setPaintProperty('background', 'background-opacity', 0);
+        }
+      }
+
+      // Land layers
+      for (const id of LAND_LAYERS) {
         if (!map.getLayer(id)) continue;
         const type = map.getLayer(id).type;
-        if (type === 'background') {
-          if (dark) {
-            map.setPaintProperty(id, 'background-color', PLACES_LAND_DARK);
-            map.setPaintProperty(id, 'background-opacity', 1);
-          } else {
-            map.setPaintProperty(id, 'background-color', 'rgba(0,0,0,0)');
-            map.setPaintProperty(id, 'background-opacity', 0);
-          }
-        } else if (type === 'fill') {
+        if (type === 'fill') {
           if (dark) {
             map.setPaintProperty(id, 'fill-color', PLACES_LAND_DARK);
             map.setPaintProperty(id, 'fill-opacity', 1);
@@ -750,7 +753,6 @@
       }
 
       // Water: scan ALL style layers and override any that contain 'water' in their ID.
-      // A fixed list misses layers like water-depth, water-color, etc. in dark-v11.
       const waterColor = dark ? PLACES_OCEAN_DARK : WATER_COLOR_LIGHT;
       const style = map.getStyle();
       if (style && style.layers) {
@@ -758,6 +760,7 @@
           if (!layer.id.includes('water')) continue;
           try {
             if (layer.type === 'fill') {
+              map.setPaintProperty(layer.id, 'fill-pattern', null);
               map.setPaintProperty(layer.id, 'fill-color', waterColor);
               map.setPaintProperty(layer.id, 'fill-opacity', 1);
             } else if (layer.type === 'line') {
@@ -848,9 +851,10 @@
       });
 
       placesMapInstance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
-      placesMapInstance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-left');
+      placesMapInstance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
       placesMapInstance.on('load', async () => {
+        placesMapInstance.resize();
         stripMapBackground(placesMapInstance);
         hideRoadLayers(placesMapInstance);
         await fetchPlacesData();
@@ -1093,9 +1097,9 @@
           duration: 220, easing: 'easeInQuad',
           complete: () => {
             hideAllViews(placesView);
-            renderPlaces();
             placesView.style.opacity = '0';
             placesView.style.display = 'flex';
+            renderPlaces();
             anime({ targets: placesView, opacity: [0, 1], duration: 300, easing: 'easeOutQuad' });
           }
         });

@@ -3106,6 +3106,12 @@
       transition: filter 0.35s ease;
     }
 
+    .places-mode #powerBtn { display: none; }
+
+    .places-mode .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
+      margin: 0 calc(20px - 0.5vw) calc(12px - 0.5vh) 0 !important;
+    }
+
     /* Mapbox popup: glass style matching site tokens */
     .mapboxgl-popup-content {
       background: var(--glass-bg) !important;
