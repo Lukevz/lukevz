@@ -723,7 +723,6 @@
       'national-park',
     ];
 
-    const WATER_TINT_LAYERS  = ['water', 'waterway', 'water-shadow'];
     const WATER_COLOR_LIGHT  = '#cce8f2';
 
     function stripMapBackground(map) {
@@ -734,7 +733,7 @@
         const type = map.getLayer(id).type;
         if (type === 'background') {
           if (dark) {
-            map.setPaintProperty(id, 'background-color', PLACES_OCEAN_DARK);
+            map.setPaintProperty(id, 'background-color', PLACES_LAND_DARK);
             map.setPaintProperty(id, 'background-opacity', 1);
           } else {
             map.setPaintProperty(id, 'background-color', 'rgba(0,0,0,0)');
@@ -749,20 +748,27 @@
           }
         }
       }
-      // Water: light = soft tint; dark = deep black ocean (contrast with navy land)
+
+      // Water: scan ALL style layers and override any that contain 'water' in their ID.
+      // A fixed list misses layers like water-depth, water-color, etc. in dark-v11.
       const waterColor = dark ? PLACES_OCEAN_DARK : WATER_COLOR_LIGHT;
-      for (const id of WATER_TINT_LAYERS) {
-        if (!map.getLayer(id)) continue;
-        try {
-          const type = map.getLayer(id).type;
-          if (type === 'fill') {
-            map.setPaintProperty(id, 'fill-color', waterColor);
-            map.setPaintProperty(id, 'fill-opacity', 1);
-          } else if (type === 'line') {
-            map.setPaintProperty(id, 'line-color', waterColor);
-            map.setPaintProperty(id, 'line-opacity', dark ? 0.65 : 0.8);
-          }
-        } catch (_) {}
+      const style = map.getStyle();
+      if (style && style.layers) {
+        for (const layer of style.layers) {
+          if (!layer.id.includes('water')) continue;
+          try {
+            if (layer.type === 'fill') {
+              map.setPaintProperty(layer.id, 'fill-color', waterColor);
+              map.setPaintProperty(layer.id, 'fill-opacity', 1);
+            } else if (layer.type === 'line') {
+              map.setPaintProperty(layer.id, 'line-color', waterColor);
+              map.setPaintProperty(layer.id, 'line-opacity', 1);
+            } else if (layer.type === 'background') {
+              map.setPaintProperty(layer.id, 'background-color', waterColor);
+              map.setPaintProperty(layer.id, 'background-opacity', 1);
+            }
+          } catch (_) {}
+        }
       }
     }
 
@@ -1287,69 +1293,47 @@
       if (e.key === 'Escape' && socialOpen) closeSocialPanel();
     });
 
-    // ── Theme toggle (light / warm charcoal dark) ──
-    // Explicit choice is stored in localStorage (see head script in _index.html).
-    // On load: keep override if present; otherwise follow prefers-color-scheme.
-    const THEME_KEY = 'lukevz-theme';
+    // ── Theme toggle (session-only override; never persisted) ──
     const themeToggle = document.getElementById('themeToggle');
     const themeMoon = themeToggle?.querySelector('.theme-icon-moon');
     const themeSun  = themeToggle?.querySelector('.theme-icon-sun');
+    let themeSessionOverride = null;
 
-    function themeIsExplicitOverride() {
-      try {
-        const s = localStorage.getItem(THEME_KEY);
-        return s === 'dark' || s === 'light';
-      } catch {
-        return false;
-      }
+    function systemPrefersDark() {
+      return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
     }
 
     function isDarkTheme() {
-      const t = document.documentElement.getAttribute('data-theme');
-      if (t === 'dark') return true;
-      if (t === 'light') return false;
-      return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
+      if (themeSessionOverride === true) return true;
+      if (themeSessionOverride === false) return false;
+      return systemPrefersDark();
     }
 
     function updateThemeToggleUi(dark) {
       if (!themeToggle) return;
       themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
-      const hint = ' Shift-click: use system appearance.';
+      const hint = ' Shift-click: return to system appearance.';
+      themeToggle.removeAttribute('aria-disabled');
       themeToggle.setAttribute('title', (dark ? 'Light mode' : 'Dark mode') + hint);
       themeToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
       themeMoon?.toggleAttribute('hidden', dark);
       themeSun?.toggleAttribute('hidden', !dark);
     }
 
-    function applyThemeSystem(persist) {
+    function applyThemeSystem() {
+      themeSessionOverride = null;
       document.documentElement.removeAttribute('data-theme');
-      if (persist) {
-        try { localStorage.removeItem(THEME_KEY); } catch (err) { /* ignore */ }
-      }
       updateThemeToggleUi(isDarkTheme());
     }
 
-    function applyThemeDom(dark, persist) {
-      const root = document.documentElement;
-      root.setAttribute('data-theme', dark ? 'dark' : 'light');
-      if (persist) {
-        try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (err) { /* ignore */ }
-      }
+    function applyThemeDom(dark) {
+      themeSessionOverride = dark;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
       updateThemeToggleUi(dark);
     }
 
     function initThemeOnLoad() {
-      if (themeIsExplicitOverride()) {
-        try {
-          const s = localStorage.getItem(THEME_KEY);
-          if (s === 'dark' || s === 'light') {
-            document.documentElement.setAttribute('data-theme', s);
-          }
-        } catch (err) { /* ignore */ }
-        updateThemeToggleUi(isDarkTheme());
-      } else {
-        applyThemeSystem(false);
-      }
+      applyThemeSystem();
       document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: isDarkTheme() ? 1 : 0 } }));
     }
 
@@ -1362,14 +1346,13 @@
       return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
 
-    function runThemeWipe(targetDark, persist) {
+    function runThemeWipe(targetDark) {
       if (!themeTransitionEl || !themeArc || themeWipeBusy) return;
       if (isDarkTheme() === targetDark) return;
       themeWipeBusy = true;
       anime.remove(themeArc);
       themeTransitionEl.classList.remove('theme-transition--to-dark', 'theme-transition--to-light');
       themeTransitionEl.classList.add(targetDark ? 'theme-transition--to-dark' : 'theme-transition--to-light');
-      /* Bottom-center pivot: sweep along 180° horizon BL → BR (to dark), reverse to light */
       const rotFrom = targetDark ? '-90deg' : '90deg';
       const rotTo   = targetDark ? '90deg' : '-90deg';
       themeArc.style.transform = `rotate(${rotFrom})`;
@@ -1388,7 +1371,7 @@
           document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend } }));
         },
         complete() {
-          applyThemeDom(targetDark, persist);
+          applyThemeDom(targetDark);
           document.documentElement.style.removeProperty('--theme-blend');
           document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: targetDark ? 1 : 0 } }));
           themeArc.style.transform = '';
@@ -1402,7 +1385,7 @@
     function runThemeWipeToSystem(targetDark) {
       if (!themeTransitionEl || !themeArc || themeWipeBusy) return;
       if (isDarkTheme() === targetDark) {
-        applyThemeSystem(true);
+        applyThemeSystem();
         document.documentElement.style.removeProperty('--theme-blend');
         document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: targetDark ? 1 : 0 } }));
         return;
@@ -1429,7 +1412,7 @@
           document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend } }));
         },
         complete() {
-          applyThemeSystem(true);
+          applyThemeSystem();
           document.documentElement.style.removeProperty('--theme-blend');
           document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: targetDark ? 1 : 0 } }));
           themeArc.style.transform = '';
@@ -1447,9 +1430,9 @@
       themeToggle.addEventListener('click', e => {
         e.stopPropagation();
         if (e.shiftKey) {
-          const sysDark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
+          const sysDark = systemPrefersDark();
           if (themePrefersReducedMotion() || isDarkTheme() === sysDark) {
-            applyThemeSystem(true);
+            applyThemeSystem();
             document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: sysDark ? 1 : 0 } }));
           } else {
             runThemeWipeToSystem(sysDark);
@@ -1458,19 +1441,19 @@
         }
         const next = !isDarkTheme();
         if (themePrefersReducedMotion()) {
-          applyThemeDom(next, true);
+          applyThemeDom(next);
           document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: next ? 1 : 0 } }));
           return;
         }
-        runThemeWipe(next, true);
+        runThemeWipe(next);
       });
     }
 
     try {
       if (typeof matchMedia === 'function') {
         matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (ev) => {
-          if (themeIsExplicitOverride()) return;
-          updateThemeToggleUi(ev.matches);
+          if (themeSessionOverride !== null) return;
+          applyThemeSystem();
           document.dispatchEvent(new CustomEvent('themeblend', { detail: { blend: ev.matches ? 1 : 0 } }));
         });
       }
