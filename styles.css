@@ -362,8 +362,9 @@
       position: fixed;
       top: 74px;
       left: 50%;
-      transform: translateX(-50%) scale(0.95) translateY(-6px);
+      transform: translateX(-50%) perspective(700px) rotateX(-90deg);
       transform-origin: top center;
+      transform-style: preserve-3d;
       background: var(--glass-bg);
       border-radius: 14px;
       padding: 6px;
@@ -377,20 +378,21 @@
       -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.16,1,0.3,1);
-      min-width: 160px;
+      transition: opacity 0.15s ease, transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
     }
     #overflowPanel.open {
       opacity: 1;
       pointer-events: all;
-      transform: translateX(-50%) scale(1) translateY(0);
+      transform: translateX(-50%) perspective(700px) rotateX(0deg);
     }
     .overflow-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      width: 100%;
-      padding: 9px 14px;
+      gap: 8px;
+      padding: 9px 12px;
       border-radius: 9px;
       background: none;
       border: none;
@@ -400,9 +402,17 @@
       font-weight: 500;
       color: var(--text-primary);
       text-align: left;
-      transition: background 0.12s ease;
+      transition: background 0.12s ease, opacity 0.25s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
       white-space: nowrap;
+      min-width: 0;
+      opacity: 0;
+      transform: translateY(-6px);
     }
+    #overflowPanel.open .overflow-item { opacity: 1; transform: translateY(0); }
+    #overflowPanel.open .overflow-item:nth-child(1),
+    #overflowPanel.open .overflow-item:nth-child(2) { transition-delay: 0.10s; }
+    #overflowPanel.open .overflow-item:nth-child(3),
+    #overflowPanel.open .overflow-item:nth-child(4) { transition-delay: 0.17s; }
     .overflow-item:hover { background: var(--hover-fill); }
     .overflow-item.active { color: var(--tab-pill-bg); font-weight: 600; }
     @media (hover: hover) and (pointer: fine) {

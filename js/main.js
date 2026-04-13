@@ -1185,6 +1185,7 @@
       if (overflowOpen) {
         closeOverflowPanel();
       } else {
+        overflowPanel.style.width = modeTab.offsetWidth + 'px';
         overflowOpen = true;
         overflowPanel.classList.add('open');
         overflowBtn.setAttribute('aria-expanded', 'true');
