@@ -192,7 +192,7 @@
     body {
       min-height: 100vh;
       background: transparent;
-      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      font-family: 'Google Sans Flex', system-ui, -apple-system, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -615,13 +615,13 @@
 
     /* Heading */
     h1, h2, h3, h4, h5, h6 {
-      font-family: 'Chillax', system-ui, sans-serif;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
     }
 
     h1 {
-      font-family: 'Chillax', system-ui, sans-serif;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
       font-size: clamp(1.4rem, 3vw, 1.6rem);
-      font-weight: 600;
+      font-weight: 800;
       color: var(--text-primary);
       text-align: left;
       margin-bottom: 8px;
@@ -1950,7 +1950,7 @@
     }
     .sm-row:hover { background: var(--hover-fill-soft); }
     .sm-row-title {
-      font-family: 'Chillax', system-ui, sans-serif;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
       font-size: 0.95rem;
       font-weight: 600;
       color: var(--text-primary);
@@ -1981,6 +1981,7 @@
       gap: 12px;
     }
     .sm-row--video {
+      position: relative;
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
@@ -1989,6 +1990,27 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid var(--border-medium);
+    }
+    .sm-row-thumb-glow {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 40%;
+      background-size: 220%;
+      background-position: center;
+      filter: blur(28px);
+      opacity: 0.45;
+      transform: scale(1.2);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50%);
+      mask-image: linear-gradient(to right, transparent 0%, black 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .sm-row--video .sm-row-info,
+    .sm-row--video .sm-row-thumb-wrap {
+      position: relative;
+      z-index: 1;
     }
     .sm-row--video:hover { background: var(--hover-fill-soft); }
     .sm-row-thumb-wrap {
@@ -3423,7 +3445,7 @@
     /* ── Headline lines ───────────────────────────────────── */
 
     .intro-line {
-      font-family: 'Chillax', system-ui, -apple-system, sans-serif;
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
       font-weight: 600;
       font-size: clamp(1.2rem, 3vw, 1.85rem);
       color: var(--text-primary);
@@ -3585,7 +3607,7 @@
     /* ── Enter button ─────────────────────────────────────── */
 
     .intro-enter-btn {
-      font-family: 'Chillax', system-ui, sans-serif;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
       font-weight: 500;
       font-size: 0.78rem;
       letter-spacing: 0.07em;
@@ -3618,7 +3640,7 @@
     /* ── Final headline ───────────────────────────────────── */
 
     .intro-final-headline {
-      font-family: 'Chillax', system-ui, sans-serif;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
       font-weight: 400;
       font-size: clamp(1rem, 2.4vw, 1.45rem);
       color: var(--text-muted);

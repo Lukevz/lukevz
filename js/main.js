@@ -688,14 +688,36 @@
       }
     }
 
+    const PLACES_CACHE_KEY    = 'places-geojson-cache-v1';
+    const PLACES_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
+
+    function loadCachedPlaces() {
+      try {
+        const raw = localStorage.getItem(PLACES_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.ts || !parsed.data) return null;
+        if (Date.now() - parsed.ts > PLACES_CACHE_TTL_MS) return null;
+        return parsed.data;
+      } catch (_) { return null; }
+    }
+
+    function savePlacesCache(data) {
+      try {
+        localStorage.setItem(PLACES_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+      } catch (_) {}
+    }
+
     async function fetchPlacesData() {
       try {
         const res = await fetch('/api/places');
         if (!res.ok) throw new Error(`places API ${res.status}`);
-        placesGeojson = await res.json();
+        const data = await res.json();
+        placesGeojson = data;
+        savePlacesCache(data);
       } catch (err) {
         console.warn('Places: failed to fetch pins', err);
-        placesGeojson = { type: 'FeatureCollection', features: [] };
+        if (!placesGeojson) placesGeojson = { type: 'FeatureCollection', features: [] };
       }
     }
 
@@ -712,6 +734,33 @@
         script.onerror = reject;
         document.head.appendChild(script);
       });
+    }
+
+    async function resolveMapboxToken() {
+      let token = window.MAPBOX_TOKEN;
+      if (token && token !== 'pk.your_public_token_here') return token;
+      try {
+        const tr = await fetch('/api/mapbox-token');
+        if (tr.ok) { const td = await tr.json(); return td.token || null; }
+      } catch (_) {}
+      return null;
+    }
+
+    // Kick off Mapbox script + token + places data in parallel. Safe to call
+    // multiple times — work happens at most once. Called eagerly on idle so
+    // the first Places click is near-instant.
+    let placesPreloadStarted = false;
+    let placesScriptPromise  = null;
+    let placesTokenPromise   = null;
+    let placesDataPromise    = null;
+    function preloadPlaces() {
+      if (placesPreloadStarted) return;
+      placesPreloadStarted = true;
+      const cached = loadCachedPlaces();
+      if (cached) placesGeojson = cached;
+      placesScriptPromise = loadMapboxScript();
+      placesTokenPromise  = resolveMapboxToken();
+      placesDataPromise   = fetchPlacesData();
     }
 
     /* Basemap tuning — background layer = ocean base, land layers drawn on top */
@@ -818,17 +867,10 @@
       }
       placesRendered = true;
 
-      await loadMapboxScript();
+      preloadPlaces(); // no-op if already started on idle
 
-      // Token: prefer window.MAPBOX_TOKEN (set by local gitignored mapbox-config.js),
-      // then fall back to fetching from /api/mapbox-token (reads Vercel env var in production).
-      let mapboxToken = window.MAPBOX_TOKEN;
-      if (!mapboxToken || mapboxToken === 'pk.your_public_token_here') {
-        try {
-          const tr = await fetch('/api/mapbox-token');
-          if (tr.ok) { const td = await tr.json(); mapboxToken = td.token; }
-        } catch (_) { /* ignore */ }
-      }
+      await placesScriptPromise;
+      const mapboxToken = await placesTokenPromise;
       if (!mapboxToken) {
         console.warn('Places: no Mapbox token found. Set MAPBOX_PUBLIC_TOKEN in Vercel env vars.');
         placesRendered = false; // allow retry
@@ -853,16 +895,33 @@
       placesMapInstance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
       placesMapInstance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-      placesMapInstance.on('load', async () => {
-        placesMapInstance.resize();
-        stripMapBackground(placesMapInstance);
-        hideRoadLayers(placesMapInstance);
-        await fetchPlacesData();
-        placesAddLayers(placesMapInstance);
+      const revealMap = () => {
+        if (mapContainer.dataset.revealed === '1') return;
+        mapContainer.dataset.revealed = '1';
         requestAnimationFrame(() => {
           mapContainer.style.transition = 'opacity 0.4s ease';
           mapContainer.style.opacity = '1';
         });
+      };
+
+      placesMapInstance.on('load', async () => {
+        placesMapInstance.resize();
+        stripMapBackground(placesMapInstance);
+        hideRoadLayers(placesMapInstance);
+
+        // Render cached pins immediately if we have them
+        const hadCachedPins = !!(placesGeojson && placesGeojson.features && placesGeojson.features.length);
+        if (hadCachedPins) {
+          placesAddLayers(placesMapInstance);
+          revealMap();
+        }
+
+        // Wait for the (possibly in-flight) fresh fetch and refresh layers
+        await placesDataPromise;
+        if (placesGeojson) {
+          placesAddLayers(placesMapInstance);
+          revealMap();
+        }
       });
 
       // Swap style on theme change, then re-add layers
@@ -983,7 +1042,14 @@
       const isSpecial   = isBookshelf || isGear || isAppStack || isPlaces;
       const urlSuffix   = isWork ? '?work' : isBookshelf ? '?bookshelf' : isGear ? '?gear' : isAppStack ? '?appstack' : isPlaces ? '?places' : location.pathname;
       history.pushState(null, '', urlSuffix);
-      document.body.classList.toggle('work-mode', isWork);
+      // Defer work-mode removal when transitioning work→life to avoid a layout
+      // jump: removing it early changes body from padding-top centering to
+      // justify-content:center while portfolioGrid is still visible (and tall),
+      // which makes the content snap from top to center once portfolioGrid hides.
+      const deferWorkModeRemoval = prevMode === 'work' && !isWork && !isSpecial;
+      if (!deferWorkModeRemoval) {
+        document.body.classList.toggle('work-mode', isWork);
+      }
       document.body.classList.toggle('places-mode', isPlaces);
       if (!isWork && !isSpecial) window.scrollTo({ top: 0 });
 
@@ -1153,6 +1219,7 @@
             opacity: 0, scale: 0.95,
             duration: 280, easing: 'easeInQuad',
             complete: () => {
+              document.body.classList.remove('work-mode');
               portfolioGrid.style.display = 'none';
               launchpad.style.opacity = '';
               launchpad.style.transform = '';
@@ -1776,6 +1843,7 @@
           if (item.type === 'video') {
             const safeTitle = item.title.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return `<button class="sm-row sm-row--video" data-section="${section}" data-slug="${item.slug}">
+              <div class="sm-row-thumb-glow" style="background-image:url('${item.thumbnail}')"></div>
               <span class="sm-row-info">
                 <span class="sm-row-title">${safeTitle}</span>
                 <span class="sm-row-sub">${item.date}</span>
@@ -2254,3 +2322,10 @@
 
     // Deep link on load
     handleHash();
+
+    // Warm up Places (Mapbox script + token + pins) on idle so the first
+    // click is near-instant. Falls back to setTimeout for Safari.
+    const schedulePreload = window.requestIdleCallback
+      ? cb => window.requestIdleCallback(cb, { timeout: 3000 })
+      : cb => setTimeout(cb, 1500);
+    schedulePreload(() => { try { preloadPlaces(); } catch (_) {} });

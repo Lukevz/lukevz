@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     const geojson = parseKmlToGeoJSON(kml);
 
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400');
     res.status(200).json(geojson);
   } catch (err) {
     console.error('Places API error:', err);
