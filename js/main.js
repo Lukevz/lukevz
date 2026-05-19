@@ -2110,7 +2110,6 @@
         '<div class="now-board-head">' +
           '<div class="now-board-head-left">' +
             '<span class="now-board-wordmark">NOW</span>' +
-            '<span class="now-board-subtitle">DEPARTURES</span>' +
           '</div>' +
         '</div>' +
         '<div class="now-board-rows" id="nbRows"></div>' +
