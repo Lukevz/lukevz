@@ -75,8 +75,8 @@
     /* ── Hole (content clearing) ── */
     // Ellipse semi-axes of the fully-clear zone, plus transition width
     const HOLE_RX   = 240;  // horizontal half-width of the clear zone (px)
-    const HOLE_RY   = 280;  // vertical half-height of the clear zone (px)
-    const HOLE_FADE = 0.9;  // transition width as a fraction of the hole radius
+    const HOLE_RY   = 160;  // vertical half-height of the clear zone (px)
+    const HOLE_FADE = 0.7;  // transition width as a fraction of the hole radius
 
     function holeFade(x, y, cx, cy) {
       const ex = (x - cx) / HOLE_RX;

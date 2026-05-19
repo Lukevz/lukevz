@@ -1805,6 +1805,17 @@
     .cs-body blockquote p { margin: 0; color: var(--cs-muted); font-size: 1em; }
     .cs-body blockquote strong { color: var(--text-primary); }
     .cs-body p > em:only-child { font-size: 0.78rem; color: var(--text-secondary); font-style: normal; display: block; margin-top: -10px; margin-bottom: 14px; }
+    .cs-body iframe {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      margin: 14px 0;
+      display: block;
+      background: var(--glass-bg);
+    }
+    .cs-body figure { margin: 14px 0; }
+    .cs-body figure img { margin: 0; }
+    .cs-body figcaption { font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; text-align: center; }
 
     /* ── Section Modal ── */
     #sModal {

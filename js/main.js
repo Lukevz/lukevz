@@ -309,6 +309,37 @@
 
     let loadedStudies = [];
 
+    function buildPrevCard(meta, body, idx) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'study';
+      const jobTitle = meta.job || meta.role || meta.title || 'Untitled';
+      const company = meta.company || '';
+      const timeline = meta.timeline || '';
+      const rightCol = (company || timeline)
+        ? `<div class="cs-meta-col">
+            ${company ? `<span class="cs-company">${escHtml(company)}</span>` : ''}
+            ${timeline ? `<span class="cs-dates">${escHtml(timeline)}</span>` : ''}
+          </div>`
+        : '';
+      const blurb = meta.headline || caseStudyCardBlurb(body);
+      const tagsHtml = renderCaseStudyTagChips(meta.tag);
+      btn.innerHTML = `
+        <div class="study-card">
+          <div class="cs-row">
+            <span class="cs-job-title">${escHtml(jobTitle)}</span>
+            ${rightCol}
+          </div>
+          ${blurb ? `<p class="cs-card-headline">${escHtml(blurb)}</p>` : ''}
+          ${tagsHtml}
+        </div>`;
+      btn.addEventListener('click', () => {
+        renderPrevDetail(idx);
+        openSModal();
+      });
+      return btn;
+    }
+
     fetch('/api/content/list?category=case-studies')
       .then(r => r.json())
       .then(({ items = [] }) => Promise.all(
@@ -321,6 +352,13 @@
       ))
       .then(studies => {
         loadedStudies = studies.filter(Boolean).filter(s => s.meta.title);
+        const prevGrid = document.getElementById('prevGrid');
+        if (prevGrid && loadedStudies.length) {
+          prevGrid.innerHTML = '';
+          loadedStudies.forEach(({ meta, body }, i) => {
+            prevGrid.appendChild(buildPrevCard(meta, body, i));
+          });
+        }
       })
       .catch(() => {});
 
